@@ -44,6 +44,10 @@ local sampleNPCSettings = {
 	enemyID = 137,
 	holdX = 36,
 	holdY = 12,
+	mineID = 579,
+	bulletID = 1000,
+	barrierID = 949,
+	meleeID = 998,
 
 
 
@@ -154,7 +158,7 @@ function sampleNPC.onTickEndNPC(v)
 		end
 	
 		if data.stateTimer % 64 == 9 then
-			local missile = NPC.spawn(npcID + 24, v.x - 20 + spawnOffset[v.direction], v.y + 24)
+			local missile = NPC.spawn(NPC.config[v.id].bulletID, v.x - 20 + spawnOffset[v.direction], v.y + 24)
 			missile.direction = v.direction
 			missile.speedX = 5 * v.direction
 			missile.speedY = (player.y - missile.y) / 78
@@ -195,7 +199,7 @@ function sampleNPC.onTickEndNPC(v)
 		if data.stateTimer == 50 then
 			for i = 0,3 do
 				local d = i * 1.75
-				local n = NPC.spawn(617, v.x - 20 + spawnOffset[v.direction], v.y - 8)
+				local n = NPC.spawn(NPC.config[v.id].hammerID, v.x - 20 + spawnOffset[v.direction], v.y - 8)
 				n.direction = v.direction
 				n.speedX = (0.5 + d) * n.direction
 				n.speedY = -12
@@ -273,7 +277,7 @@ function sampleNPC.onTickEndNPC(v)
 		if data.stateTimer == 50 then
 			for i = 0,0 do
 				local d = i * 1.3
-				local n = NPC.spawn(sampleNPCSettings.enemyID, v.x - 20 + spawnOffset[v.direction], v.y - 8)
+				local n = NPC.spawn(NPC.config[v.id].enemyID, v.x - 20 + spawnOffset[v.direction], v.y - 8)
 				n.direction = v.direction
 				local bombxspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
 				n.speedX = bombxspeed.x / 50
@@ -341,9 +345,9 @@ function sampleNPC.onTickEndNPC(v)
 			SFX.play("hammer_swing.wav")
 			local n
 			if v.direction == DIR_LEFT then
-				n = NPC.spawn(npcID + 1, v.x - 48, v.y + 24)
+				n = NPC.spawn(NPC.config[v.id].meleeID, v.x - 48, v.y + 24)
 			else
-				n = NPC.spawn(npcID + 1, v.x + 32, v.y + 24)
+				n = NPC.spawn(NPC.config[v.id].meleeID, v.x + 32, v.y + 24)
 			end
 			v.speedX = 6 * v.direction
 		end
@@ -418,7 +422,7 @@ function sampleNPC.onTickEndNPC(v)
 		v.animationFrame = 14
 		if data.stateTimer == 60 then
 			if not data.barrier then
-				data.barrier = NPC.spawn(949, v.x - (v.width / 3), v.y - (v.height / 4), player.section, false, false)
+				data.barrier = NPC.spawn(NPC.config[v.id].barrierID, v.x - (v.width / 3), v.y - (v.height / 4), player.section, false, false)
 				data.barrier.layerName = "Spawned NPCs"
 				data.barrier.data.parent = v
 				data.barrier.data.owner = v
@@ -476,7 +480,7 @@ function sampleNPC.onTickEndNPC(v)
 			SFX.play("bombThrow.ogg")
 			for i = 0,4 do
 				local d = i * -2
-				local n = NPC.spawn(579, v.x - 20 + spawnOffset[v.direction], v.y - 8)
+				local n = NPC.spawn(NPC.config[v.id].mineID, v.x - 20 + spawnOffset[v.direction], v.y - 8)
 				n.direction = v.direction
 				n.speedX = (4 + d)
 				n.speedY = -6
@@ -528,9 +532,9 @@ function sampleNPC.onTickEndNPC(v)
 	end
 	if data.hp <= 0 then
 		v:kill(HARM_TYPE_NPC)
-		SFX.play("tatanga_defeated2.wav")
+		SFX.play(41)
 		for _,n in ipairs(NPC.get()) do
-			if n.id == 977 or n.id == 1000 or n.id == 949 then
+			if n.id == NPC.config[v.id].bulletID or n.id == NPC.config[v.id].hammerID or n.id == NPC.config[v.id].barrierID or n.id == NPC.config[v.id].enemyID or n.id == NPC.config[v.id].mineID or n.id == NPC.config[v.id].meleeID then
 				if n.x + n.width > camera.x and n.x < camera.x + camera.width and n.y + n.height > camera.y and n.y < camera.y + camera.height then
 					n:kill(HARM_TYPE_OFFSCREEN)
 				end
@@ -616,7 +620,7 @@ function sampleNPC.onNPCHarm(e, v, r, o)
 					data.hp = data.hp - 1
 					data.bossState = 9
 					if data.hp > 0 then
-						SFX.play("tatanga_hurt.wav")
+						SFX.play(39)
 					end
 					data.stateTimer = 0
 				end
@@ -647,9 +651,9 @@ function sampleNPC.onNPCHarm(e, v, r, o)
 		local e = Effect.spawn(npcID, v.x, v.y)
 		e.speedX = 4 * -v.direction
 		e.speedY = -8
-		SFX.play("tatanga_defeated2.wav")
+		SFX.play(41)
 		for _,n in ipairs(NPC.get()) do
-			if n.id == 977 or n.id == 1000 or n.id == 949 then
+			if n.id == NPC.config[v.id].bulletID or n.id == NPC.config[v.id].hammerID or n.id == NPC.config[v.id].barrierID or n.id == NPC.config[v.id].enemyID or n.id == NPC.config[v.id].mineID or n.id == NPC.config[v.id].meleeID then
 				if n.x + n.width > camera.x and n.x < camera.x + camera.width and n.y + n.height > camera.y and n.y < camera.y + camera.height then
 					n:kill(HARM_TYPE_OFFSCREEN)
 				end
