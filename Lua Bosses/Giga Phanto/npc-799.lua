@@ -3,7 +3,6 @@ local npcManager = require("npcManager")
 local npcutils = require("npcs/npcutils")
 local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
-local freeze = require("freezeHighlight")
 --Create the library table
 local Bathin = {}
 --NPC_ID is dynamic based on the name of the library file
@@ -12,16 +11,16 @@ local npcID = NPC_ID
 local BathinSettings = {
 	id = npcID,
 	--Sprite size
-	gfxheight = 208,
-	gfxwidth = 176,
+	gfxheight = 128,
+	gfxwidth = 128,
 	--Hitbox size. Bottom-center-bound to sprite size.
-	width = 80,
-	height = 80,
+	width = 96,
+	height = 96,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
-	gfxoffsety = 18,
+	gfxoffsety = 16,
 	--Frameloop-related
-	frames = 54,
+	frames = 11,
 	framestyle = 1,
 	framespeed = 8, --# frames between frame change
 	--Movement speed. Only affects speedX by default.
@@ -33,14 +32,14 @@ local BathinSettings = {
 	playerblocktop = false, --Also handles other NPCs walking atop this NPC.
 
 	nohurt=true,
-	nogravity = false,
-	noblockcollision = false,
-	nofireball = false,
+	nogravity = true,
+	noblockcollision = rue,
+	nofireball = true,
 	noiceball = true,
 	noyoshi= true,
 	nowaterphysics = true,
 	--Various interactions
-	jumphurt = false, --If true, spiny-like
+	jumphurt = true, --If true, spiny-like
 	spinjumpsafe = false, --If true, prevents player hurt when spinjumping
 	harmlessgrab = false, --Held NPC hurts other NPCs if false
 	harmlessthrown = false, --Thrown NPC hurts other NPCs if false
@@ -48,23 +47,20 @@ local BathinSettings = {
 	grabside=false,
 	grabtop=false,
 	staticdirection = true,
-	hp = 250,
-	mineID = 781,
-	shockwaveID = 782,
-	needleID = 783,
-	tailLightningID = 784,
-	iFramesSet = 1,
+	hp = 150,
+	projectileID = npcID + 1,
+	phanto1ID = nil,
+	phanto2ID = nil,
+	phanto3ID = nil,
+	iFramesSet = 0,
 	--An iFrame system that has the boss' frame be turned invisible from the set of frames periodically.
 	--Set 0 defines its hurtTimer until it is at its iFramesDelay
 	--Set 1 defines the same from Set 0 but whenever the boss has been harmed, it stacks up the iFramesDelay the more. The catch is that when the boss has been left alone after getting harmed, it resets the iFramesStacks so that the player can be able to jump on the boss for some time again.
 	iFramesDelay = 32,
 	iFramesDelayStack = 48,
-	jumpPointBGO = 780,
-	velocityBreakEffectID = 781,
-	tailLightningEffectID = 783,
 	
 	--A config that uses Enjil's/Emral's freezeHighlight.lua; if set to true the lua file of it needs to be in the local or episode folder.
-	useFreezeHightLight = true
+	useFreezeHightLight = false
 }
 
 --Applies NPC settings
@@ -73,21 +69,21 @@ npcManager.setNpcSettings(BathinSettings)
 --Register the vulnerable harm types for this NPC. The first table defines the harm types the NPC should be affected by, while the second maps an effect to each, if desired.
 npcManager.registerHarmTypes(npcID,
 	{
-		HARM_TYPE_JUMP,
+		--HARM_TYPE_JUMP,
 		HARM_TYPE_FROMBELOW,
 		HARM_TYPE_NPC,
 		HARM_TYPE_PROJECTILE_USED,
 		HARM_TYPE_LAVA,
 		HARM_TYPE_HELD,
 		--HARM_TYPE_TAIL,
-		HARM_TYPE_SPINJUMP,
+		--HARM_TYPE_SPINJUMP,
 		--HARM_TYPE_OFFSCREEN,
 		HARM_TYPE_SWORD
 	}, 
 	{
 		--[HARM_TYPE_JUMP]=10,
 		--[HARM_TYPE_FROMBELOW]=10,
-		[HARM_TYPE_NPC]=901,
+		[HARM_TYPE_NPC]=10,
 		--[HARM_TYPE_PROJECTILE_USED]=10,
 		--[HARM_TYPE_LAVA]={id=13, xoffset=0.5, xoffsetBack = 0, yoffset=1, yoffsetBack = 1.5},
 		--[HARM_TYPE_HELD]=10,
@@ -98,40 +94,15 @@ npcManager.registerHarmTypes(npcID,
 	}
 );
 
-local STATE_IDLE = 0
---Stays in one place for a breif moment
-local STATE_JUMP = 1
---Jumps around
-local STATE_MINE = 2
---Jumps in the air to lob 5 energy bombs
-local STATE_CHARGE = 3
---Rams at the player, exceeding at the speed of light
-local STATE_EARTH_PRISON = 4
---Charges electricity and uses his tail on the ground to emit shockwaves
-local STATE_CRUSH = 5
---Attempts to crush the player by jumping over the player and then slamming the player with his fists
-local STATE_ATTACH_TO_WALL = 6
---@MegaDood, I want you to either teleport him to his BGO on the wall or jump to the wall at the designated cordinates of the BGO
-local STATE_TRICK_NEEDLE = 7
---@MegaDood, I want you to apply this: Only when attached to walls, he will shoot roaming Trick Needles that go out of the arena once they collided against walls for a certain amount of collisions.
-local STATE_VELOCITY_BREAK = 8
---@MegaDood, after using trick needle, he will jump out of the wall and attempts to crush the player using his fists
-local STATE_TAIL_LIGHTNING = 9
---@MegaDood, make him use his tail to blast horizontal lightning at the player.
-local STATE_KILL = 10
---Just a kill animation
-
---@King DRACalgar, all done! -MegaDood
-
-
-local spawnOffset = {
-[-1] = 0,
-[1] = BathinSettings.width
-}
-
-local tailLightningOffset = {
-[-1] = (-BathinSettings.width * 1.5) + 56,
-[1] = BathinSettings.width - 80
+local STATE = {
+	IDLE = 0,
+	SUMMON = 1,
+	FLOAT = 2,
+	CALLEVENT = 3,
+	SHOOT = 4,
+	HURT = 5,
+	PHASE = 6,
+	KILL = 7,
 }
 
 local hurtCooldown = 160
