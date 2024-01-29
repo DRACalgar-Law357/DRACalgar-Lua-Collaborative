@@ -12,14 +12,14 @@ local id = NPC_ID
 local togeBroSettings = {
 	id = npcID,
 	--Sprite size
-	gfxheight = 128,
-	gfxwidth = 128,
+	gfxheight = 96,
+	gfxwidth = 96,
 	--Hitbox size. Bottom-center-bound to sprite size.
 	width = 64,
-	height = 58,
+	height = 32,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
-	gfxoffsety = 38,
+	gfxoffsety = 0,
 	--Frameloop-related
 	frames = 12,
 	framestyle = 1,
@@ -51,11 +51,11 @@ local togeBroSettings = {
 	--Define custom properties below
 	hp = 24,
 	idletime = 180,
-  shellReadyDelay = 32,
-  shellGroundedDelay = 240,
-  shellAirDelay = 240,
-  descendHeight = 3.5,
-  descendDelay = 80
+	shellReadyDelay = 32,
+	shellGroundedDelay = 240,
+	shellAirDelay = 240,
+	descendHeight = 3.5,
+	descendDelay = 80
 }
 
 --Applies NPC settings
@@ -157,12 +157,13 @@ function togeBro.onTickEndNPC(v)
 		end
   elseif data.state == STATE_SHELL then --Shell Attack where it chases the player horizontally.
     if v.ai1 == 0 then --Prepare Shell attack and then chase the player horizontally on the ground
-
+	v.speedX = 0
+	v.animationFrame = math.floor(lunatime.tick() / 6) % 4 + 3
     elseif v.ai1 == 1 then --Descend in the air
 
     elseif v.ai1 == 2 then --Prepares to fly over the player's vertical position in attempt to crush them
 
-    elseif v.ai1 == 3 then
+    elseif v.ai1 == 3 then --Drop to the ground
       
     end
 	elseif data.state == STATE_HURT then
