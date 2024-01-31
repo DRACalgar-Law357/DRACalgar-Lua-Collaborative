@@ -55,7 +55,9 @@ local togeBroSettings = {
 	shellGroundedDelay = 240,
 	shellAirDelay = 240,
 	descendHeight = 3.5,
-	descendDelay = 80
+	descendDelay = 80,
+	shellAcceleration = 0.2,
+	accelerationCap = 5
 }
 
 --Applies NPC settings
@@ -125,6 +127,7 @@ function togeBro.onTickEndNPC(v)
 		data.timer = 0
 		data.health = NPC.config[id].hp
 		data.state = STATE_IDLE
+		data.accel = 0
 	end
 
 		--Depending on the NPC, these checks must be handled differently
@@ -137,6 +140,12 @@ function togeBro.onTickEndNPC(v)
 		data.timer = 0
 		return
 	end
+	v.ai5 = Player.getNearest(v.x + v.width / 2, v.y + v.height / 2).idx
+	
+	local p = Player(v.ai5)
+	
+	local px = p.x + p.width / 2
+	local vx = v.x + v.width / 2
 	data.timer = data.timer + 1
   if data.state == STATE_SHELL and (v.ai1 == 2 or v.ai1 == 1) then
     v.nogravity = true
@@ -144,9 +153,13 @@ function togeBro.onTickEndNPC(v)
     v.nogravity = false
   end
 	if data.state == STATE_IDLE then --Wait for a set amount of time before doing something else
-		npcutils.faceNearestPlayer(v)
+		if px < v.x then
+			v.direction = -1
+		else
+			v.direction = 1
+		end
 		if data.timer < config.idletime - 8 then
-			v.animationFrame = math.floor(lunatime.tick() / 10) % 2
+			v.animationFrame = math.floor(data.timer / 10) % 2
 		else
 			v.animationFrame = 2
 		end
@@ -155,17 +168,68 @@ function togeBro.onTickEndNPC(v)
 			v.ai1 = 0
 			data.state = STATE_SHELL
 		end
-  elseif data.state == STATE_SHELL then --Shell Attack where it chases the player horizontally.
-    if v.ai1 == 0 then --Prepare Shell attack and then chase the player horizontally on the ground
-	v.speedX = 0
-	v.animationFrame = math.floor(lunatime.tick() / 6) % 4 + 3
-    elseif v.ai1 == 1 then --Descend in the air
-
-    elseif v.ai1 == 2 then --Prepares to fly over the player's vertical position in attempt to crush them
-
-    elseif v.ai1 == 3 then --Drop to the ground
-      
-    end
+	elseif data.state == STATE_SHELL then --Shell Attack where it chases the player horizontally.
+		if v.ai1 == 0 then --Prepare Shell attack and then chase the player horizontally on the ground
+			if data.timer < NPC.config[v.id].shellReadyDelay then
+				v.speedX = 0
+				data.accel = 0
+			else
+				if px < v.x then
+					v.direction = -1
+				else
+					v.direction = 1
+				end
+				data.accel = data.accel + (NPC.config[v.id].shellAcceleration * v.direction)
+				v.speedX = v.speedX + data.accel
+				
+				data.accel = math.clamp(data.accel, -NPC.config[v.id].accelerationCap, NPC.config[v.id].accelerationCap)
+			end
+			v.animationFrame = math.floor(data.timer / 6) % 4 + 3
+			if data.timer >= NPC.config[v.id].shellReadyDelay + NPC.config[v.id].shellGroundedDelay then
+				data.timer = 0
+				v.ai1 = 1
+			end
+		elseif v.ai1 == 1 then --Descend in the air
+			v.animationFrame = math.floor(data.timer / 6) % 4 + 3
+			if data.timer >= NPC.config[v.id].descendDelay then
+				v.speedY = 0
+			else
+				v.speedY = -NPC.config[v.id].descendHeight
+			end
+			if data.timer >= NPC.config[v.id].descendWaitDelay + NPC.config[v.id].descendDelay then
+				v.ai1 = 2
+				data.timer = 0
+				data.accel = 0
+			end
+		elseif v.ai1 == 2 then --Prepares to fly over the player's vertical position in attempt to crush them
+			if px < v.x then
+				v.direction = -1
+			else
+				v.direction = 1
+			end
+			data.accel = data.accel + (NPC.config[v.id].shellAcceleration * v.direction)
+			v.speedX = v.speedX + data.accel
+			v.speedY = 0
+			data.accel = math.clamp(data.accel, -NPC.config[v.id].accelerationCap, NPC.config[v.id].accelerationCap)
+			v.animationFrame = math.floor(data.timer / 6) % 4 + 7
+			if data.timer >= NPC.config[v.id].shellReadyDelay + NPC.config[v.id].shellGroundedDelay then
+				data.timer = 0
+				v.ai1 = 3
+				v.speedX = 0
+			end
+		elseif v.ai1 == 3 then --Drop to the ground
+			v.animationFrame = math.floor(data.timer / 6) % 4 + 7
+			if v.collidesBlockBottom then
+				data.timer = 0
+				v.ai1 = 0
+				data.state = STATE_IDLE
+			end
+		end
+		if v.ai1 <= 2 then
+			for k, n in  ipairs(Colliders.getColliding{a = v, b = NPC.HITTABLE, btype = Colliders.NPC, filter = npcFilter}) do
+		       		n:harm(HARM_TYPE_NPC)
+			end
+		end
 	elseif data.state == STATE_HURT then
 		v.animationFrame = 11
 		if data.timer == 1 then
@@ -173,7 +237,7 @@ function togeBro.onTickEndNPC(v)
 			v.speedY = -3
 			SFX.play("WL1 Boss Hit.wav")
 		end
-		if data.timer >= 56 then
+		if data.timer >= 64 then
 			data.timer = 0
 			data.state = STATE_SHELL
 			v.ai1 = 0
@@ -194,7 +258,7 @@ function togeBro.onTickEndNPC(v)
 		v:mem(0x120, FIELD_BOOL, false)
 	end
 	
-	if Colliders.collide(p, v) and not v.friendly and data.state ~= STATE_KILL and not Defines.cheat_donthurtme then
+	if Colliders.collide(p, v) and not v.friendly and ((data.state ~= STATE_HURT)) and not Defines.cheat_donthurtme then
 		p:harm()
 	end
 end
