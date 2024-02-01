@@ -2,6 +2,7 @@
 local npcManager = require("npcManager")
 local npcutils = require("npcs/npcutils")
 local klonoa = require("characters/klonoa")
+local colliders = require("colliders")
 klonoa.UngrabableNPCs[NPC_ID] = true
 --Create the library table
 local togeBro = {}
