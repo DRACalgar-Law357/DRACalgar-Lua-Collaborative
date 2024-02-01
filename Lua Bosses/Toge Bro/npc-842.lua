@@ -12,11 +12,11 @@ local id = NPC_ID
 local togeBroSettings = {
 	id = npcID,
 	--Sprite size
-	gfxheight = 96,
-	gfxwidth = 96,
+	gfxheight = 104,
+	gfxwidth = 80,
 	--Hitbox size. Bottom-center-bound to sprite size.
-	width = 64,
-	height = 32,
+	width = 58,
+	height = 40,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
 	gfxoffsety = 0,
