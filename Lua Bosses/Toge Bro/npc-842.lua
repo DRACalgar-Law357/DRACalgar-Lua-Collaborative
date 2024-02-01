@@ -268,35 +268,30 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 	local data = v.data
 	if v.id ~= npcID then return end
 
-		if data.state == STATE_IDLE then
-			if reason ~= HARM_TYPE_LAVA then
-				if reason == HARM_TYPE_JUMP or killReason == HARM_TYPE_SPINJUMP or killReason == HARM_TYPE_FROMBELOW then
-					SFX.play(2)
+	if data.state == STATE_IDLE then
+		if reason ~= HARM_TYPE_LAVA then
+			if reason == HARM_TYPE_JUMP or killReason == HARM_TYPE_SPINJUMP or killReason == HARM_TYPE_FROMBELOW then
+				SFX.play(2)
+				data.state = STATE_HURT
+				data.timer = 0
+				data.health = data.health - 8
+			elseif reason == HARM_TYPE_SWORD then
+				if v:mem(0x156, FIELD_WORD) <= 0 then
+					data.health = data.health - 8
 					data.state = STATE_HURT
 					data.timer = 0
-					data.health = data.health - 8
-				elseif reason == HARM_TYPE_SWORD then
-					if v:mem(0x156, FIELD_WORD) <= 0 then
-						data.health = data.health - 8
-						data.state = STATE_HURT
-						data.timer = 0
-						SFX.play(89)
-						v:mem(0x156, FIELD_WORD,20)
-					end
-					if Colliders.downSlash(player,v) then
-						player.speedY = -6
-					end
-				elseif reason == HARM_TYPE_NPC then
-					if culprit then
-						if type(culprit) == "NPC" then
-							if culprit.id == 13  then
-								SFX.play(9)
-								data.health = data.health - 1
-							else
-								data.health = data.health - 8
-								data.state = STATE_HURT
-								data.timer = 0
-							end
+					SFX.play(89)
+					v:mem(0x156, FIELD_WORD,20)
+				end
+				if Colliders.downSlash(player,v) then
+					player.speedY = -6
+				end
+			elseif reason == HARM_TYPE_NPC then
+				if culprit then
+					if type(culprit) == "NPC" then
+						if culprit.id == 13  then
+							SFX.play(9)
+							data.health = data.health - 1
 						else
 							data.health = data.health - 8
 							data.state = STATE_HURT
@@ -307,55 +302,59 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 						data.state = STATE_HURT
 						data.timer = 0
 					end
-				elseif reason == HARM_TYPE_LAVA and v ~= nil then
-					v:kill(HARM_TYPE_OFFSCREEN)
-				elseif v:mem(0x12, FIELD_WORD) == 2 then
-					v:kill(HARM_TYPE_OFFSCREEN)
 				else
+					data.health = data.health - 8
 					data.state = STATE_HURT
 					data.timer = 0
-					data.health = data.health - 8
 				end
-				if culprit then
-					if type(culprit) == "NPC" and (culprit.id ~= 195 and culprit.id ~= 50) and NPC.HITTABLE_MAP[culprit.id] then
-						culprit:kill(HARM_TYPE_NPC)
-					elseif culprit.__type == "Player" then
-						--Bit of code taken from the basegame chucks
-						if (culprit.x + 0.5 * culprit.width) < (v.x + v.width*0.5) then
-							culprit.speedX = -5
-						else
-							culprit.speedX = 5
-						end
-					elseif type(culprit) == "NPC" and (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45) and culprit.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
-						culprit:kill(HARM_TYPE_NPC)
-					end
-				end
-				if data.health <= 0 then
-					v:kill(HARM_TYPE_NPC)
-				elseif data.health > 0 then
-					v:mem(0x156,FIELD_WORD,60)
-				end
+			elseif reason == HARM_TYPE_LAVA and v ~= nil then
+				v:kill(HARM_TYPE_OFFSCREEN)
+			elseif v:mem(0x12, FIELD_WORD) == 2 then
+				v:kill(HARM_TYPE_OFFSCREEN)
 			else
-				v:kill(HARM_TYPE_LAVA)
+				data.state = STATE_HURT
+				data.timer = 0
+				data.health = data.health - 8
 			end
-		else
 			if culprit then
-				if Colliders.collide(culprit, v) then
-					if culprit.y < v.y and culprit:mem(0x50, FIELD_BOOL) and player.deathTimer <= 0 then
-						SFX.play(2)
-						--Bit of code taken from the basegame chucks
-						if (culprit.x + 0.5 * culprit.width) < (v.x + v.width*0.5) then
-							culprit.speedX = -5
-						else
-							culprit.speedX = 5
-						end
+				if type(culprit) == "NPC" and (culprit.id ~= 195 and culprit.id ~= 50) and NPC.HITTABLE_MAP[culprit.id] then
+					culprit:kill(HARM_TYPE_NPC)
+				elseif culprit.__type == "Player" then
+					--Bit of code taken from the basegame chucks
+					if (culprit.x + 0.5 * culprit.width) < (v.x + v.width*0.5) then
+						culprit.speedX = -5
 					else
-						culprit:harm()
+						culprit.speedX = 5
 					end
-				end
-				if type(culprit) == "NPC" and (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45) and culprit.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
+				elseif type(culprit) == "NPC" and (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45) and culprit.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
 					culprit:kill(HARM_TYPE_NPC)
 				end
+			end
+			if data.health <= 0 then
+				v:kill(HARM_TYPE_NPC)
+			elseif data.health > 0 then
+				v:mem(0x156,FIELD_WORD,60)
+			end
+		else
+			v:kill(HARM_TYPE_LAVA)
+		end
+	else
+		if culprit then
+			if Colliders.collide(culprit, v) then
+				if culprit.y < v.y and culprit:mem(0x50, FIELD_BOOL) and player.deathTimer <= 0 then
+					SFX.play(2)
+					--Bit of code taken from the basegame chucks
+					if (culprit.x + 0.5 * culprit.width) < (v.x + v.width*0.5) then
+						culprit.speedX = -5
+					else
+						culprit.speedX = 5
+					end
+				else
+					culprit:harm()
+				end
+			end
+			if type(culprit) == "NPC" and (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45) and culprit.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
+				culprit:kill(HARM_TYPE_NPC)
 			end
 		end
 	end
