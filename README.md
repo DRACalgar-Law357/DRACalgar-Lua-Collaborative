@@ -1,1 +1,1 @@
-Just a collection of my Lua Bosses for SMBX2
+This is a collection meant for users to test the bosses opened for testing. As I make bosses or if I contributed into making a boss with a user, I will put them available. Further changes will be made such as organzing files (in which I am currently focusing), add boss entries, and looking forward to fix issues or bugs. I may be open to accomodate suggestions.
