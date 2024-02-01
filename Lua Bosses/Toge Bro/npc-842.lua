@@ -227,7 +227,7 @@ function togeBro.onTickEndNPC(v)
 		end
 		if v.ai1 <= 2 then
 			for k, n in  ipairs(Colliders.getColliding{a = v, b = NPC.HITTABLE, btype = Colliders.NPC, filter = npcFilter}) do
-		       		n:harm(HARM_TYPE_NPC)
+		       	n:harm(HARM_TYPE_NPC)
 			end
 		end
 	elseif data.state == STATE_HURT then
