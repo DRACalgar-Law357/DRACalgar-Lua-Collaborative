@@ -13,8 +13,8 @@ local id = NPC_ID
 local togeBroSettings = {
 	id = npcID,
 	--Sprite size
-	gfxheight = 104,
-	gfxwidth = 80,
+	gfxheight = 80,
+	gfxwidth = 104,
 	--Hitbox size. Bottom-center-bound to sprite size.
 	width = 58,
 	height = 40,
@@ -33,7 +33,7 @@ local togeBroSettings = {
 	playerblock = false,
 	playerblocktop = false, --Also handles other NPCs walking atop this NPC.
 
-	nohurt=false,
+	nohurt=true,
 	nogravity = false,
 	noblockcollision = false,
 	nofireball = false,
@@ -49,16 +49,20 @@ local togeBroSettings = {
 	grabside=false,
 	grabtop=false,
 
+	score = 5,
+
 	--Define custom properties below
-	hp = 24,
 	idletime = 180,
 	shellReadyDelay = 32,
 	shellGroundedDelay = 240,
 	shellAirDelay = 240,
-	descendHeight = 3.5,
+	descendHeight = 2,
 	descendDelay = 80,
+	descendWaitDelay = 40,
 	shellAcceleration = 0.2,
-	accelerationCap = 5
+	accelerationCap = 5,
+	--Set debug = true to view his belly hitbox where the player can jump into it to damage him
+	debug = false
 }
 
 --Applies NPC settings
@@ -96,6 +100,7 @@ npcManager.registerHarmTypes(npcID,
 local STATE_IDLE = 1
 local STATE_SHELL = 2
 local STATE_HURT = 3
+local STATE_FRIENDLY = 4
 
 --Register events
 function togeBro.onInitAPI()
@@ -113,6 +118,14 @@ function togeBro.onTickEndNPC(v)
 	local data = v.data
 	local settings = data._settings
 	local p = Player.getNearest(v.x + v.width / 2, v.y + v.height / 2)
+
+	data.bellyBox = Colliders.Box(v.x - (v.width * 2), v.y - (v.height * 1.5), NPC.config[v.id].width - 4, NPC.config[v.id].height/2 + 2)
+	data.bellyBox.x = v.x + v.width/2 - data.bellyBox.width/2
+	data.bellyBox.y = v.y + v.height - data.bellyBox.height/2
+	if NPC.config[v.id].debug == true then
+		data.bellyBox:Debug(true)
+	end
+	
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
@@ -125,9 +138,16 @@ function togeBro.onTickEndNPC(v)
 
 		--Initialize necessary data.
 		data.initialized = true
+		settings.health = settings.health or 24
+		settings.pinchShell = settings.pinchShell or false
+
 		data.timer = 0
-		data.health = NPC.config[id].hp
-		data.state = STATE_IDLE
+		data.health = settings.health
+		if v.friendly == false then
+			data.state = STATE_IDLE
+		else
+			data.state = STATE_FRIENDLY
+		end
 		data.accel = 0
 	end
 
@@ -148,11 +168,6 @@ function togeBro.onTickEndNPC(v)
 	local px = p.x + p.width / 2
 	local vx = v.x + v.width / 2
 	data.timer = data.timer + 1
-  if data.state == STATE_SHELL and (v.ai1 == 2 or v.ai1 == 1) then
-    v.nogravity = true
-  else
-    v.nogravity = false
-  end
 	if data.state == STATE_IDLE then --Wait for a set amount of time before doing something else
 		if px < v.x then
 			v.direction = -1
@@ -160,13 +175,14 @@ function togeBro.onTickEndNPC(v)
 			v.direction = 1
 		end
 		if data.timer < config.idletime - 8 then
-			v.animationFrame = math.floor(data.timer / 10) % 2
+			v.animationFrame = math.floor(data.timer / 12) % 2
 		else
 			v.animationFrame = 2
 		end
 		if data.timer >= config.idletime then
 			data.timer = 0
 			v.ai1 = 0
+			v.ai2 = 0
 			data.state = STATE_SHELL
 		end
 	elseif data.state == STATE_SHELL then --Shell Attack where it chases the player horizontally.
@@ -188,19 +204,29 @@ function togeBro.onTickEndNPC(v)
 			v.animationFrame = math.floor(data.timer / 6) % 4 + 3
 			if data.timer >= NPC.config[v.id].shellReadyDelay + NPC.config[v.id].shellGroundedDelay then
 				data.timer = 0
-				v.ai1 = 1
+				if settings.pinchShell == true and data.health <= settings.health / 2 then
+					v.ai1 = 4
+				else
+					v.ai1 = 1
+				end
+				v.speedX = 0
 			end
 		elseif v.ai1 == 1 then --Descend in the air
 			v.animationFrame = math.floor(data.timer / 6) % 4 + 3
 			if data.timer >= NPC.config[v.id].descendDelay then
-				v.speedY = 0
+				v.speedY = -defines.npc_grav
 			else
-				v.speedY = -NPC.config[v.id].descendHeight
+				v.speedY = -NPC.config[v.id].descendHeight - defines.npc_grav
 			end
 			if data.timer >= NPC.config[v.id].descendWaitDelay + NPC.config[v.id].descendDelay then
 				v.ai1 = 2
 				data.timer = 0
 				data.accel = 0
+			end
+			if Colliders.collide(p,data.bellyBox) and not v.friendly and p:mem(0x140,FIELD_WORD) <= 0 then
+				data.state = STATE_HURT
+				data.timer = 0
+				data.health = data.health - 8
 			end
 		elseif v.ai1 == 2 then --Prepares to fly over the player's vertical position in attempt to crush them
 			if px < v.x then
@@ -210,7 +236,7 @@ function togeBro.onTickEndNPC(v)
 			end
 			data.accel = data.accel + (NPC.config[v.id].shellAcceleration * v.direction)
 			v.speedX = v.speedX + data.accel
-			v.speedY = 0
+			v.speedY = -defines.npc_grav
 			data.accel = math.clamp(data.accel, -NPC.config[v.id].accelerationCap, NPC.config[v.id].accelerationCap)
 			v.animationFrame = math.floor(data.timer / 6) % 4 + 7
 			if data.timer >= NPC.config[v.id].shellReadyDelay + NPC.config[v.id].shellGroundedDelay then
@@ -220,10 +246,44 @@ function togeBro.onTickEndNPC(v)
 			end
 		elseif v.ai1 == 3 then --Drop to the ground
 			v.animationFrame = math.floor(data.timer / 6) % 4 + 7
+			v.speedY = 6
 			if v.collidesBlockBottom then
 				data.timer = 0
 				v.ai1 = 0
 				data.state = STATE_IDLE
+			end
+		elseif v.ai1 == 4 then --Pinch: Crushes the player
+			v.ai2 = v.ai2 + 1
+			if v.ai2 > 32 and v.ai2 <= 80 then
+				v.speedY = -Defines.npc_grav
+				v.speedX = 0
+			end
+			if v.ai2 > 80 then
+				v.speedY = 9
+				v.speedX = 0
+				if v.collidesBlockBottom then
+					Defines.earthquake = 2
+					SFX.play(37)
+					Animation.spawn(10, v.x, v.y + v.height)
+					Animation.spawn(10, v.x + v.width, v.y + v.height)
+					v.ai2 = 0
+					v.speedX = 0
+				end
+			end
+			if v.ai2 == 9 and v.collidesBlockBottom then
+				--Bit of code here by Murphmario
+				local bombxspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
+				v.speedX = bombxspeed.x / 24
+			end
+			v.animationFrame = math.floor(data.timer / 6) % 4 + 3
+			if v.ai2 >= 9 and v.ai2 <= 32 then
+				v.speedY = -7 - Defines.npc_grav
+			end
+			if data.timer >= 300 and v.collidesBlockBottom then
+				data.timer = 0
+				v.ai1 = 0
+				data.state = STATE_IDLE
+				v.ai2 = 0
 			end
 		end
 		if v.ai1 <= 2 then
@@ -243,6 +303,10 @@ function togeBro.onTickEndNPC(v)
 			data.state = STATE_SHELL
 			v.ai1 = 0
 		end
+	elseif data.state == STATE_FRIENDLY then
+		v.friendly = true
+		v.speedX = 0
+		v.animationFrame = math.floor(data.timer / 12) % 2
 	end
 
 		
@@ -259,7 +323,7 @@ function togeBro.onTickEndNPC(v)
 		v:mem(0x120, FIELD_BOOL, false)
 	end
 	
-	if Colliders.collide(p, v) and not v.friendly and ((data.state ~= STATE_HURT)) and not Defines.cheat_donthurtme then
+	if Colliders.collide(p, v) and not v.friendly and data.state ~= STATE_HURT and not Defines.cheat_donthurtme then
 		p:harm()
 	end
 end
