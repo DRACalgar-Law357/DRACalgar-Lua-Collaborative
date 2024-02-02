@@ -7,7 +7,6 @@
 			"name": "health",
 			"title": "Health",
 			"type": "int",
-			"tooltip": "How many hits it takes the NPC to die. Fireballs decrease 1 hps,  and other harms decrease 4 hps.",
 			"value-default": 24,
 			"value-min": 1,
 			"value-max": 300
@@ -15,7 +14,8 @@
 
 		{
 			"control": "description",
-			"text": ""
+			"name": ".",
+			"text": "Damage values are: <br><b>Fireballs:</b> 1, <br><b>Strong Attacks</b>(4)"
 		},
 
 		{
