@@ -1,0 +1,1 @@
+This is Funfun, also known as Devil's Head, from Wario Land 1. He is immune to fireballs and jumps, so the player must throw something at him. Funfun will occasionally snot out carryable fireballs and stick his tongue to break block. Funfun will only need 3 hits to take him down. MrNameless took on my request to make Funfun. 
