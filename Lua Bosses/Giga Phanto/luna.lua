@@ -1,0 +1,1 @@
+local freeze = require("freezeHighlight")

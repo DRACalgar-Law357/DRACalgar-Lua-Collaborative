@@ -210,15 +210,20 @@ ID:281;X:-199456;Y:-200128;
 ID:283;X:-199552;Y:-200128;
 BGO_END
 NPC
-ID:799;X:-199318;Y:-200460;D:-1;BS:1;ED:"Defeat";
+ID:799;X:-199318;Y:-200460;D:-1;BS:1;ED:"Victory";
+ID:41;X:-199505;Y:-200194;D:-1;LR:"Orb";
+ID:249;X:-199552;Y:-200160;D:-1;
+ID:249;X:-199456;Y:-200160;D:-1;
 NPC_END
 LAYERS
 LR:"Default";
 LR:"Destroyed Blocks";HD:1;
 LR:"Spawned NPCs";
+LR:"Orb";HD:1;
 LAYERS_END
 EVENTS_CLASSIC
 ET:"Level - Start";AS:0;AX:0;AY:0;
 ET:"P Switch - Start";AS:0;AX:0;AY:0;
 ET:"P Switch - End";AS:0;AX:0;AY:0;
+ET:"Victory";LS:["Orb"];SSS:["ID\:0\;MI\:0\;"];AS:0;AX:0;AY:0;
 EVENTS_CLASSIC_END
