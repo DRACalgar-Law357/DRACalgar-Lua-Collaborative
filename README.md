@@ -1,1 +1,7 @@
-This is a collection meant for users to test the bosses opened for testing in SMBX2 with the use of lua. As I make bosses or if I contributed into making a boss with a user, I will put them available. Further changes will be made such as organzing files (in which I am currently focusing), add boss entries, and looking forward to fix issues or bugs. I may be open to accomodate suggestions.
+This is a collection meant for users to help users collaborate, make, and test custom assets for SMBX2 if they feel comfortable to. Certain assets from users and I will be putten in this repository for accomodations for requests and projects.
+
+We currently have the following contributors dedicated to help:
+-Murphmario
+-Suckerman7 GM
+-Prism Emerald
+-MegaDood
