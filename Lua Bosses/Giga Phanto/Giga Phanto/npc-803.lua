@@ -14,7 +14,7 @@ local phanto = {}
 local settings = {
 	id = npcID,
 	aggroLevel = 1,
-	chaseDuration = 480
+	chaseDuration = 720
 }
 
 phantoServantsAI.register(settings)

@@ -226,10 +226,7 @@ function fire.onTickNPC(v)
 		data.state = data.state + 1
 	end
 	local framedirection = 0
-	if data.dir == 1 then
-		framedirection = cfg.frames
-	end
-	if v.animationFrame == 4 + framedirection then
+	if v.animationFrame == 5 + framedirection then
 		v:kill(9)
 	end
 end
@@ -244,9 +241,6 @@ function fire.onDrawNPC(v)
 
 	v.animationTimer = 500
 	local framedirection = 0
-	if data.dir == 1 then
-		framedirection = cfg.frames
-	end
 	if data.timer then
 		v.animationFrame = (math.floor(data.timer/cfg.framespeed)%cfg.frames) + framedirection
 	else

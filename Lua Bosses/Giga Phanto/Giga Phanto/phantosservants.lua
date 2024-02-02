@@ -67,7 +67,7 @@ local sharedSettings = {
     
     aggroLevel = 0, -- behaviour when chasing the player: 0=chases as a phanto would, 1=chases and attempts to outsmart the player, 2=chases faster
 
-	chaseDuration = 420
+	chaseDuration = 540
 }
 
 function phantoServants.register(config)
@@ -80,7 +80,7 @@ end
 
 
 --Custom local definitions below
-local STATE = {INACTIVE=1, AWAKEN=2, SHAKE=3, FOLLOW=4, HOSTAGE=5}
+local STATE = {INACTIVE=1, AWAKEN=2, SHAKE=3, FOLLOW=4, HOSTAGE=5 , OUTSMART = 6}
 local soundfx = {
 	awaken = Misc.resolveSoundFile("phanto-awaken"),
 	shake = Misc.resolveSoundFile("phanto-shake"),
@@ -132,6 +132,8 @@ function phantoServants.onTickEndNPC(v)
 		v.ai1 = 0
 		v.ai2 = 0
 		v.ai3 = 0
+		v.ai4 = 0
+		v.ai5 = 0
 		data.startSection = currentSection
 		data.currentScreenLeft = v.x
 		data.targetPlayer = nil
@@ -174,7 +176,7 @@ function phantoServants.onTickEndNPC(v)
 	end
 
 	-- Handle the move sound effect, determining the target player and following them across sections
-	if  data.state == STATE.AWAKEN  or  data.state == STATE.SHAKE  or  data.state == STATE.FOLLOW  then
+	if  data.state == STATE.AWAKEN  or  data.state == STATE.SHAKE  or  data.state == STATE.FOLLOW  or data.state == STATE.OUTSMART  then
 		-- Reset target player
 		local sectionToCheck = currentSection
 
@@ -294,27 +296,35 @@ function phantoServants.onTickEndNPC(v)
 		local chaseAcceleration = 0.15
 		local direction = 1
 		if config.aggroLevel == 2 then verticalMovement = 0.2 end
-		if v.x + v.width/2 < data.targetPlayer.x then
-			direction = -1
-		else
+		local targetP = data.targetPlayer
+		if v.x + v.width/2 < targetP.x+0.5*targetP.width then
 			direction = 1
+		else
+			direction = -1
 		end
-		if lunatime.tick() % 240 >= 160 then
-			if math.abs(data.targetPlayer.x - (v.x + v.width/2)) < 320 then
+		
+		if v.ai5 % 240 < 120 then
+			if math.abs(targetP.x+0.5*targetP.width - (v.x + v.width/2)) < 256 then
 				chaseAcceleration = chaseAcceleration * -direction
 			else
 				chaseAcceleration = chaseAcceleration * direction
 			end
 		else
-			if math.abs(data.targetPlayer.x - (v.x + v.width/2)) < 320 then
-				chaseAcceleration = chaseAcceleration * direction
-			else
-				chaseAcceleration = chaseAcceleration * -direction
-			end
+			chaseAcceleration = chaseAcceleration * direction
 		end
 
 		v.speedX = math.clamp(v.speedX + chaseAcceleration, -5, 5)
 		center = vector.v2(v.x+0.5*v.width, v.y+0.5*v.height)
+		v.ai5 = v.ai5 + 1
+		if NPC.config[v.id].aggroLevel == 1 then
+			v.ai4 = v.ai4 + 1
+			if v.ai4 == 240 then
+				v.ai4 = 0
+				v.speedX = 0
+				v.speedY = 0
+				data.state = STATE.OUTSMART
+			end
+		end
 
 
 	-- HOSTAGE
@@ -330,6 +340,21 @@ function phantoServants.onTickEndNPC(v)
 			data.currentScreenLeft = v.x
 			data.state = STATE.FOLLOW
 			data.startTick = lunatime.tick()
+		end
+	--OUTSMART
+	elseif  data.state == STATE.OUTSMART  then
+		v.ai4 = v.ai4 + 1
+		if v.ai4 == 1 then v.speedX = 0 v.speedY = 0 end
+		if v.ai4 == 32 then
+			v.speedX = RNG.irandomEntry{-2.5,0,2.5}
+			v.speedY = RNG.irandomEntry{-2.5,0,2.5}
+			SFX.play(soundfx.move)
+		elseif v.ai4 == 64 then
+			v.speedX = 0
+			v.speedY = 0
+		elseif v.ai4 >= 96 then
+			v.ai4 = 0
+			data.state = STATE.OUTSMART
 		end
 	end
 

@@ -53,7 +53,7 @@ local gigaPhantoSettings = {
 	phantoNormalID = npcID + 3,
 	phantoAggroID = npcID + 4,
 	phantoFuriousID = npcID + 5,
-	iFramesSet = 1,
+	iFramesSet = 0,
 	--An iFrame system that has the boss' frame be turned invisible from the set of frames periodically.
 	--Set 0 defines its hurtTimer until it is at its iFramesDelay
 	--Set 1 defines the same from Set 0 but whenever the boss has been harmed, it stacks up the iFramesDelay the more. The catch is that when the boss has been left alone after getting harmed, it resets the iFramesStacks so that the player can be able to jump on the boss for some time again.
@@ -66,7 +66,7 @@ local gigaPhantoSettings = {
 	},
 	
 	--A config that uses Enjil's/Emral's freezeHighlight.lua; if set to true the lua file of it needs to be in the local or episode folder.
-	useFreezeHightLight = false
+	useFreezeHightLight = true
 }
 
 --Applies NPC settings
@@ -159,7 +159,7 @@ function gigaPhanto.onTickEndNPC(v)
 		--Initialize necessary data.
 		data.initialized = true
 
-		settings.hp = settings.hp or 150
+		settings.hp = settings.hp or 120
 		settings.summonSet = settings.summonSet or 0
 
 		data.timer = data.timer or 0
@@ -327,9 +327,7 @@ function gigaPhanto.onTickEndNPC(v)
 			v.animationFrame = 0
 		end
 		if data.timer == 1 then SFX.play("Boss Hurt 2.wav") defines.earthquake = 4 end
-		if data.timer >= 40 then
-			v.x=v.x+(math.sin(-data.timer/5)*3 / 3)
-		end
+		v.y=v.y+(math.sin(-data.timer/5)*3 / 3)
 		if data.timer >= 96 then
 			data.timer = 0
 			SFX.play("Air Bullet.wav")
@@ -419,9 +417,7 @@ function gigaPhanto.onTickEndNPC(v)
 			v.animationFrame = 0
 		end
 		if data.timer == 1 then SFX.play("Boss Hurt 2.wav") defines.earthquake = 4 end
-		if data.timer >= 40 then
-			v.x=v.x+(math.sin(-data.timer/5)*3 / 3)
-		end
+		v.x=v.x+(math.sin(-data.timer/5)*3 / 3)
 		if data.timer >= 96 then
 			data.timer = 0
 			SFX.play("Air Bullet.wav")
@@ -440,11 +436,10 @@ function gigaPhanto.onTickEndNPC(v)
 					n.speedY = -2
 					n.direction = 1
 				elseif i == 3 then
+					npcutils.faceNearestPlayer(n)
 					n.speedX = 0
 					n.speedY = -4
-					npcutils.faceNearestPlayer(n)
 				end
-				n:mem(0x08,FIELD_BOOL,true)
 			end
 			data.state = STATE.IDLE
 		end
@@ -523,7 +518,7 @@ function gigaPhanto.onNPCHarm(eventObj, v, reason, culprit)
 	local data = v.data
 	if v.id ~= npcID then return end
 
-			if data.hurtPlayer == false then
+			if data.iFrames == false then
 				local fromFireball = (culprit and culprit.__type == "NPC" and culprit.id == 13 )
 				local hpd = 10
 				if fromFireball then
@@ -562,10 +557,6 @@ function gigaPhanto.onNPCHarm(eventObj, v, reason, culprit)
 				end
 				
 				data.health = data.health - hpd
-			else
-				if culprit and culprit.__type == "Player" then
-					player:harm()
-				end
 			end
 			if culprit then
 				if type(culprit) == "NPC" and (culprit.id ~= 195 and culprit.id ~= 50) and NPC.HITTABLE_MAP[culprit.id] then
