@@ -159,7 +159,6 @@ function togeBro.onTickEndNPC(v)
 		--Handling
 		data.state = STATE_IDLE
 		data.timer = 0
-		return
 	end
 	v.ai5 = Player.getNearest(v.x + v.width / 2, v.y + v.height / 2).idx
 	
@@ -223,7 +222,7 @@ function togeBro.onTickEndNPC(v)
 				data.timer = 0
 				data.accel = 0
 			end
-			if Colliders.collide(p,data.bellyBox) and not v.friendly and p:mem(0x140,FIELD_WORD) <= 0 then
+			if Colliders.collide(p,data.bellyBox) and not v.friendly and p:mem(0x140,FIELD_WORD) <= 0 and p.speedY < 0 then
 				data.state = STATE_HURT
 				data.timer = 0
 				data.health = data.health - 8
@@ -326,6 +325,10 @@ function togeBro.onTickEndNPC(v)
 	if Colliders.collide(p, v) and not v.friendly and data.state ~= STATE_HURT and not Defines.cheat_donthurtme then
 		p:harm()
 	end
+
+	if data.health <= 0 then
+		v:kill(HARM_TYPE_NPC)
+	end
 end
 
 
@@ -403,6 +406,17 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 		else
 			v:kill(HARM_TYPE_LAVA)
 		end
+		--Interact with Superballs and bullets from Marine Pop and Sky Pop for minor damage
+		for _,n in ipairs(NPC.getIntersecting(v.x, v.y, v.x + v.width, v.y + v.height)) do
+			if NPC.config[n.id].SMLDamageSystem then
+				if v:mem(0x156, FIELD_WORD) <= 0 then
+					data.hp = data.hp - 1
+					v:mem(0x156, FIELD_WORD,5)
+					SFX.play(9)
+					Animation.spawn(75, n.x, n.y)
+				end
+			end
+		end
 	else
 		if culprit then
 			if Colliders.collide(culprit, v) then
@@ -422,6 +436,52 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 				culprit:kill(HARM_TYPE_NPC)
 			end
 		end
+		--Special interactions in his shell
+		if data.state == STATE_SHELL and v.ai1 == 2 and (reason == HARM_TYPE_NPC or reason == HARM_TYPE_PROJECTILE_USED or reason == HARM_TYPE_SWORD) then
+			if reason == HARM_TYPE_NPC or reason == HARM_TYPE_PROJECTILE_USED then
+				if culprit then
+					if Colliders.collide(culprit, v) then
+						if culprit.y < v.y then
+							if type(culprit) == "NPC" then
+								if culprit.id == 13  then
+									SFX.play(9)
+									data.health = data.health - 1
+								else
+									data.health = data.health - 8
+									data.state = STATE_HURT
+									data.timer = 0
+								end
+							else
+								data.health = data.health - 8
+								data.state = STATE_HURT
+								data.timer = 0
+							end
+						end
+					end
+				end
+				for _,n in ipairs(NPC.getIntersecting(v.x, v.y, v.x + v.width, v.y + v.height / 2)) do
+					if NPC.config[n.id].SMLDamageSystem then
+						if v:mem(0x156, FIELD_WORD) <= 0 then
+							data.hp = data.hp - 1
+							v:mem(0x156, FIELD_WORD,5)
+							SFX.play(9)
+							Animation.spawn(75, n.x, n.y)
+						end
+					end
+				end
+			elseif reason == HARM_TYPE_SWORD then
+				if v:mem(0x156, FIELD_WORD) <= 0 then
+					if Colliders.downSlash(player,v) then
+						player.speedY = -6
+						data.health = data.health - 8
+						data.state = STATE_HURT
+						data.timer = 0
+						SFX.play(89)
+						v:mem(0x156, FIELD_WORD,20)
+					end
+				end
+			end
+ 		end
 	end
 	eventObj.cancelled = true
 end
@@ -429,7 +489,7 @@ end
 function togeBro.onNPCKill(eventObj,v,reason)
 	local data = v.data
 	if v.id ~= npcID then return end
-  if reason == HARM_TYPE_LAVA or reason == HARM_TYPE_OFFSCREEN then return end
+	if reason == HARM_TYPE_LAVA or reason == HARM_TYPE_OFFSCREEN then return end
 	if v.legacyBoss then
 	  local ball = NPC.spawn(16, v.x, v.y)
 		ball.x = ball.x + ((v.width - ball.width) / 2)
@@ -439,7 +499,7 @@ function togeBro.onNPCKill(eventObj,v,reason)
 				
 		SFX.play(20)
 	end
-  SFX.play("WL1 Boss Dead.wav")
+	SFX.play("WL1 Boss Dead.wav")
 end
 
 --Gotta return the library table!
