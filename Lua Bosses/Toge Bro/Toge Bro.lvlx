@@ -319,19 +319,22 @@ ID:91;X:-199264;Y:-200192;
 ID:91;X:-199264;Y:-200160;
 BGO_END
 NPC
-ID:842;X:-199325;Y:-200136;D:-1;BS:1;XTRA:"{\n    \"health\"\: 32\,\n    \"pinchShell\"\: true\n}\n";
 ID:9;X:-199776;Y:-200288;D:-1;NM:1;
 ID:9;X:-199776;Y:-200256;D:-1;NM:1;
 ID:91;X:-199744;Y:-200096;D:-1;CN:45;GE:1;GT:1;GD:1;GM:100;
 ID:91;X:-199344;Y:-200096;D:-1;CN:45;GE:1;GT:1;GD:1;GM:100;
+ID:842;X:-199325;Y:-200136;D:-1;ED:"Victory";XTRA:"{\n    \"pinchShell\"\: true\n}\n";
+ID:41;X:-199552;Y:-200288;D:-1;LR:"Orb";
 NPC_END
 LAYERS
 LR:"Default";
 LR:"Destroyed Blocks";HD:1;
 LR:"Spawned NPCs";
+LR:"Orb";HD:1;
 LAYERS_END
 EVENTS_CLASSIC
 ET:"Level - Start";AS:0;AX:0;AY:0;
 ET:"P Switch - Start";AS:0;AX:0;AY:0;
 ET:"P Switch - End";AS:0;AX:0;AY:0;
+ET:"Victory";LS:["Orb"];SSS:["ID\:0\;MI\:0\;"];AS:0;AX:0;AY:0;
 EVENTS_CLASSIC_END
