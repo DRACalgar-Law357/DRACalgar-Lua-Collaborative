@@ -1,0 +1,203 @@
+{
+	"style" : "groupbox",
+	"title" : "Shield Plant Configurations",
+	"layout": [	
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "enemyID",
+            "title": "Enemy ID",
+			"value-default": 166,
+			"value-min": 1,
+			"value-max": 1000,
+			"single-step": 1
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "enemyIDPinch",
+            "title": "Enemy ID (Pinch)",
+			"value-default": 19,
+			"value-min": 1,
+			"value-max": 1000,
+			"single-step": 1
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "projectileID",
+            "title": "Projectile ID",
+			"value-default": 811,
+			"value-min": 1,
+			"value-max": 1000,
+			"single-step": 1
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "projectileIDPinch",
+            "title": "Projectile ID (Pinch)",
+			"value-default": 811,
+			"value-min": 1,
+			"value-max": 1000,
+			"single-step": 1
+		},
+        {
+			"control": "spinBox",
+			"type": "double",
+			"name": "jumpHeight",
+			"title": "Jump Height",
+			"value-default": 7.5,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+		{
+			"control": "spinBox",
+			"type": "double",
+			"name": "jumpHeightHigh",
+			"title": "High Jump Height",
+			"value-default": 11,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+        {
+			"control": "spinBox",
+			"type": "double",
+			"name": "jumpHeightPinch",
+			"title": "Jump Height Pinch",
+			"value-default": 6.5,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+		{
+			"control": "spinBox",
+			"type": "double",
+			"name": "jumpHeightHighPinch",
+			"title": "High Jump Height Pinch",
+			"value-default": 10,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+        {
+			"control": "spinBox",
+			"type": "double",
+			"name": "jumpSpeed",
+			"title": "Jump Speed",
+			"value-default": 3,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+		{
+			"control": "spinBox",
+			"type": "double",
+			"name": "jumpSpeedHigh",
+			"title": "High Jump Speed",
+			"value-default": 3,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+        {
+			"control": "spinBox",
+			"type": "double",
+			"name": "jumpSpeedPinch",
+			"title": "Jump Speed Pinch",
+			"value-default": 4,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+		{
+			"control": "spinBox",
+			"type": "double",
+			"name": "jumpSpeedHighPinch",
+			"title": "High Jump Speed Pinch",
+			"value-default": 5,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+        {
+			"control": "spinBox",
+			"type": "double",
+			"name": "projectileSpeedX",
+			"title": "Projectile Speed X",
+			"value-default": 4,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+        {
+			"control": "spinBox",
+			"type": "double",
+			"name": "projectileSpeedYMin",
+			"title": "Projectile Speed Y Min",
+			"value-default": 5,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+		{
+			"control": "spinBox",
+			"type": "double",
+			"name": "projectileSpeedYMax",
+			"title": "Projectile Speed Y Max",
+			"value-default": 7,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+        {
+			"control": "spinBox",
+			"type": "double",
+			"name": "projectileSpeedXPinch",
+			"title": "Projectile Speed X Pinch",
+			"value-default": 5,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+        {
+			"control": "spinBox",
+			"type": "double",
+			"name": "projectileSpeedYMinPinch",
+			"title": "Projectile Speed Y Min Pinch",
+			"value-default": 6,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+		{
+			"control": "spinBox",
+			"type": "double",
+			"name": "projectileSpeedYMaxPinch",
+			"title": "Projectile Speed Y Max Pinch",
+			"value-default": 8,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "hp",
+			"title": "Health",
+			"value-default": 6,
+			"value-min": 1,
+			"value-max": 20,
+			"single-step": 1
+		},
+        {
+			"control": "checkbox",
+			"name": "intro",
+			"title": "Intro?",
+			"text-visible": true,
+			"value-default": true
+		}
+		]
+}
