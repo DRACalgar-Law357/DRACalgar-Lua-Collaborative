@@ -87,7 +87,7 @@ npcManager.registerHarmTypes(npcID,
 		--[HARM_TYPE_FROMBELOW]=10,
 		[HARM_TYPE_NPC]=npcID,
 		--[HARM_TYPE_PROJECTILE_USED]=10,
-		[HARM_TYPE_LAVA]={id=13, xoffset=0.5, xoffsetBack = 0, yoffset=1, yoffsetBack = 1.5},
+		[HARM_TYPE_LAVA]=npcID,
 		--[HARM_TYPE_HELD]=10,
 		--[HARM_TYPE_TAIL]=10,
 		--[HARM_TYPE_SPINJUMP]=10,
@@ -375,8 +375,6 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 					data.state = STATE_HURT
 					data.timer = 0
 				end
-			elseif reason == HARM_TYPE_LAVA and v ~= nil then
-				v:kill(HARM_TYPE_OFFSCREEN)
 			elseif v:mem(0x12, FIELD_WORD) == 2 then
 				v:kill(HARM_TYPE_OFFSCREEN)
 			else
@@ -489,8 +487,8 @@ end
 function togeBro.onNPCKill(eventObj,v,reason)
 	local data = v.data
 	if v.id ~= npcID then return end
-	if reason == HARM_TYPE_LAVA or reason == HARM_TYPE_OFFSCREEN then return end
-	if v.legacyBoss then
+	if reason == HARM_TYPE_OFFSCREEN then return end
+	if v.legacyBoss and reason ~= HARM_TYPE_LAVA then
 	  local ball = NPC.spawn(16, v.x, v.y)
 		ball.x = ball.x + ((v.width - ball.width) / 2)
 		ball.y = ball.y + ((v.height - ball.height) / 2)
