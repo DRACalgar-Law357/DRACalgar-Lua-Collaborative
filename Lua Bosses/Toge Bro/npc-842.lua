@@ -498,6 +498,9 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 										data.health = data.health - 1
 									end
 								end
+								if type(culprit) == "NPC" and (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45) and culprit.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
+									culprit:kill(HARM_TYPE_NPC)
+								end
 							elseif culprit.__type == "Player" and (culprit.y < v.y and (v.ai1 == 2 or v.ai1 == 3)) then
 								data.health = data.health - 8
 								data.state = STATE_HURT
@@ -507,6 +510,22 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 								data.health = data.health - 8
 								data.state = STATE_HURT
 								data.timer = 0
+							end
+						else
+							if culprit then
+								if Colliders.collide(culprit, v) then
+									if culprit.y < v.y and culprit:mem(0x50, FIELD_BOOL) and player.deathTimer <= 0 then
+										SFX.play(2)
+										--Bit of code taken from the basegame chucks
+										if (culprit.x + 0.5 * culprit.width) < (v.x + v.width*0.5) then
+											culprit.speedX = -5
+										else
+											culprit.speedX = 5
+										end
+									else
+										culprit:harm()
+									end
+								end
 							end
 						end
 					end
