@@ -1,0 +1,20 @@
+{
+	"style" : "groupbox",
+	"title" : "Sammer Sledge Bros Settings",
+	"layout": [	
+		{
+			"control": "checkbox",
+			"name": "slam",
+			"title": "Jump & then Slam Weapon?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "jumpblock",
+			"title": "Jump Over Gaps?",
+			"text-visible": true,
+			"value-default": true
+		}
+		]
+}
