@@ -41,8 +41,8 @@ local togeBroSettings = {
 	noyoshi= true,
 	nowaterphysics = false,
 	--Various interactions
-	jumphurt = true, --If true, spiny-like
-	spinjumpsafe = true, --If true, prevents player hurt when spinjumping
+	jumphurt = false, --If true, spiny-like
+	spinjumpsafe = false, --If true, prevents player hurt when spinjumping
 	harmlessgrab = false, --Held NPC hurts other NPCs if false
 	harmlessthrown = false, --Thrown NPC hurts other NPCs if false
 
@@ -61,7 +61,7 @@ local togeBroSettings = {
 	descendWaitDelay = 40,
 	shellAcceleration = 0.2,
 	accelerationCap = 5,
-	--Set debug = true to view his belly hitbox where the player can jump into it to damage him
+	--Set debug = true to view his belly hitbox and destroy collider where the player can jump into it to damage him
 	debug = false
 }
 
@@ -71,13 +71,13 @@ npcManager.setNpcSettings(togeBroSettings)
 --Register the vulnerable harm types for this NPC. The first table defines the harm types the NPC should be affected by, while the second maps an effect to each, if desired.
 npcManager.registerHarmTypes(npcID,
 	{
-		--HARM_TYPE_JUMP,
-		--HARM_TYPE_FROMBELOW,
+		HARM_TYPE_JUMP,
+		HARM_TYPE_FROMBELOW,
 		HARM_TYPE_NPC,
 		HARM_TYPE_PROJECTILE_USED,
 		HARM_TYPE_LAVA,
 		HARM_TYPE_HELD,
-		--HARM_TYPE_TAIL,
+		HARM_TYPE_TAIL,
 		--HARM_TYPE_SPINJUMP,
 		--HARM_TYPE_OFFSCREEN,
 		HARM_TYPE_SWORD
@@ -102,6 +102,11 @@ local STATE_SHELL = 2
 local STATE_HURT = 3
 local STATE_FRIENDLY = 4
 
+local destroyColliderOffset = {
+	[-1] = -1,
+	[1] = togeBroSettings.width/2+1
+}
+
 --Register events
 function togeBro.onInitAPI()
 	--npcManager.registerEvent(npcID, togeBro, "onTickNPC")
@@ -116,7 +121,7 @@ function togeBro.onTickEndNPC(v)
 	--Don't act during time freeze
 	if Defines.levelFreeze then return end
 	local data = v.data
-	local settings = data._settings
+	local settings = v.data._settings
 	local p = Player.getNearest(v.x + v.width / 2, v.y + v.height / 2)
 
 	data.bellyBox = Colliders.Box(v.x - (v.width * 2), v.y - (v.height * 1.5), NPC.config[v.id].width - 4, NPC.config[v.id].height/2 + 2)
@@ -124,6 +129,9 @@ function togeBro.onTickEndNPC(v)
 	data.bellyBox.y = v.y + v.height - data.bellyBox.height/2
 	if NPC.config[v.id].debug == true then
 		data.bellyBox:Debug(true)
+		if data.destroyCollider then
+			data.destroyCollider:Debug(true)
+		end
 	end
 	
 	--If despawned
@@ -138,8 +146,6 @@ function togeBro.onTickEndNPC(v)
 
 		--Initialize necessary data.
 		data.initialized = true
-		settings.health = settings.health or 24
-		settings.pinchShell = settings.pinchShell or false
 
 		data.timer = 0
 		data.health = settings.health
@@ -151,7 +157,7 @@ function togeBro.onTickEndNPC(v)
 		data.accel = 0
 	end
 
-		--Depending on the NPC, these checks must be handled differently
+	--Depending on the NPC, these checks must be handled differently
 	if v:mem(0x12C, FIELD_WORD) > 0    --Grabbed
 	or v:mem(0x136, FIELD_BOOL)        --Thrown
 	or v:mem(0x138, FIELD_WORD) > 0    --Contained within
@@ -199,6 +205,32 @@ function togeBro.onTickEndNPC(v)
 				v.speedX = v.speedX + data.accel
 				
 				data.accel = math.clamp(data.accel, -NPC.config[v.id].accelerationCap, NPC.config[v.id].accelerationCap)
+				if v.collidesBlockLeft or v.collidesBlockRight then
+					v.speedX = -v.speedX
+					data.accel = -data.accel
+					SFX.play(3)
+				end
+				-- Interact with blocks
+				data.destroyCollider = data.destroyCollider or Colliders.Box(v.x, v.y, v.width / 2, v.height);
+				data.destroyCollider.x = v.x + destroyColliderOffset[v.direction]
+				data.destroyCollider.y = v.y;
+				local tbl = Block.SOLID .. Block.PLAYER
+				local list = Colliders.getColliding{
+				a = data.destroyCollider,
+				b = tbl,
+				btype = Colliders.BLOCK,
+				filter = function(other)
+					if other.isHidden or other:mem(0x5A, FIELD_BOOL) then
+						return false
+					end
+					return true
+				end
+				}
+				for _,b in ipairs(list) do
+					if (Block.config[b.id].smashable == nil and Block.config[b.id].smashable ~= 3) then
+						b:hit(true)
+					end
+				end
 			end
 			v.animationFrame = math.floor(data.timer / 6) % 4 + 3
 			if data.timer >= NPC.config[v.id].shellReadyDelay + NPC.config[v.id].shellGroundedDelay then
@@ -263,13 +295,17 @@ function togeBro.onTickEndNPC(v)
 				if v.collidesBlockBottom then
 					Defines.earthquake = 2
 					SFX.play(37)
-					Animation.spawn(10, v.x, v.y + v.height)
-					Animation.spawn(10, v.x + v.width, v.y + v.height)
+					local a1 = Animation.spawn(10, v.x, v.y + v.height)
+					local a2 = Animation.spawn(10, v.x + v.width, v.y + v.height)
+					a1.x=a1.x-a1.width/2
+					a1.y=a1.y-a1.height/2
+					a2.x=a2.x-a2.width/2
+					a2.y=a2.y-a2.height/2
 					v.ai2 = 0
 					v.speedX = 0
 				end
 			end
-			if v.ai2 == 9 and v.collidesBlockBottom then
+			if v.ai2 == 9 then
 				--Bit of code here by Murphmario
 				local bombxspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
 				v.speedX = bombxspeed.x / 24
@@ -296,6 +332,7 @@ function togeBro.onTickEndNPC(v)
 			v.speedX = 0
 			v.speedY = -3
 			SFX.play("WL1 Boss Hit.wav")
+			Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 		end
 		if data.timer >= 64 then
 			data.timer = 0
@@ -338,26 +375,51 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 
 	if data.state == STATE_IDLE then
 		if reason ~= HARM_TYPE_LAVA then
-			if reason == HARM_TYPE_JUMP or killReason == HARM_TYPE_SPINJUMP or killReason == HARM_TYPE_FROMBELOW then
-				SFX.play(2)
+			if reason == HARM_TYPE_JUMP or reason == HARM_TYPE_SPINJUMP then
+				if culprit then
+					if Colliders.collide(culprit, v) then
+						if culprit.y < v.y and culprit:mem(0x50, FIELD_BOOL) and player.deathTimer <= 0 then
+							SFX.play(2)
+							--Bit of code taken from the basegame chucks
+							if (culprit.x + 0.5 * culprit.width) < (v.x + v.width*0.5) then
+								culprit.speedX = -5
+							else
+								culprit.speedX = 5
+							end
+						else
+							culprit:harm()
+						end
+					end
+					if type(culprit) == "NPC" and (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45) and culprit.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
+						culprit:kill(HARM_TYPE_NPC)
+					end
+				end
+			elseif reason == HARM_TYPE_FROMBELOW then
 				data.state = STATE_HURT
 				data.timer = 0
 				data.health = data.health - 8
 			elseif reason == HARM_TYPE_SWORD then
-				if v:mem(0x156, FIELD_WORD) <= 0 then
-					data.health = data.health - 8
-					data.state = STATE_HURT
-					data.timer = 0
-					SFX.play(89)
-					v:mem(0x156, FIELD_WORD,20)
-				end
 				if Colliders.downSlash(player,v) then
 					player.speedY = -6
+					SFX.play(2)
+				else
+					if v:mem(0x156, FIELD_WORD) <= 0 then
+						data.health = data.health - 8
+						data.state = STATE_HURT
+						data.timer = 0
+						SFX.play(89)
+						v:mem(0x156, FIELD_WORD,20)
+					end
 				end
+			elseif reason == HARM_TYPE_TAIL then
+				data.state = STATE_HURT
+				data.timer = 0
+				data.health = data.health - 8
 			elseif reason == HARM_TYPE_NPC then
+				--Interact with Superballs and bullets from Marine Pop and Sky Pop for minor damage
 				if culprit then
 					if type(culprit) == "NPC" then
-						if culprit.id == 13  then
+						if culprit.id == 13 or NPC.config[culprit.id].SMLDamageSystem then
 							SFX.play(9)
 							data.health = data.health - 1
 						else
@@ -371,9 +433,16 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 						data.timer = 0
 					end
 				else
-					data.health = data.health - 8
-					data.state = STATE_HURT
-					data.timer = 0
+					for _,n in ipairs(NPC.getIntersecting(v.x, v.y, v.x + v.width, v.y + v.height)) do
+						if NPC.config[n.id].SMLDamageSystem then
+							if v:mem(0x156, FIELD_WORD) <= 0 then
+								data.health = data.health - 1
+								v:mem(0x156, FIELD_WORD,5)
+								SFX.play(9)
+								Animation.spawn(75, n.x, n.y)
+							end
+						end
+					end
 				end
 			elseif v:mem(0x12, FIELD_WORD) == 2 then
 				v:kill(HARM_TYPE_OFFSCREEN)
@@ -399,56 +468,41 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 			if data.health <= 0 then
 				v:kill(HARM_TYPE_NPC)
 			elseif data.health > 0 then
-				v:mem(0x156,FIELD_WORD,60)
+				if data.state == STATE_HURT then
+					v:mem(0x156,FIELD_WORD,60)
+				end
 			end
 		else
 			v:kill(HARM_TYPE_LAVA)
 		end
-		--Interact with Superballs and bullets from Marine Pop and Sky Pop for minor damage
-		for _,n in ipairs(NPC.getIntersecting(v.x, v.y, v.x + v.width, v.y + v.height)) do
-			if NPC.config[n.id].SMLDamageSystem then
-				if v:mem(0x156, FIELD_WORD) <= 0 then
-					data.hp = data.hp - 1
-					v:mem(0x156, FIELD_WORD,5)
-					SFX.play(9)
-					Animation.spawn(75, n.x, n.y)
-				end
-			end
-		end
 	else
-		if culprit then
-			if Colliders.collide(culprit, v) then
-				if culprit.y < v.y and culprit:mem(0x50, FIELD_BOOL) and player.deathTimer <= 0 then
-					SFX.play(2)
-					--Bit of code taken from the basegame chucks
-					if (culprit.x + 0.5 * culprit.width) < (v.x + v.width*0.5) then
-						culprit.speedX = -5
-					else
-						culprit.speedX = 5
-					end
-				else
-					culprit:harm()
-				end
-			end
-			if type(culprit) == "NPC" and (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45) and culprit.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
-				culprit:kill(HARM_TYPE_NPC)
-			end
-		end
 		--Special interactions in his shell
-		if data.state == STATE_SHELL and v.ai1 == 2 and (reason == HARM_TYPE_NPC or reason == HARM_TYPE_PROJECTILE_USED or reason == HARM_TYPE_SWORD) then
-			if reason == HARM_TYPE_NPC or reason == HARM_TYPE_PROJECTILE_USED then
+		if data.state == STATE_SHELL and (reason == HARM_TYPE_NPC or reason == HARM_TYPE_PROJECTILE_USED or reason == HARM_TYPE_SWORD or reason == HARM_TYPE_JUMP) then
+			if reason == HARM_TYPE_NPC or reason == HARM_TYPE_PROJECTILE_USED or reason == HARM_TYPE_JUMP then
 				if culprit then
 					if Colliders.collide(culprit, v) then
-						if culprit.y < v.y then
+						if (culprit.y < v.y and (v.ai1 == 2 or v.ai1 == 3)) or (Colliders.collide(culprit, data.bellyBox) and (v.ai1 == 1 or v.ai1 == 0 or v.ai1 == 4)) then
 							if type(culprit) == "NPC" then
-								if culprit.id == 13  then
-									SFX.play(9)
-									data.health = data.health - 1
+								if not (Colliders.collide(culprit, data.bellyBox) and (v.ai1 == 1 or v.ai1 == 0 or v.ai1 == 4)) then
+									if culprit.id == 13  then
+										SFX.play(9)
+										data.health = data.health - 1
+									else
+										data.health = data.health - 8
+										data.state = STATE_HURT
+										data.timer = 0
+									end
 								else
-									data.health = data.health - 8
-									data.state = STATE_HURT
-									data.timer = 0
+									if culprit.id == 13  then
+										SFX.play(9)
+										data.health = data.health - 1
+									end
 								end
+							elseif culprit.__type == "Player" and (culprit.y < v.y and (v.ai1 == 2 or v.ai1 == 3)) then
+								data.health = data.health - 8
+								data.state = STATE_HURT
+								data.timer = 0
+								SFX.play(2)
 							else
 								data.health = data.health - 8
 								data.state = STATE_HURT
@@ -456,27 +510,49 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 							end
 						end
 					end
-				end
-				for _,n in ipairs(NPC.getIntersecting(v.x, v.y, v.x + v.width, v.y + v.height / 2)) do
-					if NPC.config[n.id].SMLDamageSystem then
-						if v:mem(0x156, FIELD_WORD) <= 0 then
-							data.hp = data.hp - 1
-							v:mem(0x156, FIELD_WORD,5)
-							SFX.play(9)
-							Animation.spawn(75, n.x, n.y)
+				else
+					for _,n in ipairs(NPC.getIntersecting(v.x, v.y, v.x + v.width, v.y + v.height)) do
+						if NPC.config[n.id].SMLDamageSystem then
+							if v:mem(0x156, FIELD_WORD) <= 0 then
+								data.health = data.health - 1
+								v:mem(0x156, FIELD_WORD,5)
+								SFX.play(9)
+								Animation.spawn(75, n.x, n.y)
+							end
 						end
 					end
 				end
 			elseif reason == HARM_TYPE_SWORD then
 				if v:mem(0x156, FIELD_WORD) <= 0 then
-					if Colliders.downSlash(player,v) then
-						player.speedY = -6
+					if (Colliders.downSlash(player,v) and (v.ai1 == 2 or v.ai1 == 3)) or (v.ai1 == 1) then
+						if Colliders.downSlash(player,v) then
+							player.speedY = -6
+						end
 						data.health = data.health - 8
 						data.state = STATE_HURT
 						data.timer = 0
 						SFX.play(89)
 						v:mem(0x156, FIELD_WORD,20)
 					end
+				end
+			end
+		else
+			if culprit then
+				if Colliders.collide(culprit, v) then
+					if culprit.y < v.y and culprit:mem(0x50, FIELD_BOOL) and player.deathTimer <= 0 then
+						SFX.play(2)
+						--Bit of code taken from the basegame chucks
+						if (culprit.x + 0.5 * culprit.width) < (v.x + v.width*0.5) then
+							culprit.speedX = -5
+						else
+							culprit.speedX = 5
+						end
+					else
+						culprit:harm()
+					end
+				end
+				if type(culprit) == "NPC" and (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45) and culprit.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
+					culprit:kill(HARM_TYPE_NPC)
 				end
 			end
  		end
