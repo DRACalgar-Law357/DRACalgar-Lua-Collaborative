@@ -254,10 +254,29 @@ function togeBro.onTickEndNPC(v)
 				data.timer = 0
 				data.accel = 0
 			end
-			if Colliders.collide(p,data.bellyBox) and not v.friendly and p:mem(0x140,FIELD_WORD) <= 0 and p.speedY < 0 then
+			if Colliders.collide(p,data.bellyBox) and not v.friendly and p:mem(0x140,FIELD_WORD) <= 0 and p.speedY < 0 and p.forcedState == 0 and p.deathTimer <= 0 then
 				data.state = STATE_HURT
 				data.timer = 0
 				data.health = data.health - 8
+			end
+			for _,n in ipairs(NPC.getIntersecting(v.x, v.y, v.x + v.width, v.y + v.height)) do
+				if n.id ~= v.id and Colliders.collide(n,data.bellyBox) then
+					if NPC.config[n.id].SMLDamageSystem then
+						if v:mem(0x156, FIELD_WORD) <= 0 then
+							data.health = data.health - 1
+							v:mem(0x156, FIELD_WORD,5)
+							SFX.play(9)
+							Animation.spawn(75, n.x, n.y)
+							if data.health <= 0 then
+								v:kill(HARM_TYPE_NPC)
+							end
+						end
+					else
+						data.health = data.health - 8
+						data.state = STATE_HURT
+						data.timer = 0
+					end
+				end
 			end
 		elseif v.ai1 == 2 then --Prepares to fly over the player's vertical position in attempt to crush them
 			if px < v.x then
@@ -440,9 +459,18 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 								v:mem(0x156, FIELD_WORD,5)
 								SFX.play(9)
 								Animation.spawn(75, n.x, n.y)
+								if data.health <= 0 then
+									v:kill(HARM_TYPE_NPC)
+								end
 							end
+							eventObj.cancelled = true
+							return
 						end
 					end
+					
+					data.health = data.health - 8
+					data.state = STATE_HURT
+					data.timer = 0
 				end
 			elseif v:mem(0x12, FIELD_WORD) == 2 then
 				v:kill(HARM_TYPE_OFFSCREEN)
@@ -526,17 +554,6 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 										culprit:harm()
 									end
 								end
-							end
-						end
-					end
-				else
-					for _,n in ipairs(NPC.getIntersecting(v.x, v.y, v.x + v.width, v.y + v.height)) do
-						if NPC.config[n.id].SMLDamageSystem then
-							if v:mem(0x156, FIELD_WORD) <= 0 then
-								data.health = data.health - 1
-								v:mem(0x156, FIELD_WORD,5)
-								SFX.play(9)
-								Animation.spawn(75, n.x, n.y)
 							end
 						end
 					end
