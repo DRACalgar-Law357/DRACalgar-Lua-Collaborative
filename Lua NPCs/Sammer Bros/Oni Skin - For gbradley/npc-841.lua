@@ -358,9 +358,9 @@ function sampleNPC.onTickEndNPC(v)
 			v.animationFrame = 0
 		elseif v.ai4 < 16 then
 			v.animationFrame = 1
-		elseif v.ai4 < 16 then
+		elseif v.ai4 < 24 then
 			v.animationFrame = 2
-		elseif v.ai4 < 16 then
+		elseif v.ai4 < 32 then
 			v.animationFrame = 3
 		else
 			v.animationFrame = 0
