@@ -400,9 +400,9 @@ function sampleNPC.onTickEndNPC(v)
 		if data.timer < 64 then
             v.animationFrame = 0
         else
-			if data.timer % 48 < 16 then
+			if data.timer % 48 >= 32 then
 				v.animationFrame = 3
-			elseif data.timer % 48 < 32 then
+			elseif data.timer % 48 >= 16 then
 				v.animationFrame = 4
 			else
 				v.animationFrame = 0
@@ -410,10 +410,10 @@ function sampleNPC.onTickEndNPC(v)
         end
         v.speedX = 0
 		if data.timer == 1 then
-			v.ai3 = data.phase
+			v.ai3 = 1 + data.phase
 		end
         if data.timer >= 64 then
-			if data.timer % 48 == 16 then
+			if data.timer % 48 == 32 then
 				SFX.play("fireBreath.ogg")
 				local n = NPC.spawn(config.fireChargeID, v.x + spawnOffset[v.direction], v.y - 16)
 				n.x=n.x-n.width/2
