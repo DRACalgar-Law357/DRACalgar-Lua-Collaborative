@@ -24,7 +24,7 @@
 			"title": "Fly Around Horizontal Time",
 			"type": "int",
 			"tooltip": "How many frames it takes the NPC to complete a full horizontal movement cycle.",
-			"value-default": 640,
+			"value-default": 386,
 			"value-min": 1,
 			"value-max": 4096
 		},
@@ -44,7 +44,7 @@
 			"title": "Fly Around Vertical Time",
 			"type": "int",
 			"tooltip": "How many frames it takes the NPC to complete a full vertical movement cycle.",
-			"value-default": 512,
+			"value-default": 320,
 			"value-min": 1,
 			"value-max": 4096
 		},
@@ -62,6 +62,35 @@
 		{
 			"control": "description",
 			"text": ""
+		},
+
+		{
+			"control": "lineEdit",
+			"name": "second",
+			"title": "Trigger event upon reaching his second phase?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        },
+		
+		{
+			"control": "lineEdit",
+			"name": "third",
+			"title": "Trigger event upon reaching his third phase?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        },
+
+		{
+			"control": "description",
+			"text": ""
+		},
+
+		{
+			"control": "checkbox",
+			"name": "mushroom",
+			"title": "Give mushrooms each phase shift?",
+			"text-visible": true,
+			"value-default": true
 		}
 	]
 }

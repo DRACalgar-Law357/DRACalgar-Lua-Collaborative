@@ -3,6 +3,7 @@ local npcManager = require("npcManager")
 local npcutils = require("npcs/npcutils")
 local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
+local freeze = require("freezeHighlight")
 --Create the library table
 local gigaPhanto = {}
 --NPC_ID is dynamic based on the name of the library file
@@ -63,6 +64,11 @@ local gigaPhantoSettings = {
 	bombArray = {
 		134,
 		135,
+		166,
+		25,
+		348,
+		210,
+		579,
 	},
 	
 	--A config that uses Enjil's/Emral's freezeHighlight.lua; if set to true the lua file of it needs to be in the local or episode folder.
@@ -104,24 +110,41 @@ local STATE = {
 	IDLE = 0,
 	CHASE = 1,
 	SUMMON = 2,
-	CALLEVENT = 3,
-	SHOOT = 4,
-	SHOCKWAVE = 5,
-	LOB = 6,
-	PHASE = 7,
+	CALLEVENT = 7,
+	SHOOT = 3,
+	SHOCKWAVE = 4,
+	LOB = 5,
+	RETURN = 6,
 	KILL = 8,
 }
 
 local function handleFlyAround(v,data,config,settings)
-	local horizontalDistance = settings.flyAroundHorizontalDistance*0.5*v.spawnDirection
-	local verticalDistance = settings.flyAroundVerticalDistance*0.5
-	local horizontalTime = settings.flyAroundHorizontalTime / math.pi / 2
-	local verticalTime   = settings.flyAroundVerticalTime   / math.pi / 2
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
+	if data.movementSet == 0 then
+		local horizontalDistance = settings.flyAroundHorizontalDistance*0.5*v.spawnDirection
+		local verticalDistance = settings.flyAroundVerticalDistance*0.5
+		local horizontalTime = settings.flyAroundHorizontalTime / math.pi / 2
+		local verticalTime   = settings.flyAroundVerticalTime   / math.pi / 2
 
-	v.speedX = math.sin(data.flyAroundTimer / horizontalTime)*horizontalDistance / horizontalTime
-	v.speedY = math.sin(data.flyAroundTimer / verticalTime  )*verticalDistance   / verticalTime
+		v.speedX = math.cos(data.flyAroundTimer / horizontalTime)*horizontalDistance / horizontalTime
+		v.speedY = math.sin(data.flyAroundTimer / verticalTime  )*verticalDistance   / verticalTime
 
-	data.flyAroundTimer = data.flyAroundTimer + 1
+		data.flyAroundTimer = data.flyAroundTimer + 1
+		if (v.x + v.width/2 <= Camera.get()[1].x - 96) or (v.x + v.width/2 >= Camera.get()[1].x + Camera.get()[1].width + 96) or (v.y + v.height/2 <= Camera.get()[1].y - 96) or (v.y + v.height/2 >= Camera.get()[1].y + Camera.get()[1].height + 96) then
+			data.timer = 0
+			data.state = STATE.RETURN
+		end
+	elseif data.movementSet == 1 then
+		local ydirection
+		if v.y > v.spawnY then
+			ydirection = -1
+		else
+			ydirection = 1
+		end
+
+		v.speedX = math.clamp(v.speedX + 0.05 * v.direction, -4, 4)
+		v.speedY = math.clamp(v.speedY +0.1 * ydirection, -3, 3)
+	end
 
 	npcutils.faceNearestPlayer(v)
 end
@@ -143,12 +166,12 @@ function gigaPhanto.onTickEndNPC(v)
 	
 	local data = v.data
 	local settings = v.data._settings
-	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
 	
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
-		data.initialized = false
+		data.initalized = false
 		data.timer = 0
 		data.hurtTimer = 0
 		return
@@ -181,7 +204,13 @@ function gigaPhanto.onTickEndNPC(v)
 		data.frameTimer = 0
 		data.hurtPlayer = false
 		data.statelimit = 0
+		data.phanto = {}
 		data.phantoPrompt = NPC.config[v.id].phantoNormalID
+		data.movementTimer = 0
+		data.movementSet = 0
+		data.phase2ndEvent = false
+		data.phase3rdEvent = false
+		data.movementDelay = RNG.randomInt(360,600)
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -195,11 +224,14 @@ function gigaPhanto.onTickEndNPC(v)
 	end
 	if (data.health <= settings.hp*2/3 and data.phase == 0) or (data.health <= settings.hp*1/3 and data.phase == 1) then
 		data.phase = data.phase + 1
-		SFX.play(7)
-		local n = NPC.spawn(9, v.x + v.width / 2, v.y + v.height/2)
-		n.dontMove = true
-		n.speedY = -5
+		if settings.mushroom == true then
+			SFX.play(7)
+			local n = NPC.spawn(9, v.x + v.width / 2, v.y + v.height/2)
+			n.dontMove = true
+			n.speedY = -5
+		end
 		data.timer = 0
+		data.state = STATE.RETURN
 	end
 	if data.phase == 0 then
 		data.phantoPrompt = NPC.config[v.id].phantoNormalID
@@ -209,8 +241,24 @@ function gigaPhanto.onTickEndNPC(v)
 		data.phantoPrompt = NPC.config[v.id].phantoFuriousID
 	end
 	data.timer = data.timer + 1
-	if data.state < STATE.PHASE then
+	data.movementTimer = data.movementTimer + 1
+	data.dirVectr = vector.v2(
+		(v.spawnX + 32) - (v.x + v.width * 0.5),
+		(v.spawnY + 48) - (v.y + v.height * 0.5)
+		):normalize() * 5
+	if data.state < STATE.RETURN then
 		handleFlyAround(v,data,config,settings)
+		if data.movementTimer >= data.movementDelay then
+			data.movementDelay = RNG.randomInt(360,600)
+			local options = {}
+			if data.movementSet ~= 0 then table.insert(options,0) end
+			if data.movementSet ~= 1 then table.insert(options,1) end
+			if #options > 0 then
+				data.movementSet = RNG.irandomEntry(options)
+			end
+			data.movementTimer = 0
+			SFX.play(Misc.resolveSoundFile("phanto-move"))
+		end
 	end
 	if data.state == STATE.IDLE then
 		v.animationFrame = 0
@@ -220,12 +268,14 @@ function gigaPhanto.onTickEndNPC(v)
 			local options = {}
 			if data.statelimit ~= STATE.SHOOT then table.insert(options,STATE.SHOOT) end
 			if data.statelimit ~= STATE.SHOCKWAVE then table.insert(options,STATE.SHOCKWAVE) end
-			if data.statelimit ~= STATE.SUMMON then table.insert(options,STATE.SUMMON) end
+			if data.statelimit ~= STATE.SUMMON and not data.phanto[1] and not data.phanto[2] then table.insert(options,STATE.SUMMON) end
 			if data.statelimit ~= STATE.LOB then table.insert(options,STATE.LOB) table.insert(options,STATE.LOB) end
+			table.insert(options,RNG.randomEntry{STATE.LOB,STATE.SHOCKWAVE,STATE.SHOOT})
 			if #options > 0 then
 				data.state = RNG.irandomEntry(options)
 			end
 			data.statelimit = data.state
+
 		end
 	elseif data.state == STATE.SHOOT then
 		if data.timer % 48 < 6 then
@@ -248,7 +298,7 @@ function gigaPhanto.onTickEndNPC(v)
 		if data.timer % 48 == 30 then
 			SFX.play(82)
 			for i = 1,2 do
-				local n = NPC.spawn(NPC.config[v.id].projectileID, v.x, v.y, player.section, false, false)
+				local n = NPC.spawn(NPC.config[v.id].projectileID, v.x, v.y)
 				if i==1 then
 					n.x=v.x+v.width/4
 					n.y=v.y+v.height/2
@@ -261,7 +311,7 @@ function gigaPhanto.onTickEndNPC(v)
 				npcutils.faceNearestPlayer(n)
 			end
 		end
-		local shootDelay = 144 + (48 * data.phase)
+		local shootDelay = 96 + (48 * data.phase)
 		if data.timer >= shootDelay then
 			data.timer = 0
 			data.state = STATE.IDLE
@@ -287,7 +337,7 @@ function gigaPhanto.onTickEndNPC(v)
 		if data.timer % 48 == 30 then
 			SFX.play(82)
 			for i = 1,2 do
-				local n = NPC.spawn(NPC.config[v.id].orbID, v.x, v.y, player.section, false, false)
+				local n = NPC.spawn(NPC.config[v.id].orbID, v.x, v.y)
 				if i==1 then
 					n.x=v.x+v.width/4
 					n.y=v.y+v.height/2
@@ -301,7 +351,7 @@ function gigaPhanto.onTickEndNPC(v)
 				n.speedY = -RNG.random(5,8)
 			end
 		end
-		local shootDelay = 96 + (48 * data.phase)
+		local shootDelay = 48 + (48 * data.phase)
 		if data.timer >= shootDelay then
 			data.timer = 0
 			data.state = STATE.IDLE
@@ -331,69 +381,28 @@ function gigaPhanto.onTickEndNPC(v)
 		if data.timer >= 96 then
 			data.timer = 0
 			SFX.play("Air Bullet.wav")
-			local summonAmount = 2
-			if settings.summonSet == 1 then summonAmount = 4 end
-			for i = 1,2 do
+			local summonAmount = 1
+			if settings.summonSet == 1 then summonAmount = 2 end
+			for i = 1,summonAmount do
 				local phantoServant
 				phantoServant = data.phantoPrompt
-				local n = NPC.spawn(phantoServant, v.x+v.width/2, v.y+v.height/2, player.section, false, false)
-				n.x=n.x-n.width/2
-				n.y=n.y-n.height/2
-				if i == 1 then
-					n.speedX = -5
-					n.speedY = 0
-				elseif i == 2 then
-					n.speedX = 5
-					n.speedY = 0
-				elseif i == 3 then
-					n.speedX = 0
-					n.speedY = -5
-				elseif i == 4 then
-					n.speedX = 0
-					n.speedY = 5
+				data.phanto[i] = NPC.spawn(phantoServant, v.x+v.width/2, v.y+v.height/2)
+				data.phanto[i].x=data.phanto[i].x-data.phanto[i].width/2
+				data.phanto[i].y=data.phanto[i].y-data.phanto[i].height/2
+				if summonAmount == 2 then
+					if i == 1 then
+						data.phanto[i].speedX = -5
+						data.phanto[i].speedY = 0
+					elseif i == 2 then
+						data.phanto[i].speedX = 5
+						data.phanto[i].speedY = 0
+					end
+				elseif summonAmount == 1 then
+					data.phanto[i].speedX = 0
+					data.phanto[i].speedY = -5
 				end
-				n.data.state = 5
+				data.phanto[i].data.state = 5
 			end
-			data.state = STATE.IDLE
-		end
-	elseif data.state == STATE.SHOCKWAVE then
-		if data.timer % 48 < 6 then
-			v.animationFrame = 0
-		elseif data.timer % 48 < 12 then
-			v.animationFrame = 8
-		elseif data.timer % 48 < 18 then
-			v.animationFrame = 9
-		elseif data.timer % 48 < 24 then
-			v.animationFrame = 10
-		elseif data.timer % 48 < 30 then
-			v.animationFrame = 11
-		elseif data.timer % 48 < 36 then
-			v.animationFrame = 10
-		elseif data.timer % 48 < 42 then
-			v.animationFrame = 9
-		else
-			v.animationFrame = 8
-		end
-		if data.timer % 48 == 30 then
-			SFX.play(82)
-			for i = 1,2 do
-				local n = NPC.spawn(NPC.config[v.id].orbID, v.x, v.y, player.section, false, false)
-				if i==1 then
-					n.x=v.x+v.width/4
-					n.y=v.y+v.height/2
-				else
-					n.x=v.x+v.width*3/4
-					n.y=v.y+v.height/2
-				end
-				n.x=n.x-n.width/2
-				n.y=n.y-n.height/2
-				n.speedX = RNG.random(-3,3)
-				n.speedY = -RNG.random(5,8)
-			end
-		end
-		local shootDelay = 96 + (48 * data.phase)
-		if data.timer >= shootDelay then
-			data.timer = 0
 			data.state = STATE.IDLE
 		end
 	elseif data.state == STATE.LOB then
@@ -421,26 +430,78 @@ function gigaPhanto.onTickEndNPC(v)
 		if data.timer >= 96 then
 			data.timer = 0
 			SFX.play("Air Bullet.wav")
-			local summonAmount = 2
-			if settings.summonSet == 1 then summonAmount = 4 end
 			for i = 1,3 do
-				local n = NPC.spawn(RNG.irandomEntry(NPC.config[v.id].bombArray), v.x+v.width/2, v.y+v.height/2, player.section, false, false)
+				local n = NPC.spawn(RNG.irandomEntry(NPC.config[v.id].bombArray), v.x+v.width/2, v.y+v.height/2)
 				n.x=n.x-n.width/2
 				n.y=n.y-n.height/2
 				if i == 1 then
-					n.speedX = -3
-					n.speedY = -2
 					n.direction = -1
-				elseif i == 2 then
-					n.speedX = 3
+					n.speedX = -4
 					n.speedY = -2
+				elseif i == 2 then
 					n.direction = 1
+					n.speedX = 4
+					n.speedY = -2
 				elseif i == 3 then
 					npcutils.faceNearestPlayer(n)
 					n.speedX = 0
 					n.speedY = -4
 				end
 			end
+			data.state = STATE.IDLE
+		end
+	elseif data.state == STATE.RETURN then
+		if math.abs(v.spawnX - v.x) <= 8 and math.abs(v.spawnY - v.y) <= 64 then
+			v.x = v.spawnX
+			v.y = v.spawnY
+			v.speedX = 0
+			v.speedY = 0
+			--When enough time has passed, go into an attack phase
+			if data.timer >= 96 then
+				if (settings.second ~= "" and data.phase == 1 and data.phase2ndEvent == false) or (settings.third ~= "" and data.phase == 2 and data.phase3rdEvent == false) then
+					data.state = STATE.CALLEVENT
+				else
+					data.state = STATE.IDLE
+				end
+				data.timer = 0
+			end
+			npcutils.faceNearestPlayer(v)
+		else
+			v.speedX = data.dirVectr.x
+			v.speedY = data.dirVectr.y
+			data.timer = 0
+		end
+		v.animationFrame = 0
+	elseif data.state == STATE.CALLEVENT then
+		if data.timer < 8 then
+			v.animationFrame = 0
+		elseif data.timer < 16 then
+			v.animationFrame = 8
+		elseif data.timer < 24 then
+			v.animationFrame = 9
+		elseif data.timer < 32 then
+			v.animationFrame = 10
+		elseif data.timer < 40 then
+			v.animationFrame = 11
+		elseif data.timer < 48 then
+			v.animationFrame = 10
+		elseif data.timer < 56 then
+			v.animationFrame = 9
+		elseif data.timer < 64 then
+			v.animationFrame = 8
+		else
+			v.animationFrame = 0
+		end
+		if data.timer == 1 then SFX.play("Boss Hurt 2.wav") defines.earthquake = 4 end
+		if data.timer >= 96 then
+			if (settings.second ~= "" and data.phase == 1 and data.phase2ndEvent == false) then
+				triggerEvent(settings.second)
+				data.phase2ndEvent = true
+			elseif (settings.third ~= "" and data.phase == 2 and data.phase3rdEvent == false) then
+				triggerEvent(settings.third)
+				data.phase3rdEvent = true
+			end
+			data.timer = 0
 			data.state = STATE.IDLE
 		end
     else
@@ -505,6 +566,16 @@ function gigaPhanto.onTickEndNPC(v)
 			frames = gigaPhantoSettings.frames
 		});
 	end
+	if data.phanto[1] then
+		if not data.phanto[1].isValid then
+			data.phanto[1] = nil
+		end
+	end
+	if data.phanto[2] then
+		if not data.phanto[2].isValid then
+			data.phanto[2] = nil
+		end
+	end
 	
 	--Prevent gigaPhanto from turning around when he hits NPCs because they make him get stuck
 	if v:mem(0x120, FIELD_BOOL) then
@@ -518,7 +589,7 @@ function gigaPhanto.onNPCHarm(eventObj, v, reason, culprit)
 	local data = v.data
 	if v.id ~= npcID then return end
 
-			if data.iFrames == false then
+			if data.iFrames == false and data.state ~= STATE.KILL and data.state ~= STATE.CALLEVENT and data.state ~= STATE.RETURN then
 				local fromFireball = (culprit and culprit.__type == "NPC" and culprit.id == 13 )
 				local hpd = 10
 				if fromFireball then
@@ -573,14 +644,14 @@ function gigaPhanto.onNPCHarm(eventObj, v, reason, culprit)
 				end
 			end
 			if data.health <= 0 then
-				data.state = STATE_KILL
+				data.state = STATE.KILL
 				data.timer = 0
 				if NPC.config[v.id].useFreezeHightLight == true then
 					freeze.set(48)
 				end
 				SFX.play(63)
 				for _,n in ipairs(NPC.get()) do
-					if n.id == NPC.config[v.id].shockwaveID then
+					if n.id == NPC.config[v.id].shockwaveID or n.id == NPC.config[v.id].bombArray or n.id == NPC.config[v.id].phantoNormalID or n.id == NPC.config[v.id].phantoAggroID or n.id == NPC.config[v.id].phantoFuriousID or n.id == NPC.config[v.id].orbID or n.id == NPC.config[v.id].projectileID then
 						if n.x + n.width > camera.x and n.x < camera.x + camera.width and n.y + n.height > camera.y and n.y < camera.y + camera.height then
 							n:kill(9)
 							Animation.spawn(10, n.x, n.y)
