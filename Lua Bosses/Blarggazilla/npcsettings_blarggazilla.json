@@ -1,0 +1,59 @@
+{
+	"style" : "groupbox",
+	"title" : "Blarggazilla Settings",
+	"layout": [	
+		{
+			"control": "checkbox",
+			"name": "breath",
+			"title": "Breathe Fire?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "walk",
+			"title": "Walk Around?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "jump",
+			"title": "Jump & Cause Debris?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "charge",
+			"title": "Super Charge Big Fireballs?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "lob",
+			"title": "Lob Fireballs?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "spinBox",
+			"type": "int",
+			"name": "health",
+			"title": "Health",
+			"value-default": 6,
+			"value-min": 0,
+			"value-max": 100,
+			"single-step": 1
+		},
+		{
+			"control": "combobox",
+			"name": "phaseSet",
+			"title": "Phases Configuration",
+			"tooltip": "Determines the phases the boss will undergo",
+			"elements": ["All Phases", "1st Only", "3rd Only"],
+			"value-default": 0
+		}
+		]
+}

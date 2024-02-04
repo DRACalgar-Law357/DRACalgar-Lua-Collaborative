@@ -1,0 +1,7 @@
+image = background-926e.png
+name = "Blarggazilla Falling Debris Point"
+frames = 1
+framespeed = 8
+noshadows = false
+priority = -85
+grid = 8
