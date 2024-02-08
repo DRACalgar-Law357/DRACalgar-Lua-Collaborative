@@ -1,0 +1,26 @@
+{
+	"style" : "groupbox",
+	"title" : "Giant Blooper Configurations",
+	"layout": [	
+        {
+			"control": "spinBox",
+			"type": "double",
+			"name": "swimSpeed",
+			"title": "Swim Speed",
+			"value-default": 2,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		},
+		{
+			"control": "spinBox",
+			"type": "double",
+			"name": "riseSpeed",
+			"title": "Rise Speed",
+			"value-default": 4,
+			"value-min": 0.0,
+			"value-max": 20,
+			"single-step": 0.5
+		}
+		]
+}
