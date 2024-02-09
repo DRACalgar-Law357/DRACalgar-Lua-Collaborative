@@ -1,0 +1,4 @@
+gfxwidth=56
+gfxheight=64
+frames=3
+score=0

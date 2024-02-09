@@ -1,0 +1,11 @@
+gfxwidth=90
+gfxheight=98
+width=60
+height=68
+score=0
+noyoshi=1
+noiceball=1
+frames=32
+framespeed=16
+framestyle=0
+name="Chill Penguin"
