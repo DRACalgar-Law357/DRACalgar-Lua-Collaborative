@@ -1,6 +1,7 @@
 --NPCManager is required for setting basic NPC properties
 local npcManager = require("npcManager")
 local npcutils = require("npcs/npcutils")
+local playerManager = require("playerManager")
 local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
 --Create the library table
@@ -16,10 +17,10 @@ local sampleNPCSettings = {
 	gfxwidth = 64,
 	--Hitbox size. Bottom-center-bound to sprite size.
 	width = 64,
-	height = 64,
+	height = 48,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
-	gfxoffsety = 0,
+	gfxoffsety = 16,
 	--Frameloop-related
 	frames = 2,
 	framestyle = 0,
@@ -38,7 +39,7 @@ local sampleNPCSettings = {
 	nofireball = false,
 	noiceball = true,
 	noyoshi= true,
-	nowaterphysics = false,
+	nowaterphysics = true,
 	--Various interactions
 	jumphurt = true, --If true, spiny-like
 	spinjumpsafe = false, --If true, prevents player hurt when spinjumping
@@ -51,7 +52,7 @@ local sampleNPCSettings = {
 	score = 6,
 
 	--Define custom properties below
-	hp = 20
+	aquatic = true
 }
 
 --Applies NPC settings
@@ -91,6 +92,7 @@ npcManager.registerHarmTypes(npcID,
 function sampleNPC.onInitAPI()
 	npcManager.registerEvent(npcID, sampleNPC, "onTickEndNPC")
 	registerEvent(sampleNPC, "onNPCHarm")
+	registerEvent(sampleNPC, "onNPCKill")
 end
 
 function sampleNPC.onNPCHarm(e, v, o, c)
@@ -131,13 +133,9 @@ function sampleNPC.onNPCHarm(e, v, o, c)
 	else
 		e.cancelled = true
 	end
-	if type(o) == "NPC" and (NPC.HITTABLE_MAP[o.id] or o.id == 45) and o.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
-		o:kill(HARM_TYPE_NPC)
+	if c and type(c) == "NPC" and (NPC.HITTABLE_MAP[c.id] or c.id == 45) and c.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
+		c:kill(HARM_TYPE_NPC)
 	end
-end
-
-local function underwater(v)
-	return (v.underwater and v:mem(0x04, FIELD_WORD) ~= 2)
 end
 
 function sampleNPC.onTickEndNPC(v)
@@ -148,7 +146,7 @@ function sampleNPC.onTickEndNPC(v)
 	local settings = v.data._settings
 	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
 	--If despawned
-	if v.despawnTimer <= 0 then
+	if v:mem(0x12A, FIELD_WORD) <= 0 then
 		--Reset our properties, if necessary
 		data.initialized = false
 		return
@@ -156,15 +154,17 @@ function sampleNPC.onTickEndNPC(v)
 	--Initialize
 	if not data.initialized then
 		--Initialize necessary data.
-		if settings.swimSpeed == nil then
-			settings.swimSpeed = 3
-		end
-		if settings.riseSpeed == nil then
-			settings.riseSpeed = 4
+		if settings.hp == nil then
+			settings.hp = 20
 		end
 
 
-		data.hp = sampleNPCSettings.hp
+		data.hp = settings.hp
+		data.blooperstate = 1 --1 = sinking, 2 = floating, 3 = beached
+		data.noticetimer = 0 --Set to 40
+		data.noticecooldown = 0 --set to 5
+		data.determinedirection = 0
+		data.aquatic = NPC.config[v.id].aquatic
 		data.initialized = true
 	end
 
@@ -176,41 +176,57 @@ function sampleNPC.onTickEndNPC(v)
 		--Handling
 		return
 	end
-	if not underwater(v) then
-		v.speedX = v.speedX * .7
-		if v.speedY < -1 then
-			v.speedY = -1
-		end
-		v.animationFrame = 0
-		
-		return
-	else
-		if math.random() > 0.99 then
-			local a = Effect.spawn(113, v.x + v.width * .5, v.y + v.height * .5)
-			a.x=a.x-a.width/2
-			a.y=a.y-a.height/2
-		end
-	end
 
-	if plr.x + plr.width * .5 > v.x + v.width * .5 then
-		v.direction = 1
-	elseif plr.x + plr.width * .5 < v.x + v.width * .5 then
-		v.direction = -1
-	end
-	--Behaviour Code
-	if plr.y < v.y and v.speedY >= 0 then
-		v.speedX = settings.swimSpeed * v.direction
-		v.speedY = -settings.riseSpeed
-	end
+	local settings = PlayerSettings.get(playerManager.getBaseID(player.character),player.powerup)
 	
-	if v.speedY >= 1 then
+	v.animationTimer = 0
+	if data.aquatic == true and v.underwater == false then
+		data.blooperstate = 3
+	elseif data.blooperstate == 3 and v.underwater == true then
+		data.blooperstate = 1
+		data.noticecooldown = 20
+	end
+	if data.noticecooldown == 0 and player.y - settings.hitboxDuckHeight < v.y and data.blooperstate ~= 3 then
+		data.blooperstate = 2
+		data.noticetimer = 40
+		if player.x > v.x then
+			v.direction = 1
+		else
+			v.direction = -1
+		end
+		data.determinedirection = math.random(1, 5)
+		if data.determinedirection == 5 then
+			v.direction = v.direction * -1
+		end
+	end
+	if data.blooperstate == 1 then
 		v.animationFrame = 1
 		v.speedX = 0
-		v:mem(0x18, FIELD_FLOAT, 0)
 		v.speedY = 1
-	else
+	elseif data.blooperstate == 2 then
 		v.animationFrame = 0
+		data.noticecooldown = 2
+		v.speedX = data.noticetimer * .105 * v.direction
+		v.speedY = data.noticetimer * -.105 - 1
+		if data.noticetimer <= 0 or v.collidesBlockUp then
+			data.noticetimer = 0
+			data.blooperstate = 1
+			data.noticecooldown = 20
+		end
+	else
+		v.speedY = Defines.gravity
+		if v.collidesBlockBottom then
+			v.speedX = 0
+		end
 	end
+	
+	if data.noticetimer > 0 then
+		data.noticetimer = data.noticetimer - 2
+	end
+	if data.noticecooldown > 0 then
+		data.noticecooldown = data.noticecooldown - 1
+	end
+
 	if v.animationFrame >= 0 then
 		-- animation controlling
 		v.animationFrame = npcutils.getFrameByFramestyle(v, {
@@ -222,6 +238,21 @@ function sampleNPC.onTickEndNPC(v)
 	--Prevent Giant Blooper from turning around when it hits NPCs because they make it get stuck
 	if v:mem(0x120, FIELD_BOOL) then
 		v:mem(0x120, FIELD_BOOL, false)
+	end
+end
+
+function sampleNPC.onNPCKill(eventObj,v,reason)
+	local data = v.data
+	if v.id ~= npcID then return end
+	if reason == HARM_TYPE_OFFSCREEN then return end
+	if v.legacyBoss and reason ~= HARM_TYPE_LAVA then
+	  local ball = NPC.spawn(16, v.x, v.y)
+		ball.x = ball.x + ((v.width - ball.width) / 2)
+		ball.y = ball.y + ((v.height - ball.height) / 2)
+		ball.speedY = -6
+		ball.despawnTimer = 100
+				
+		SFX.play(20)
 	end
 end
 
