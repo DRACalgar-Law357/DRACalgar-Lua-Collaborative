@@ -38,7 +38,7 @@ local sampleNPCSettings = {
 	nofireball = false,
 	noiceball = true,
 	noyoshi= true,
-	nowaterphysics = true,
+	nowaterphysics = false,
 	--Various interactions
 	jumphurt = true, --If true, spiny-like
 	spinjumpsafe = false, --If true, prevents player hurt when spinjumping
@@ -48,10 +48,10 @@ local sampleNPCSettings = {
 	grabside=false,
 	grabtop=false,
 	staticdirection = true,
+	score = 6,
 
 	--Define custom properties below
-	hp = 12,
-	underwater = true
+	hp = 20
 }
 
 --Applies NPC settings
@@ -114,22 +114,25 @@ function sampleNPC.onNPCHarm(e, v, o, c)
 			data.timer = 0
 			if o == HARM_TYPE_JUMP or o == HARM_TYPE_SPINJUMP then
 				SFX.play(2)
-				v:mem(0x156, FIELD_WORD,15)
+				v:mem(0x156, FIELD_WORD,25)
 			elseif o == HARM_TYPE_SWORD then
 				SFX.play(Misc.resolveSoundFile("zelda-hit"))
-			    v:mem(0x156, FIELD_WORD,10)
+			    v:mem(0x156, FIELD_WORD,15)
 			else
 			    if type(c) == "NPC" and c.id == 13 then
 				    SFX.play(9)
-				    v:mem(0x156, FIELD_WORD,8)
+				    v:mem(0x156, FIELD_WORD,10)
 				else
 			        SFX.play(39)
-					v:mem(0x156, FIELD_WORD,15)
+					v:mem(0x156, FIELD_WORD,25)
 			    end
 			end
 		end
 	else
 		e.cancelled = true
+	end
+	if type(o) == "NPC" and (NPC.HITTABLE_MAP[o.id] or o.id == 45) and o.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
+		o:kill(HARM_TYPE_NPC)
 	end
 end
 
@@ -154,7 +157,7 @@ function sampleNPC.onTickEndNPC(v)
 	if not data.initialized then
 		--Initialize necessary data.
 		if settings.swimSpeed == nil then
-			settings.swimSpeed = 2
+			settings.swimSpeed = 3
 		end
 		if settings.riseSpeed == nil then
 			settings.riseSpeed = 4
@@ -173,13 +176,11 @@ function sampleNPC.onTickEndNPC(v)
 		--Handling
 		return
 	end
-	if (not underwater(v) and sampleNPCSettings.underwater == true) or sampleNPCSettings.underwater == false then
+	if not underwater(v) then
 		v.speedX = v.speedX * .7
-		
 		if v.speedY < -1 then
 			v.speedY = -1
 		end
-		
 		v.animationFrame = 0
 		
 		return
