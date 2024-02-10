@@ -58,7 +58,7 @@ local QueenBSettings = {
 
 	--Various interactions
 	jumphurt = true, --If true, spiny-like (prevents regular jump bounces)
-	spinjumpsafe = true, --If true, prevents player hurt when spinjumping and causes a bounce
+	spinjumpsafe = false, --If true, prevents player hurt when spinjumping and causes a bounce
 	harmlessgrab = false, --Held NPC hurts other NPCs if false
 	harmlessthrown = false, --Thrown NPC hurts other NPCs if false
 	nowalldeath = false, -- If true, the NPC will not die when released in a wall
@@ -339,10 +339,6 @@ function QueenB.onTickEndNPC(v)
 			data.useUniqueAttacks = true
 		end
 	end
-	Text.print(data.phase,110,142)
-	Text.print(data.health,110,158)
-	Text.print(settings.phase,110,190)
-	Text.print(data.useUniqueAttacks,110,206)
 	if data.invincible == false then
 		data.invincibleCooldown = config.invincibleCooldown
 	else
