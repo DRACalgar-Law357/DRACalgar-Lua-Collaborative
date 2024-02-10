@@ -25,10 +25,57 @@
 
 		{
 			"control": "combobox",
-			"name": "playStyle",
-			"title": "Play Styles",
-			"tooltip": "Determines how he behaves throughout the fight.",
-			"elements": ["Swoop", "Swoop & Form Zingers", "Swoop & Spike", "Swoop & Both Attacks"],
+			"name": "movementPlayStyle1",
+			"title": "Movement Play Style Phase 1",
+			"tooltip": "Determines how she moves in 1st phase. Needs to be accorded to the phase extra settings to make this work.",
+			"elements": ["Swoop", "Zigzag", "Chase"],
+			"value-default": 0
+		},
+
+		{
+			"control": "combobox",
+			"name": "movementPlayStyle2",
+			"title": "Movement Play Style Phase 2",
+			"tooltip": "Determines how she moves in 2nd phase. Needs to be accorded to the phase extra settings to make this work.",
+			"elements": ["Swoop", "Zigzag", "Chase"],
+			"value-default": 0
+		},
+
+		
+		{
+			"control": "combobox",
+			"name": "movementPlayStyle3",
+			"title": "Movement Play Style Phase 3",
+			"tooltip": "Determines how she moves in 3rd phase. Needs to be accorded to the phase extra settings to make this work.",
+			"elements": ["Swoop", "Zigzag", "Chase"],
+			"value-default": 0
+		},
+
+		{
+			"control": "combobox",
+			"name": "attackPlayStyle1",
+			"title": "Attack Play Style Phase 1",
+			"tooltip": "Determines how she attacks throughout the 1st phase. She'll commit attacks once her unique health points are depleted. Needs to be accorded to the phase extra settings to make this work.",
+			"elements": ["None", "Spike", "Summon", "Spike & Summon"],
+			"value-default": 0
+		},
+
+		{
+			"control": "combobox",
+			"name": "attackPlayStyle2",
+			"title": "Attack Play Style Phase 2",
+			"tooltip": "Determines how she attacks throughout the 2nd phase. Needs to be accorded to the phase extra settings to make this work.",
+			"elements": ["None", "Spike", "Summon", "Spike & Summon"],
+			"value-default": 0
+		},
+
+		
+		{
+			"control": "combobox",
+			"name": "attackPlayStyle3",
+			"title": "Attack Play Style Phase 3",
+			"tooltip": "Determines how she attacks throughout the 3rd phase. Needs to be accorded to the phase extra settings to make this work.",
+			"elements": ["None", "Spike", "Summon", "Spike & Summon"],
 			"value-default": 0
 		},
 
@@ -42,8 +89,57 @@
 		},
 
 		{
+			"control": "spinBox",
+			"name": "invincibleDelay",
+			"title": "Invincible Cooldown",
+			"type": "int",
+			"tooltip": "How many frames it for her aggro state to calm down.",
+			"value-default": 448,
+			"value-min": 1,
+			"value-max": 9999
+		},
+
+		{
 			"control": "description",
 			"text": ""
+		},
+
+		{
+			"control": "spinBox",
+			"name": "speedX",
+			"title": "Swoop Speed X",
+			"type": "double",
+			"value-default": 2,
+			"value-min": 0,
+			"value-max": 20
+		},
+        {
+			"control": "spinBox",
+			"name": "speedXAggro",
+			"title": "Swoop Speed X Aggro",
+			"type": "double",
+			"value-default": 3.5,
+			"value-min": 0,
+			"value-max": 20
+		},
+		{
+			"control": "spinBox",
+			"name": "speedXAggro",
+			"title": "Swoop Speed X Aggro",
+			"type": "double",
+			"value-default": 3.5,
+			"value-min": 0,
+			"value-max": 20
+		},
+		{
+			"control": "spinBox",
+			"name": "speedXIncrease",
+			"title": "Swoop Speed X Increase",
+			"tooltip": "Increases the horizontal swoop speed throughout each phases.",
+			"type": "double",
+			"value-default": 0.3,
+			"value-min": 0,
+			"value-max": 20
 		},
 
 		{
@@ -92,6 +188,16 @@
 			"value-min": -4096,
 			"value-max": 4096
 		},
+		{
+			"control": "spinBox",
+			"name": "flyAroundVerticalAccelerateIncrease",
+			"title": "Fly Around Vertical Acceleration Increase",
+			"tooltip": "Increases the vertical swoop acceleration throughout each phases. Won't affect vertical swoop speed caps.",
+			"type": "double",
+			"value-default": 0.1,
+			"value-min": 0,
+			"value-max": 20
+		},
         {
 			"control": "combobox",
 			"name": "flyingDirection",
@@ -105,23 +211,48 @@
 			"text": ""
 		},
 
-        {
+		{
 			"control": "spinBox",
-			"name": "speedX",
-			"title": "Speed X",
+			"name": "chaseSpeed",
+			"title": "Chase Speed",
+			"type": "double",
+			"value-default": 1,
+			"value-min": 0,
+			"value-max": 20
+		},
+		{
+			"control": "spinBox",
+			"name": "chaseSpeedAggro",
+			"title": "Chase Speed Aggro",
 			"type": "double",
 			"value-default": 2,
 			"value-min": 0,
 			"value-max": 20
 		},
-        {
+		{
 			"control": "spinBox",
-			"name": "speedXAggro",
-			"title": "Speed X Aggro",
+			"name": "chaseSpeedIncrease",
+			"title": "Chase Speed Increase",
+			"tooltip": "Increases the chase speed throughout each phases.",
 			"type": "double",
-			"value-default": 3.5,
+			"value-default": 0.5,
 			"value-min": 0,
 			"value-max": 20
+		},
+		{
+			"control": "spinBox",
+			"name": "chaseInterval",
+			"title": "Chase Interval",
+			"type": "int",
+			"tooltip": "How many frames it takes for her to redirect the chase position.",
+			"value-default": 48,
+			"value-min": 1,
+			"value-max": 9999
+		},
+
+		{
+			"control": "description",
+			"text": ""
 		},
 
         {

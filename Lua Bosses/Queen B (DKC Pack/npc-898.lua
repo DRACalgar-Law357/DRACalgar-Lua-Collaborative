@@ -97,9 +97,6 @@ local QueenBSettings = {
 	zingerID = 899,
 
 	spikeDelay = 64,
-	turns = true,
-
-	invincibleCooldown = 448,
 
 }
 
@@ -153,6 +150,7 @@ local function handleFlyAround(v,data,config,settings)
 	local verticalDirection
 	local verticalDistance = settings.flyAroundVerticalDistance
 	local aggro = false
+	local speedIncrease = settings.flyAroundVerticalAccelerateIncrease * data.phase
 	verticalDirection = data.verticalDirection
 	if settings.flyingDirection == 0 then
 		if (v.y <= v.spawnY - verticalDistance and data.verticalDirection == -1) or (v.y >= v.spawnY and data.verticalDirection == 1) then
@@ -167,9 +165,9 @@ local function handleFlyAround(v,data,config,settings)
 	end
 	aggro = data.invincible
 	if aggro == true then
-		v.speedY = math.clamp(v.speedY + settings.flyAroundVerticalAccelerateAggro * verticalDirection, -settings.flyAroundVerticalSpeedCapAggro, settings.flyAroundVerticalSpeedCapAggro)
+		v.speedY = math.clamp(v.speedY + (settings.flyAroundVerticalAccelerateAggro + speedIncrease) * verticalDirection, -settings.flyAroundVerticalSpeedCapAggro, settings.flyAroundVerticalSpeedCapAggro)
 	else
-		v.speedY = math.clamp(v.speedY + settings.flyAroundVerticalAccelerate * verticalDirection, -settings.flyAroundVerticalSpeedCap, settings.flyAroundVerticalSpeedCap)
+		v.speedY = math.clamp(v.speedY + (settings.flyAroundVerticalAccelerate + speedIncrease) * verticalDirection, -settings.flyAroundVerticalSpeedCap, settings.flyAroundVerticalSpeedCap)
 	end
 
 
@@ -181,7 +179,7 @@ end
 
 local function handleAnimation(v,data,config,settings)
 	-- Initialise the turning direction
-	if data.oldDirection ~= v.direction and v:mem(0x12C,FIELD_WORD) == 0 and data.turnTimer % 128 == 0 then
+	if data.oldDirection ~= v.direction and v:mem(0x12C,FIELD_WORD) == 0 and data.turnTimer % 90 == 0 then
 		data.turnActive = true
 		data.animationTimer = 0
 		SFX.play(config.sfx_turn)
@@ -294,9 +292,14 @@ function QueenB.onTickEndNPC(v)
 			data.phase3rdEvent = true
 		end
 		data.useUniqueAttacks = false --A variable which lets it use unique attacks. Setting the unique health settings can help make the phasing at start from not using attacks into using attacks.
-		v.ai1 = RNG.randomInt(300,450) --flying delay
-		v.ai2 = 0 --flying timer
+		v.ai1 = RNG.randomInt(210,370) --flying delay for spike attack
+		v.ai2 = 0 --flying timer for spike attack
 		v.ai3 = 0 --consecutive
+		v.ai4 = 0 --flying timer for summoning
+		v.ai5 = RNG.randomInt(300,450) --flying delay for summoning
+		data.attackStyle = 0
+		data.movementStyle = 0
+		data.beeServants = {}
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -311,6 +314,12 @@ function QueenB.onTickEndNPC(v)
 	data.timer = data.timer + 1
 	data.invincibleTimer = data.invincibleTimer + 1
 	data.turnTimer = data.turnTimer + 1
+	local chase = settings.chaseSpeed
+	if data.invincible == true then chase = settings.chaseSpeedAggro end
+	data.dirVectr = vector.v2(
+		(plr.x + plr.width/2) - (v.x + v.width * 0.5),
+		(plr.y + plr.height/2) - (v.y + v.height * 0.5)
+		):normalize() * (chase + settings.chaseSpeedIncrease * data.phase)
 	if settings.phase == 3 then
 		if data.useUniqueAttacks == false and data.health <= settings.health then
 			data.useUniqueAttacks = true
@@ -339,8 +348,21 @@ function QueenB.onTickEndNPC(v)
 			data.useUniqueAttacks = true
 		end
 	end
+	if data.phase == 0 then
+		data.movementStyle = settings.movementPlayStyle1
+		data.attackStyle = settings.attackPlayStyle1
+	elseif data.phase == 1 then
+		data.movementStyle = settings.movementPlayStyle2
+		data.attackStyle = settings.attackPlayStyle2
+	elseif data.phase == 2 then
+		data.movementStyle = settings.movementPlayStyle3
+		data.attackStyle = settings.attackPlayStyle3
+	end
+	if data.movementStyle == 2 then
+		if data.movementStyle ~= 0 then data.keepXSpeed = 0 data.keepYSpeed = 0 end
+	end
 	if data.invincible == false then
-		data.invincibleCooldown = config.invincibleCooldown
+		data.invincibleCooldown = settings.invincibleDelay
 	else
 		if data.invincibleCooldown <= 0 then
 			data.invincible = false
@@ -350,26 +372,37 @@ function QueenB.onTickEndNPC(v)
 	end
 
 	if data.state == STATE.FLYING then
-		handleFlyAround(v,data,config,settings)
-		local speedX = settings.speedX
-		if data.invincible == true then speedX = settings.speedXAggro end
-		v.speedX = speedX * data.oldDirection
+		if data.movementStyle == 0 then
+			handleFlyAround(v,data,config,settings)
+			local speedX = settings.speedX + settings.speedXIncrease * data.phase
+			if data.invincible == true then speedX = settings.speedXAggro end
+			v.speedX = speedX * data.oldDirection
+		else--if data.movementStyle == 2 then
+			if data.timer % settings.chaseInterval == 0 then
+				v.speedX = math.abs(data.dirVectr.x) * data.oldDirection
+				v.speedY = data.dirVectr.y
+				SFX.play(config.sfx_turn)
+			end
+			npcutils.faceNearestPlayer(v)
+		end
 		data.keepXSpeed = v.speedX
 		data.keepYSpeed = v.speedY
 		v.ai2 = v.ai2 + 1
-		if v.ai2 >= v.ai1 then
-			v.ai1 = RNG.randomInt(300,450)
-			data.timer = 0
+		v.ai4 = v.ai4 + 1
+		if v.ai2 >= v.ai1 and (data.attackStyle == 1 or data.attackStyle == 3) then
+			v.ai1 = RNG.randomInt(210,370)
 			v.ai2 = 0
 			if data.useUniqueAttacks == true then
-				local options = {}
-				if settings.playStyle == 1 or settings.playStyle == 3 then
-					table.insert(options,STATE.SUMMON)
-				end
-				if settings.playStyle == 2 or settings.playStyle == 3 then
-					table.insert(options,STATE.SPIKE)
-				end
-				if #options > 0 then data.state = RNG.irandomEntry(options) end
+				data.state = STATE.SPIKE
+				data.timer = 0
+			end
+		end
+		if v.ai4 >= v.ai5 and (data.attackStyle == 2 or data.attackStyle == 3) then
+			v.ai5 = RNG.randomInt(300,450)
+			v.ai4 = 0
+			if data.useUniqueAttacks == true and #data.beeServants > 0 then
+				data.state = STATE.SUMMON
+				data.timer = 0
 			end
 		end
 	elseif data.state == STATE.SUMMON then
