@@ -1,0 +1,1 @@
+This is the section where any assets from Wario Land 1 can be putten here where MegaDood will use these for his Wario Land 1 Pack. Credits will need to be appointed who generally made them and those who helped took in the contributions.
