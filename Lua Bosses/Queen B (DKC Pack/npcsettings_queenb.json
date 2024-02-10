@@ -124,15 +124,6 @@
 		},
 		{
 			"control": "spinBox",
-			"name": "speedXAggro",
-			"title": "Swoop Speed X Aggro",
-			"type": "double",
-			"value-default": 3.5,
-			"value-min": 0,
-			"value-max": 20
-		},
-		{
-			"control": "spinBox",
 			"name": "speedXIncrease",
 			"title": "Swoop Speed X Increase",
 			"tooltip": "Increases the horizontal swoop speed throughout each phases.",
