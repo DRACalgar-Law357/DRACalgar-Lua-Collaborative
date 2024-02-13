@@ -230,7 +230,7 @@ function sampleNPC.onTickEndNPC(v)
 				data.state = STATE_BOX
 			end
 			
-			--Push or hurt NPCs
+			--Hit Blocks
 			for _,b in ipairs(list) do
 				if (Block.config[b.id].smashable ~= nil and Block.config[b.id].smashable == 3) then
 					data.timer = 0
@@ -238,7 +238,7 @@ function sampleNPC.onTickEndNPC(v)
 				end
 			end
 
-			--Hit blocks
+			--Push or hurt NPCs
 			for _,npc in ipairs(npcs) do
 				if npc ~= v then
 					if not NPC.config[npc.id].iscollectable and not NPC.config[npc.id].iscoin and not npc.isHidden then
@@ -282,7 +282,7 @@ function sampleNPC.onTickEndNPC(v)
 			end
 		end
 		
-		--Push or hurt NPCs
+		--Hit Blocks
 		for _,b in ipairs(list) do
 			if (Block.config[b.id].smashable ~= nil and Block.config[b.id].smashable == 3) then
 				b:remove(true)
@@ -291,14 +291,16 @@ function sampleNPC.onTickEndNPC(v)
 			end
 		end
 
-		--Hit blocks
+		--Push or hurt NPCs
 		for _,npc in ipairs(npcs) do
 			if npc ~= v then
 				if not NPC.config[npc.id].iscollectable and not NPC.config[npc.id].iscoin and not npc.isHidden then
 					if npc.id == 45 then npc.ai1 = 1 end
 					npc.speedX = 4 * v.direction
 					npc.speedY = -6
-					npc.isProjectile = true
+					if not NPC.config[npc.id].powerup then
+						npc.isProjectile = true
+					end
 					npc.dontMove = false
 					if NPC.config[npc.id].grabtop or NPC.config[npc.id].grabside then
 						SFX.play(3)
