@@ -206,7 +206,7 @@ function sampleNPC.onTickEndNPC(v)
 				end
 			end
 		else
-			if Colliders.collide(p, v) then
+			if Colliders.collide(p, v) and not v.friendly then
 				p:harm()
 			end
 		end
@@ -277,7 +277,7 @@ function sampleNPC.onTickEndNPC(v)
 		
 		--Hurt players
 		for _,p in ipairs(Player.get()) do
-			if Colliders.collide(p, data.boxBox) and v:mem(0x12C, FIELD_WORD) == 0 then
+			if (Colliders.collide(p, data.boxBox) and v:mem(0x12C, FIELD_WORD) == 0) and not v.friendly then
 				p:harm()
 			end
 		end
@@ -330,12 +330,15 @@ function sampleNPC.onTickEndNPC(v)
 		end
 	else
 		--Animation
-		if data.helmet == 0 then
+		if data.rise == nil then
 			v.animationFrame = 0
 			--Make it jump offscreen, then when at the bottom have it come back up
 			if not v.collidesBlockBottom then data.timer = 0 end
 			if v.y >= camera.y + 640 then
-				data.helmet = 10
+				if settings.helmet then
+					data.helmet = 10
+				end
+				data.rise = 1
 				data.holdY = v.y
 			end
 		else
@@ -361,6 +364,7 @@ function sampleNPC.onTickEndNPC(v)
 						data.timer = 0
 						v.friendly = false
 						data.state = STATE_WALK
+						data.rise = nil
 					end
 				end
 			else
