@@ -173,6 +173,25 @@ function togeBro.onTickEndNPC(v)
 	local px = p.x + p.width / 2
 	local vx = v.x + v.width / 2
 	data.timer = data.timer + 1
+	--Bump Wario and Bowser
+	for _,p in ipairs(Player.get()) do
+		if p.character == CHARACTER_WARIO or p.character == CHARACTER_BOWSER then
+			if p.powerup > 1 then
+				if Colliders.collide(p, v) then
+					SFX.play(3)
+					if (p.x + 0.5 * p.width) < (v.x + v.width*0.5) then
+						p.speedX = -5
+					else
+						p.speedX = 5
+					end
+				end
+			end
+		else
+			if Colliders.collide(p, v) and not v.friendly then
+				p:harm()
+			end
+		end
+	end
 	if data.state == STATE_IDLE then --Wait for a set amount of time before doing something else
 		if px < v.x then
 			v.direction = -1
@@ -380,6 +399,24 @@ function togeBro.onTickEndNPC(v)
 	
 	if Colliders.collide(p, v) and not v.friendly and data.state ~= STATE_HURT and not Defines.cheat_donthurtme then
 		p:harm()
+	end
+
+	--If the player is ground pounding, do all this
+	if (player.character == CHARACTER_WARIO and player.keys.altJump and player.powerup > 1) then
+		player.data.isGroundPounding = true
+	end
+	
+	if player:isGroundTouching() then player.data.isGroundPounding = nil end
+	
+	--Handle interactions with ground pounds
+	for _, npc in ipairs(NPC.getIntersecting(player.x, player.y + player.height, player.x + player.width, player.y + player.height + 30)) do
+		if player.speedY > 0 and npc.id == v.id and player.data.isGroundPounding then
+			if data.state == STATE_SHELL and (v.ai1 == 3 or v.ai1 == 2) then
+				npc:harm(HARM_TYPE_JUMP)
+			else
+				player:harm()
+			end
+		end
 	end
 
 	if data.health <= 0 then

@@ -14,6 +14,15 @@
 		},
 
 		{
+			"control": "combobox",
+			"name": "summonSet",
+			"title": "Summon One or Two Servants",
+			"tooltip": "Spawns the specified number of servants and will keep track of them to keep it from spawning more.",
+			"elements": ["One", "Two"],
+			"value-default": 0
+		},
+
+		{
 			"control": "description",
 			"text": ""
 		},
