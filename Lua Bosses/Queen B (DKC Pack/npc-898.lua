@@ -94,14 +94,17 @@ local QueenBSettings = {
 	sfx_turn = Misc.resolveFile("Zinger_turn.wav"),
 
 	hornID = 900,
-	zingerID = 899,
+	zingerID = 901,
+	zingerAggroID = 902,
 
 	spikeDelay = 64,
-
+	summonDelay = 720,
 }
 
 --Applies NPC settings
 npcManager.setNpcSettings(QueenBSettings)
+
+local orbits = require 'local_orbits'
 
 --Register the vulnerable harm types for this NPC. The first table defines the harm types the NPC should be affected by, while the second maps an effect to each, if desired.
 npcManager.registerHarmTypes(npcID,
@@ -297,9 +300,12 @@ function QueenB.onTickEndNPC(v)
 		v.ai3 = 0 --consecutive
 		v.ai4 = 0 --flying timer for summoning
 		v.ai5 = RNG.randomInt(300,450) --flying delay for summoning
+		data.summonTimer = 0
 		data.attackStyle = 0
 		data.movementStyle = 0
-		data.beeServants = {}
+		data.beeServants = nil
+		data.summonStyle = 0
+		data.issueKill = false
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -348,15 +354,24 @@ function QueenB.onTickEndNPC(v)
 			data.useUniqueAttacks = true
 		end
 	end
+	local summonIntend
 	if data.phase == 0 then
 		data.movementStyle = settings.movementPlayStyle1
 		data.attackStyle = settings.attackPlayStyle1
+		summonIntend = settings.summonStyle1
 	elseif data.phase == 1 then
 		data.movementStyle = settings.movementPlayStyle2
 		data.attackStyle = settings.attackPlayStyle2
+		summonIntend = settings.summonStyle2
 	elseif data.phase == 2 then
 		data.movementStyle = settings.movementPlayStyle3
 		data.attackStyle = settings.attackPlayStyle3
+		summonIntend = settings.summonStyle3
+	end
+	if summonIntend == 0 then
+		data.summonStyle = config.zingerID
+	elseif summonIntend == 1 then
+		data.summonStyle = config.zingerAggroID
 	end
 	if data.movementStyle == 2 then
 		if data.movementStyle ~= 0 then data.keepXSpeed = 0 data.keepYSpeed = 0 end
@@ -370,7 +385,17 @@ function QueenB.onTickEndNPC(v)
 			if data.state == STATE.FLYING then data.invincibleCooldown = data.invincibleCooldown - 1 end
 		end
 	end
-
+	if data.beeServants then
+		Text.print("Working",110,110)
+		data.summonTimer = data.summonTimer + 1
+		if data.summonTimer >= config.summonDelay then
+			data.issueKill = true
+			data.beeServants = nil
+		end
+	else
+		data.summonTimer = 0
+		data.issueKill = false
+	end
 	if data.state == STATE.FLYING then
 		if data.movementStyle == 0 then
 			handleFlyAround(v,data,config,settings)
@@ -400,14 +425,37 @@ function QueenB.onTickEndNPC(v)
 		if v.ai4 >= v.ai5 and (data.attackStyle == 2 or data.attackStyle == 3) then
 			v.ai5 = RNG.randomInt(300,450)
 			v.ai4 = 0
-			if data.useUniqueAttacks == true and #data.beeServants > 0 then
+			if data.useUniqueAttacks == true and data.beeServants == nil then
 				data.state = STATE.SUMMON
 				data.timer = 0
 			end
 		end
 	elseif data.state == STATE.SUMMON then
-		data.timer = 0
-		data.state = STATE.FLYING
+		v.speedX = 0
+		v.speedY = 0
+		if data.timer == 64 then
+			local beeID = data.summonStyle
+			data.beeServants = orbits.new{
+				x = v.x + v.width / 2,
+				y = v.y + v.height / 2,
+
+				attachToNPC = v,
+				
+				section = v.section,
+				id = beeID,
+				number = 4,
+				radius = 90,
+				
+				rotationSpeed = 1,
+			}
+			SFX.play(41)
+		end
+		if data.timer >= 80 then
+			data.timer = 0
+			v.speedX = data.keepXSpeed
+			v.speedY = data.keepYSpeed
+			data.state = STATE.FLYING
+		end
 	elseif data.state == STATE.SPIKE then
 		v.speedX = 0
 		v.speedY = 0

@@ -246,6 +246,34 @@
 			"text": ""
 		},
 
+		{
+			"control": "combobox",
+			"name": "summonStyle1",
+			"title": "Summon Zinger Phase 1",
+			"tooltip": "Determines what type of Zinger will be summoned for phase 1.",
+			"elements": ["Normal", "Strong"],
+			"value-default": 0
+		},
+
+		{
+			"control": "combobox",
+			"name": "summonStyle2",
+			"title": "Summon Zinger Phase 2",
+			"tooltip": "Determines what type of Zinger will be summoned for phase 2.",
+			"elements": ["Normal", "Strong"],
+			"value-default": 0
+		},
+
+		
+		{
+			"control": "combobox",
+			"name": "summonStyle3",
+			"title": "Summon Zinger Phase 3",
+			"tooltip": "Determines what type of Zinger will be summoned for phase 3.",
+			"elements": ["Normal", "Strong"],
+			"value-default": 0
+		},
+
         {
 			"control": "description",
 			"text": ""

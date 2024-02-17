@@ -517,7 +517,7 @@ ID:213;X:-199352;Y:-200320;D:-1;
 ID:213;X:-199352;Y:-200352;D:-1;
 ID:213;X:-199352;Y:-200384;D:-1;
 ID:97;X:-199488;Y:-200256;D:-1;LR:"star";
-ID:898;X:-199152;Y:-200450;D:-1;ED:"star";XTRA:"{\n    \"attackPlayStyle1\"\: 3\,\n    \"attackPlayStyle2\"\: 3\,\n    \"attackPlayStyle3\"\: 3\,\n    \"chaseSpeed\"\: 2\,\n    \"flyingDirection\"\: 1\,\n    \"health\"\: 9\,\n    \"healthUnique\"\: 1\,\n    \"movementPlayStyle1\"\: 0\,\n    \"movementPlayStyle3\"\: 2\,\n    \"phase\"\: 3\,\n    \"playStyle\"\: 2\,\n    \"second\"\: \"phase2\"\,\n    \"third\"\: \"phase3\"\n}\n";
+ID:898;X:-199152;Y:-200450;D:-1;ED:"star";XTRA:"{\n    \"attackPlayStyle1\"\: 3\,\n    \"attackPlayStyle2\"\: 3\,\n    \"attackPlayStyle3\"\: 3\,\n    \"chaseSpeed\"\: 2\,\n    \"flyingDirection\"\: 1\,\n    \"health\"\: 9\,\n    \"healthUnique\"\: 1\,\n    \"movementPlayStyle1\"\: 0\,\n    \"movementPlayStyle3\"\: 2\,\n    \"phase\"\: 3\,\n    \"playStyle\"\: 2\,\n    \"second\"\: \"phase2\"\,\n    \"summonStyle1\"\: 1\,\n    \"summonStyle2\"\: 1\,\n    \"summonStyle3\"\: 1\,\n    \"third\"\: \"phase3\"\n}\n";
 ID:14;X:-199584;Y:-200416;D:-1;NM:1;LR:"phase2";
 ID:14;X:-199360;Y:-200416;D:-1;NM:1;LR:"phase3";
 ID:637;X:-199744;Y:-200160;D:-1;XTRA:"{\n    \"freezeX\"\: true\,\n    \"idx\"\: 2\,\n    \"npc\"\: 147\,\n    \"offscreenX\"\: false\,\n    \"offscreenY\"\: false\,\n    \"sound\"\: 22\n}\n";
