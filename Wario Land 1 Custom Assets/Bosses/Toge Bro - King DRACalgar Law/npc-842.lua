@@ -62,7 +62,12 @@ local togeBroSettings = {
 	shellAcceleration = 0.2,
 	accelerationCap = 5,
 	--Set debug = true to view his belly hitbox and destroy collider where the player can jump into it to damage him
-	debug = false
+	debug = false,
+	--The effect that spawns when the boss gets hit
+	stunnedEffect = 773,
+	--X and Y offsets of the stunned effect
+	effectSpawnX = 0,
+	effectSpawnY = -24,
 }
 
 --Applies NPC settings
@@ -366,6 +371,11 @@ function togeBro.onTickEndNPC(v)
 		end
 	elseif data.state == STATE_HURT then
 		v.animationFrame = 11
+		if data.effect then
+			--Move the stun effect with the NPC, if something causes it to move
+			data.effect.x = v.x
+			data.effect.y = v.y - 24
+		end
 		if data.timer == 1 then
 			v.speedX = 0
 			v.speedY = -3
@@ -453,6 +463,7 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 			elseif reason == HARM_TYPE_FROMBELOW then
 				data.state = STATE_HURT
 				data.timer = 0
+				data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 				data.health = data.health - 8
 			elseif reason == HARM_TYPE_SWORD then
 				if Colliders.downSlash(player,v) then
@@ -462,6 +473,7 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 					if v:mem(0x156, FIELD_WORD) <= 0 then
 						data.health = data.health - 8
 						data.state = STATE_HURT
+						data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 						data.timer = 0
 						SFX.play(89)
 						v:mem(0x156, FIELD_WORD,20)
@@ -470,6 +482,7 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 			elseif reason == HARM_TYPE_TAIL then
 				data.state = STATE_HURT
 				data.timer = 0
+				data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 				data.health = data.health - 8
 			elseif reason == HARM_TYPE_NPC then
 				--Interact with Superballs and bullets from Marine Pop and Sky Pop for minor damage
@@ -481,11 +494,13 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 						else
 							data.health = data.health - 8
 							data.state = STATE_HURT
+							data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 							data.timer = 0
 						end
 					else
 						data.health = data.health - 8
 						data.state = STATE_HURT
+						data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 						data.timer = 0
 					end
 				else
@@ -507,12 +522,14 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 					
 					data.health = data.health - 8
 					data.state = STATE_HURT
+					data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 					data.timer = 0
 				end
 			elseif v:mem(0x12, FIELD_WORD) == 2 then
 				v:kill(HARM_TYPE_OFFSCREEN)
 			else
 				data.state = STATE_HURT
+				data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 				data.timer = 0
 				data.health = data.health - 8
 			end
@@ -555,6 +572,7 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 									else
 										data.health = data.health - 8
 										data.state = STATE_HURT
+										data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 										data.timer = 0
 									end
 								else
@@ -569,11 +587,13 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 							elseif culprit.__type == "Player" and (culprit.y < v.y and (v.ai1 == 2 or v.ai1 == 3)) then
 								data.health = data.health - 8
 								data.state = STATE_HURT
+								data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 								data.timer = 0
 								SFX.play(2)
 							else
 								data.health = data.health - 8
 								data.state = STATE_HURT
+								data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 								data.timer = 0
 							end
 						else
@@ -603,6 +623,7 @@ function togeBro.onNPCHarm(eventObj, v, reason, culprit)
 						end
 						data.health = data.health - 8
 						data.state = STATE_HURT
+						data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY)
 						data.timer = 0
 						SFX.play(89)
 						v:mem(0x156, FIELD_WORD,20)
