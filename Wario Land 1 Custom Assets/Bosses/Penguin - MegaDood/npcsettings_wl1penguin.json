@@ -1,6 +1,6 @@
 {
 	"style" : "groupbox",
-	"title" : "Toge Bro Settings",
+	"title" : "Penguin Settings",
 	"layout": [
 		{
 			"control": "spinBox",
