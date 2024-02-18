@@ -92,6 +92,7 @@ local QueenBSettings = {
 	sfx_hit = Misc.resolveFile("King Zing hit.mp3"),
 	sfx_spike_pop = Misc.resolveFile("King Zing spikes.mp3"),
 	sfx_turn = Misc.resolveFile("Zinger_turn.wav"),
+	sfx_battlecry = Misc.resolveFile("King Zing battle cry.mp3"),
 
 	hornID = 900,
 	zingerID = 901,
@@ -104,7 +105,7 @@ local QueenBSettings = {
 --Applies NPC settings
 npcManager.setNpcSettings(QueenBSettings)
 
-local orbits = require 'local_orbits'
+local orbits = require 'queenb_orbits'
 
 --Register the vulnerable harm types for this NPC. The first table defines the harm types the NPC should be affected by, while the second maps an effect to each, if desired.
 npcManager.registerHarmTypes(npcID,
@@ -299,13 +300,11 @@ function QueenB.onTickEndNPC(v)
 		v.ai2 = 0 --flying timer for spike attack
 		v.ai3 = 0 --consecutive
 		v.ai4 = 0 --flying timer for summoning
-		v.ai5 = RNG.randomInt(300,450) --flying delay for summoning
-		data.summonTimer = 0
+		v.ai5 = RNG.randomInt(360,510) --flying delay for summoning
 		data.attackStyle = 0
 		data.movementStyle = 0
 		data.beeServants = nil
 		data.summonStyle = 0
-		data.issueKill = false
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -373,7 +372,7 @@ function QueenB.onTickEndNPC(v)
 	elseif summonIntend == 1 then
 		data.summonStyle = config.zingerAggroID
 	end
-	if data.movementStyle == 2 then
+	if data.movementStyle == 1 then
 		if data.movementStyle ~= 0 then data.keepXSpeed = 0 data.keepYSpeed = 0 end
 	end
 	if data.invincible == false then
@@ -386,15 +385,11 @@ function QueenB.onTickEndNPC(v)
 		end
 	end
 	if data.beeServants then
-		Text.print("Working",110,110)
-		data.summonTimer = data.summonTimer + 1
-		if data.summonTimer >= config.summonDelay then
-			data.issueKill = true
+		data.beeServants.x = v.x + v.width / 2
+		data.beeServants.y = v.y + v.height / 2 + 8
+		if data.beeServants.cooldown <= 0 then
 			data.beeServants = nil
 		end
-	else
-		data.summonTimer = 0
-		data.issueKill = false
 	end
 	if data.state == STATE.FLYING then
 		if data.movementStyle == 0 then
@@ -402,7 +397,7 @@ function QueenB.onTickEndNPC(v)
 			local speedX = settings.speedX + settings.speedXIncrease * data.phase
 			if data.invincible == true then speedX = settings.speedXAggro end
 			v.speedX = speedX * data.oldDirection
-		else--if data.movementStyle == 2 then
+		elseif data.movementStyle == 1 then
 			if data.timer % settings.chaseInterval == 0 then
 				v.speedX = math.abs(data.dirVectr.x) * data.oldDirection
 				v.speedY = data.dirVectr.y
@@ -423,7 +418,7 @@ function QueenB.onTickEndNPC(v)
 			end
 		end
 		if v.ai4 >= v.ai5 and (data.attackStyle == 2 or data.attackStyle == 3) then
-			v.ai5 = RNG.randomInt(300,450)
+			v.ai5 = RNG.randomInt(360,510)
 			v.ai4 = 0
 			if data.useUniqueAttacks == true and data.beeServants == nil then
 				data.state = STATE.SUMMON
@@ -433,28 +428,28 @@ function QueenB.onTickEndNPC(v)
 	elseif data.state == STATE.SUMMON then
 		v.speedX = 0
 		v.speedY = 0
-		if data.timer == 64 then
-			local beeID = data.summonStyle
+		if data.timer == 1 then SFX.play(config.sfx_battlecry) end
+		if data.timer == 96 then
+			data.timer = 0
+			data.beeID = data.summonStyle
+			v.speedX = data.keepXSpeed
+			v.speedY = data.keepYSpeed
 			data.beeServants = orbits.new{
 				x = v.x + v.width / 2,
 				y = v.y + v.height / 2,
 
-				attachToNPC = v,
+				attachToNPC = data.beeServants,
 				
 				section = v.section,
-				id = beeID,
+				id = data.beeID,
 				number = 4,
-				radius = 90,
+				radius = 64,
 				
 				rotationSpeed = 1,
+				cooldown = config.summonDelay,
 			}
-			SFX.play(41)
-		end
-		if data.timer >= 80 then
-			data.timer = 0
-			v.speedX = data.keepXSpeed
-			v.speedY = data.keepYSpeed
 			data.state = STATE.FLYING
+			SFX.play(41)
 		end
 	elseif data.state == STATE.SPIKE then
 		v.speedX = 0
@@ -597,6 +592,11 @@ function QueenB.onTickEndNPC(v)
 		if data.timer >= 180 then
 			v:kill(HARM_TYPE_NPC)
 		end
+		if data.timer == 1 and data.beeServants then
+			data.beeServants.x = -9999999
+			data.beeServants.y = -9999999
+			data.beeServants = nil
+		end
 	end
 	--Overall Flying Animation Code
 	if data.state == STATE.FLYING or data.state == STATE.SPIKE or data.state == STATE.SUMMON then
@@ -608,7 +608,7 @@ function QueenB.onTickEndNPC(v)
 			data.stateAnimation = STATE_ANIM.HURT2
 		end
 	end
-
+		
 	handleAnimation(v,data,config,settings)
 end
 
@@ -628,7 +628,13 @@ function QueenB.onNPCHarm(eventObj,v,reason,culprit)
 			end
 		end
 	end
-	
+	if culprit.__type == "NPC" and (culprit.id == 13 or culprit.id == 108 or culprit.id == 17) then
+		culprit:kill()
+	elseif reason ~= HARM_TYPE_LAVA then
+		if (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45 and v:mem(0x138, FIELD_WORD) == 0) and culprit.id ~= 50 then
+			culprit:kill()
+		end
+	end
 	if not data.invincible and data.invincibleTimer >= 48 and data.state ~= STATE.HURT and data.state ~= STATE.KILL then
 		if culprit then
 			if culprit.__type == "NPC" and (culprit.id == 13 or culprit.id == 108 or culprit.id == 17) then

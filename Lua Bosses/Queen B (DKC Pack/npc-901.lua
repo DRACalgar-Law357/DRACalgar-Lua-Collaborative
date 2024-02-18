@@ -72,8 +72,30 @@ function npc.onPostNPCHarm(v, r, c)
 	
 	--Only play if the NPC is killed but not by offscreen or if another NPC dies.
 	if reason == HARM_TYPE_OFFSCREEN then return end
-
 	SFX.play(death)
+	if c.__type == "NPC" and (c.id == 13 or c.id == 108 or c.id == 17) then
+		culprit:kill()
+	elseif r ~= HARM_TYPE_LAVA then
+		if (NPC.HITTABLE_MAP[c.id] or c.id == 45 and v:mem(0x138, FIELD_WORD) == 0) and c.id ~= 50 then
+			c:kill()
+		end
+	end
+end
+
+function npc.onNPCHarm(eventObj,v,reason,culprit)
+	if v.id ~= id then return end
+
+	local config = NPC.config[id]
+	
+	--Only play if the NPC is killed but not by offscreen or if another NPC dies.
+	if reason == HARM_TYPE_OFFSCREEN then return end
+	if culprit.__type == "NPC" and (culprit.id == 13 or culprit.id == 108 or culprit.id == 17) then
+		culprit:kill()
+	elseif r ~= HARM_TYPE_LAVA then
+		if (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45 and v:mem(0x138, FIELD_WORD) == 0) and culprit.id ~= 50 then
+			culprit:kill()
+		end
+	end
 end
 
 function npc.onInitAPI()
@@ -95,6 +117,7 @@ function npc.onInitAPI()
 	);
 	
 	registerEvent(npc, 'onPostNPCHarm')
+	registerEvent(npc, 'onNPCHarm')
 end
 
 

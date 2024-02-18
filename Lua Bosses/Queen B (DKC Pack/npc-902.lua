@@ -57,7 +57,7 @@ function npc.onTickEndNPC(v)
 	if data.noise == nil then
 		data.noise = true
 	end
-	if not v.friendly and NPC.config[v.id].strong then
+	if not v.friendly then
         for _,p in ipairs(NPC.getIntersecting(v.x - 5, v.y - 5, v.x + v.width + 5, v.y + v.height + 5)) do
 		--If the intersecting NPC is being held or has been thrown.
             if p:mem(0x12A, FIELD_WORD) > 0 and p:mem(0x138, FIELD_WORD) == 0 and (not p.isHidden) and (not p.friendly) then
@@ -95,8 +95,32 @@ function npc.onPostNPCHarm(v, r, c)
 	
 	--Only play if the NPC is killed but not by offscreen or if another NPC dies.
 	if reason == HARM_TYPE_OFFSCREEN then return end
-
 	SFX.play(death)
+	if c.__type == "NPC" and (c.id == 13 or c.id == 108 or c.id == 17) then
+		culprit:kill()
+	elseif r ~= HARM_TYPE_LAVA then
+		if (NPC.HITTABLE_MAP[c.id] or c.id == 45 and v:mem(0x138, FIELD_WORD) == 0) and c.id ~= 50 then
+			c:kill()
+		end
+	end
+end
+
+function npc.onNPCHarm(eventObj,v,reason,culprit)
+	if v.id ~= id then return end
+
+	local config = NPC.config[id]
+	
+	--Only play if the NPC is killed but not by offscreen or if another NPC dies.
+	if reason == HARM_TYPE_OFFSCREEN then return end
+	if culprit.__type == "NPC" and (culprit.id == 13 or culprit.id == 108 or culprit.id == 17) then
+		culprit:kill()
+	elseif r ~= HARM_TYPE_LAVA then
+		if (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45 and v:mem(0x138, FIELD_WORD) == 0) and culprit.id ~= 50 then
+			culprit:kill()
+		end
+	end
+	SFX.play(death)
+	eventObj.cancelled = true
 end
 
 function npc.onInitAPI()
@@ -113,6 +137,7 @@ function npc.onInitAPI()
 		}
 	);
 	
+	registerEvent(npc, 'onNPCHarm')
 	registerEvent(npc, 'onPostNPCHarm')
 end
 

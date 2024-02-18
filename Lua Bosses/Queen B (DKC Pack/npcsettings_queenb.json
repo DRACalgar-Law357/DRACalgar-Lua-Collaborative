@@ -28,7 +28,7 @@
 			"name": "movementPlayStyle1",
 			"title": "Movement Play Style Phase 1",
 			"tooltip": "Determines how she moves in 1st phase. Needs to be accorded to the phase extra settings to make this work.",
-			"elements": ["Swoop", "Zigzag", "Chase"],
+			"elements": ["Swoop", "Chase"],
 			"value-default": 0
 		},
 
@@ -37,7 +37,7 @@
 			"name": "movementPlayStyle2",
 			"title": "Movement Play Style Phase 2",
 			"tooltip": "Determines how she moves in 2nd phase. Needs to be accorded to the phase extra settings to make this work.",
-			"elements": ["Swoop", "Zigzag", "Chase"],
+			"elements": ["Swoop", "Chase"],
 			"value-default": 0
 		},
 
@@ -47,7 +47,7 @@
 			"name": "movementPlayStyle3",
 			"title": "Movement Play Style Phase 3",
 			"tooltip": "Determines how she moves in 3rd phase. Needs to be accorded to the phase extra settings to make this work.",
-			"elements": ["Swoop", "Zigzag", "Chase"],
+			"elements": ["Swoop", "Chase"],
 			"value-default": 0
 		},
 
