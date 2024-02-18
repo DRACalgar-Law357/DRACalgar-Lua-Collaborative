@@ -49,6 +49,8 @@ local sampleNPCSettings = {
 	grabside=false,
 	grabtop=false,
 	cliffturn = true,
+
+	score = 8,
 	
 	--The effect that spawns when the helmet is knocked off of the penguin
 	helmetEffect = 844,
@@ -432,7 +434,11 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 				if data.helmet > 0 then
 					if type(culprit) == "Player" then
 						if reason == HARM_TYPE_JUMP then
-							culprit:harm()
+							if not culprit:mem(0x50,FIELD_BOOL) then
+								culprit:harm()
+							else
+								SFX.play(2)
+							end
 						else
 							SFX.play(2)
 						end
@@ -446,6 +452,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 			if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
 			data.hitY = v.y
 			data.state = STATE_HURT
+			Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 			data.timer = 0
 				
 		elseif reason == HARM_TYPE_NPC then
@@ -461,6 +468,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 							if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
 							data.hitY = v.y
 							data.state = STATE_HURT
+							Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 							data.timer = 0
 						end
 					else
@@ -473,6 +481,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 					if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
 					data.hitY = v.y
 					data.state = STATE_HURT
+					Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 					data.timer = 0
 				end
 			else
@@ -502,6 +511,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 					if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
 					data.hitY = v.y
 					data.state = STATE_HURT
+					Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 					data.timer = 0
 				else
 					SFX.play(3)	
@@ -518,6 +528,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 				data.health = data.health - 8
 				if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
 				data.hitY = v.y
+				Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 			else
 				data.helmet = 0
 				SFX.play(3)
