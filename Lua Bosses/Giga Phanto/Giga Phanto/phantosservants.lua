@@ -7,13 +7,14 @@ local rng = require("rng")
 --local textplus = require("textplus");    --for debugging
 
 
-local idList  = {}
 --local effectMap = {basic=1,aggro=1,furious=1}
 
 
 
 --Create the library table
 local phantoServants = {}
+
+phantoServants.idMap  = {}
 
 --Defines NPC config for our NPC. You can remove superfluous definitions.
 local sharedSettings = {
@@ -71,11 +72,13 @@ local sharedSettings = {
 }
 
 function phantoServants.register(config)
-    table.insert(idList, config.id)
+    phantoServants.idMap[config.id] = true
 	local config = table.join(config, sharedSettings)
 	npcManager.setNpcSettings(config)
 	npcManager.registerEvent(config.id, phantoServants, "onTickEndNPC")
 	npcManager.registerEvent(config.id, phantoServants, "onDrawNPC")
+
+	npcManager.registerHarmTypes(config.id, {HARM_TYPE_TAIL, HARM_TYPE_SWORD, HARM_TYPE_NPC, HARM_TYPE_PROJECTILE_USED, HARM_TYPE_HELD})
 end
 
 
@@ -87,7 +90,21 @@ local soundfx = {
 	move = Misc.resolveSoundFile("phanto-move")
 }
 
+function phantoServants.onNPCHarm(e, v, r, culprit)
+	local data = v.data
+	if phantoServants.idMap[v.id] then
+		if r == HARM_TYPE_TAIL or r == HARM_TYPE_SWORD or r == HARM_TYPE_NPC or r == HARM_TYPE_PROJECTILE_USED or r == HARM_TYPE_HELD then
+			if v:mem(0x156, FIELD_WORD) <= 0 then
+				v.speedX = v.speedX + -v.direction * 8
+				SFX.play(39)
+				v:mem(0x156,FIELD_WORD,10)
+			end
+			e.cancelled = true
+		end
+	end
+end
 
+registerEvent(phantoServants, "onNPCHarm")
 
 
 
@@ -134,6 +151,8 @@ function phantoServants.onTickEndNPC(v)
 		v.ai3 = 0
 		v.ai4 = 0
 		v.ai5 = 0
+		data.timer = 0
+		data.timerIncrement = 1
 		data.startSection = currentSection
 		data.currentScreenLeft = v.x
 		data.targetPlayer = nil
@@ -261,6 +280,7 @@ function phantoServants.onTickEndNPC(v)
 		if  v.ai1 <= 0  then
 			data.state = STATE.FOLLOW
 			data.startTick = lunatime.tick()
+			data.timer = 0
 		end
 
 
@@ -315,6 +335,10 @@ function phantoServants.onTickEndNPC(v)
 
 		v.speedX = math.clamp(v.speedX + chaseAcceleration, -5, 5)
 		center = vector.v2(v.x+0.5*v.width, v.y+0.5*v.height)
+
+		data.timerIncrement = math.min(data.timerIncrement + 0.025, 1)
+		data.timer = data.timer + data.timerIncrement
+
 		v.ai5 = v.ai5 + 1
 		if NPC.config[v.id].aggroLevel == 1 then
 			v.ai4 = v.ai4 + 1
@@ -340,6 +364,7 @@ function phantoServants.onTickEndNPC(v)
 			data.currentScreenLeft = v.x
 			data.state = STATE.FOLLOW
 			data.startTick = lunatime.tick()
+			data.timer = 0
 		end
 	--OUTSMART
 	elseif  data.state == STATE.OUTSMART  then
