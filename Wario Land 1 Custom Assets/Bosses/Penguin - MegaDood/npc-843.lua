@@ -38,7 +38,7 @@ local sampleNPCSettings = {
 	noblockcollision = false,
 	nofireball = false,
 	noiceball = true,
-	noyoshi= false,
+	noyoshi= true,
 	nowaterphysics = false,
 	--Various interactions
 	jumphurt = false, --If true, spiny-like
