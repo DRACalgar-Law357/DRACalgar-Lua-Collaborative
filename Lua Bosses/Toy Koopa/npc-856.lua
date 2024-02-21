@@ -22,7 +22,7 @@ local sampleNPCSettings = {
 	gfxoffsetx = 0,
 	gfxoffsety = 0,
 	--Frameloop-related
-	frames = 10,
+	frames = 15,
 	framestyle = 1,
 	framespeed = 8, --# frames between frame change
 	--Movement speed. Only affects speedX by default.
@@ -50,6 +50,8 @@ local sampleNPCSettings = {
 	grabtop=false,
 
 	score = 8,
+
+	staticdirection = true,
 	
 	--The effect that spawns when the helmet is knocked off of the penguin
 	killEffect = 10,
@@ -65,6 +67,15 @@ local sampleNPCSettings = {
 		[0] = 64, --Minimum
 		[1] = 160, --Maximum
 	},
+	ramDelay = 60,
+	spinoutReady = 60,
+	spinoutDelay = 300,
+	stunnedDelay = 80,
+	shellSpeed = 4,
+	walkSpeed = 1.5,
+	turnAroundDelay = 48,
+	sfx_cannon_ready = Misc.resolveFile("mechakoopa_blaster_prepare.wav"),
+	sfx_cannon = Misc.resolveFile("mechakoopa_blaster_fire.wav"),
 	--Spawn Procedures for each round of shots in STATE_SHOOT
 	shootRoundDelay = 48,
 	bulletBillSets = {
@@ -74,7 +85,7 @@ local sampleNPCSettings = {
 			speedY = 0
 			delay = 12,
 			effect = 10,
-			SFX = 22,
+			SFX = sfx_cannon,
 		},
 		[1] = {
 			id = 17,
@@ -82,7 +93,7 @@ local sampleNPCSettings = {
 			speedY = 0
 			delay = 12,
 			effect = 10,
-			SFX = 22,
+			SFX = sfx_cannon,
 		},
 		[2] = {
 			id = 17,
@@ -90,7 +101,7 @@ local sampleNPCSettings = {
 			speedY = 0
 			delay = 60,
 			effect = 10,
-			SFX = 22,
+			SFX = sfx_cannon,
 		},
 	},
 }
@@ -166,9 +177,9 @@ function sampleNPC.onTickEndNPC(v)
 	if not data.initialized then
 		--Initialize necessary data.
 		if settings.spinOutSet == nil then settings.spinOutSet = 0 end
-
+		if settings.health == nil then settings.health = 16 end 
 		data.initialized = true
-		data.health = settings.health
+		data.health = settings.health or 16
 		data.state = STATE_WALK
 		data.timer = 0
 		data.walkTimer = 0
@@ -194,10 +205,10 @@ function sampleNPC.onTickEndNPC(v)
 	
 	if data.state == STATE_WALK then
 		--Simply walk about
-		v.speedX = 1.5 * v.direction
+		v.speedX = config.walkSpeed * v.direction
 		data.walkTimer = data.walkTimer + 1
 		
-		if data.walkTimer % 48 == 0 and v:mem(0x12C, FIELD_WORD) == 0 then
+		if data.walkTimer % config.turnAroundDelay == 0 and v:mem(0x12C, FIELD_WORD) == 0 then
 			npcutils.faceNearestPlayer(v)
 		end
 
@@ -233,7 +244,75 @@ function sampleNPC.onTickEndNPC(v)
 		v.animationFrame = math.floor(data.timer / 8) % 2
 	elseif data.state == STATE_SHOOT then
 		v.speedX = 0
-
+		v.animationFrame = 2
+		if data.timer == 1 then v.ai5 = 0 end
+		if data.timer == 1 and config.sfx_cannon_ready then SFX.play(config.sfx_cannon_ready.SFX, config.sfx_cannon_ready.delay) end
+		if data.timer >= config.shootRoundDelay then
+			if config.bulletBillSets[v.ai5] then
+				if data.timer == config.shootRoundDelay then
+					if config.bulletBillSets[v.ai5].SFX then SFX.play(config.bulletBillSets[v.ai5].SFX) end
+					local n = NPC.spawn(config.bulletBillSets[v.ai5].id, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true)
+					if config.bulletBillSets[v.ai5].effect then local a = Animation.spawn(config.bulletBillSets[v.ai5].effect, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true) end
+					n.speedX = config.bulletBillSets[v.ai5].speedX * v.direction
+					n.speedY = config.bulletBillSets[v.ai5].speedY
+				elseif data.timer >= config.shootRoundDelay + config.bulletBillSets[v.ai5].delay then
+					data.timer = config.shootRoundDelay
+					v.ai5 = v.ai5 + 1
+				end
+			else
+				v.ai5 = 0
+				data.timer = 0
+				data.state = STATE_WALK
+			end
+		end
+	elseif data.state == STATE_RAM then
+		if v.ai1 == 0 then
+			if data.timer < config.ramDelay then
+				v.animationFrame = 3
+				v.speedX = 0
+			else
+				v.animationFrame = math.floor(data.timer / 6) % 4 + 3
+				v.speedX = config.shellSpeed * v.direction
+				if (v.collidesBlockLeft and v.direction == -1) or (v.collidesBlockRight and v.direction == 1) then
+					data.timer = 0
+					v.ai1 = 1
+					v.speedX = 2 * -v.direction
+					v.speedY = -4
+					SFX.play(37)
+				end
+			end
+		else
+			v.animationFrame = 3
+			if v.colldesBlockBottom then
+				v.speedX = 0
+			end
+			if data.timer >= config.stunnedDelay then
+				data.timer = 0
+				data.state = STATE_WALK
+				npcutils.faceNearestPlayer(v)
+				v.ai1 = 0
+			end
+		end
+	elseif data.state == STATE_SPINOUT then
+		if v.ai1 == 0 then
+			v.animationFrame = math.floor(v.ai2 / 6) % 8 + 7
+			v.speedX = 0
+			if data.timer >= config.spinoutReady then
+				data.timer = 0
+				v.ai1 = 1
+			end
+		elseif v.ai1 == 1 then
+			v.speedX = config.shellSpeed * v.direction
+			v.ai2 = v.ai2 + 1 * v.direction
+			v.animationFrame = math.floor(v.ai2 / 6) % 8 + 7
+			if v.collidesBlockLeft or v.collidesBlockRight then
+				v.direction = -v.direction
+			end
+		elseif v.ai1 == 2 then
+			if v.colldesBlockBottom then
+				v.speedX = v.speedX * 0.97
+			end
+		end
 	end
 	
 	--Flip animation if it changes direction
