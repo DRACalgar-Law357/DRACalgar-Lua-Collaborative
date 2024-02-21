@@ -143,6 +143,11 @@ local STATE_SHOOT = 2
 local STATE_RAM = 3
 local STATE_SPINOUT = 4
 
+local effectOffsetSkid = {
+	[-1] = sampleNPCSettings.skidOffset[-1],
+	[1] = sampleNPCSettings.skidOffset[1]
+}
+
 --Register events
 function sampleNPC.onInitAPI()
 	npcManager.registerEvent(npcID, sampleNPC, "onTickEndNPC")
@@ -184,9 +189,9 @@ function sampleNPC.onTickEndNPC(v)
 		data.timer = 0
 		data.walkTimer = 0
 		v.ai1 = 0 --Sub-States
-		v.ai2 = 0 --Spin Out Timer
+		v.ai2 = 1 --Spin Out Timer
 		v.ai3 = 0 --Spin Out Cannon Direction
-		v.ai4 = 0 --Frame Timer
+		v.ai4 = 0 --Frame Timer (Unused; Non-Implemented)
 		v.ai5 = 0 --Bullet Bill Consecutive
 		data.rnd = RNG.randomInt(config.walkDelays[0],config.walkDelays[1])
 		data.guaranteed = false --Guarantees a cannon attack after using ram or spinout attack in a walking state
@@ -304,13 +309,41 @@ function sampleNPC.onTickEndNPC(v)
 		elseif v.ai1 == 1 then
 			v.speedX = config.shellSpeed * v.direction
 			v.ai2 = v.ai2 + 1 * v.direction
-			v.animationFrame = math.floor(v.ai2 / 6) % 8 + 7
+			v.animationFrame = math.floor((v.ai2 + 1) / 6) % 8 + 7
 			if v.collidesBlockLeft or v.collidesBlockRight then
 				v.direction = -v.direction
+				SFX.play(3)
+				if v.collidesBlockLeft then
+					Animation.spawn(75,v.x-16,v.y+v.height/2-16)
+				elseif v.collidesBlockRight then
+					Animation.spawn(75,v.x+v.width-16,v.y+v.height/2-16)
+				end
+			end
+			if data.timer >= config.spinoutDelay then
+				data.timer = 0
+				v.ai1 = 2
+			end
+			v.ai3 = (math.floor(v.ai2 / 24) % 2) * 2 - 1
+			if v.ai2 % 24 == 0 then
+				SFX.play(config.sfx_cannon)
+				local n = NPC.spawn(config.bulletBillSets[v.ai5].id, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true)
+				if config.bulletBillSets[v.ai5].effect then local a = Animation.spawn(config.bulletBillSets[v.ai5].effect, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true) end
+				n.speedX = config.bulletBillSets[v.ai5].speedX * v.direction
+				n.speedY = config.bulletBillSets[v.ai5].speedY
 			end
 		elseif v.ai1 == 2 then
-			if v.colldesBlockBottom then
-				v.speedX = v.speedX * 0.97
+			v.ai2 = v.ai2 + 0.5 * v.direction
+			v.animationFrame = math.floor(v.ai2 / 6) % 8 + 7
+			v.speedX = v.speedX - 0.4 * v.direction
+			Effect.spawn(74, v.x + effectOffsetSkid[v.direction], v.y + v.height)
+			if data.timer % 8 == 0 then
+				SFX.play(10)
+			end
+			if math.abs(v.speedX) <= 0.4 then
+				v.speedX = 0
+				data.timer = 0
+				v.ai1 = 0
+				data.state = STATE_IDLE
 			end
 		end
 	end
