@@ -56,13 +56,14 @@ local sampleNPCSettings = {
 	--The effect that spawns when the helmet is knocked off of the penguin
 	killEffect = 10,
 	--The effect that spawns when the boss gets hit
-	bulletID = 773,
+	bulletID = 17,
+	spinOutBulletSpeedX = 5,
 	--X and Y offsets of the bullet spawns
 	bulletSpawnX = {
 		[1] = 16,
 		[-1] = -16,
 	},
-	bulletSpawnY = -24,
+	bulletSpawnY = -32,
 	walkDelays = {
 		[0] = 64, --Minimum
 		[1] = 160, --Maximum
@@ -80,7 +81,7 @@ local sampleNPCSettings = {
 	shootRoundDelay = 48,
 	bulletBillSets = {
 		[0] = {
-			id = 17,
+			id = cannonID,
 			speedX = 3,
 			speedY = 0
 			delay = 12,
@@ -88,7 +89,7 @@ local sampleNPCSettings = {
 			SFX = sfx_cannon,
 		},
 		[1] = {
-			id = 17,
+			id = cannonID,
 			speedX = 3,
 			speedY = 0
 			delay = 12,
@@ -96,7 +97,7 @@ local sampleNPCSettings = {
 			SFX = sfx_cannon,
 		},
 		[2] = {
-			id = 17,
+			id = cannonID,
 			speedX = 3,
 			speedY = 0
 			delay = 60,
@@ -126,12 +127,12 @@ npcManager.registerHarmTypes(npcID,
 	{
 		--[HARM_TYPE_JUMP]=10,
 		--[HARM_TYPE_FROMBELOW]=10,
-		[HARM_TYPE_NPC]=sampleNPCSettings.killEffect,
+		--[HARM_TYPE_NPC]=10,
 		--[HARM_TYPE_PROJECTILE_USED]=10,
 		[HARM_TYPE_LAVA]=sampleNPCSettings.killEffect,
 		--[HARM_TYPE_HELD]=10,
 		--[HARM_TYPE_TAIL]=10,
-		--[HARM_TYPE_SPINJUMP]=10,
+		[HARM_TYPE_SPINJUMP]=10,
 		--[HARM_TYPE_OFFSCREEN]=10,
 		--[HARM_TYPE_SWORD]=10,
 	}
@@ -182,9 +183,9 @@ function sampleNPC.onTickEndNPC(v)
 	if not data.initialized then
 		--Initialize necessary data.
 		if settings.spinOutSet == nil then settings.spinOutSet = 0 end
-		if settings.health == nil then settings.health = 16 end 
+		if settings.health == nil then settings.health = 32 end 
 		data.initialized = true
-		data.health = settings.health or 16
+		data.health = settings.health or 32
 		data.state = STATE_WALK
 		data.timer = 0
 		data.walkTimer = 0
@@ -256,10 +257,20 @@ function sampleNPC.onTickEndNPC(v)
 			if config.bulletBillSets[v.ai5] then
 				if data.timer == config.shootRoundDelay then
 					if config.bulletBillSets[v.ai5].SFX then SFX.play(config.bulletBillSets[v.ai5].SFX) end
-					local n = NPC.spawn(config.bulletBillSets[v.ai5].id, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true)
-					if config.bulletBillSets[v.ai5].effect then local a = Animation.spawn(config.bulletBillSets[v.ai5].effect, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true) end
-					n.speedX = config.bulletBillSets[v.ai5].speedX * v.direction
-					n.speedY = config.bulletBillSets[v.ai5].speedY
+					if config.bulletBillSets[v.ai5].id then
+						local n = NPC.spawn(config.bulletBillSets[v.ai5].id, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true)
+						if config.bulletBillSets[v.ai5].speedX then
+							n.speedX = config.bulletBillSets[v.ai5].speedX * v.direction
+						end
+						if config.bulletBillSets[v.ai5].speedY then
+							n.speedY = config.bulletBillSets[v.ai5].speedY
+						end
+					end
+					if config.bulletBillSets[v.ai5].effect then
+						local a = Animation.spawn(config.bulletBillSets[v.ai5].effect, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section)
+						a.x=a.x-a.width/2
+						a.y=a.y-a.height/2
+					end
 				elseif data.timer >= config.shootRoundDelay + config.bulletBillSets[v.ai5].delay then
 					data.timer = config.shootRoundDelay
 					v.ai5 = v.ai5 + 1
@@ -284,6 +295,11 @@ function sampleNPC.onTickEndNPC(v)
 					v.speedX = 2 * -v.direction
 					v.speedY = -4
 					SFX.play(37)
+					if v.collidesBlockLeft then
+						Animation.spawn(75,v.x-16,v.y+v.height/2-16)
+					elseif v.collidesBlockRight then
+						Animation.spawn(75,v.x+v.width-16,v.y+v.height/2-16)
+					end
 				end
 			end
 		else
@@ -309,6 +325,7 @@ function sampleNPC.onTickEndNPC(v)
 		elseif v.ai1 == 1 then
 			v.speedX = config.shellSpeed * v.direction
 			v.ai2 = v.ai2 + 1 * v.direction
+			v.ai3 = (math.floor(v.ai2 / 24) % 2) * 2 - 1
 			v.animationFrame = math.floor((v.ai2 + 1) / 6) % 8 + 7
 			if v.collidesBlockLeft or v.collidesBlockRight then
 				v.direction = -v.direction
@@ -323,13 +340,15 @@ function sampleNPC.onTickEndNPC(v)
 				data.timer = 0
 				v.ai1 = 2
 			end
-			v.ai3 = (math.floor(v.ai2 / 24) % 2) * 2 - 1
 			if v.ai2 % 24 == 0 then
-				SFX.play(config.sfx_cannon)
+				if config.sfx_cannon then SFX.play(config.sfx_cannon) end
 				local n = NPC.spawn(config.bulletBillSets[v.ai5].id, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true)
-				if config.bulletBillSets[v.ai5].effect then local a = Animation.spawn(config.bulletBillSets[v.ai5].effect, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true) end
-				n.speedX = config.bulletBillSets[v.ai5].speedX * v.direction
-				n.speedY = config.bulletBillSets[v.ai5].speedY
+				if config.bulletBillSets[v.ai5].effect then
+					local a = Animation.spawn(config.bulletBillSets[v.ai5].effect, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY)
+					a.x=a.x-a.width/2
+					a.y=a.y-a.height/2
+				end
+				n.speedX = config.spinOutBulletspeedX * v.direction * v.ai3
 			end
 		elseif v.ai1 == 2 then
 			v.ai2 = v.ai2 + 0.5 * v.direction
@@ -363,7 +382,7 @@ function sampleNPC.onTickEndNPC(v)
 	--Handle interactions with ground pounds
 	for _, npc in ipairs(NPC.getIntersecting(player.x, player.y + player.height, player.x + player.width, player.y + player.height + 30)) do
 		if player.speedY > 0 and npc.id == v.id and player.data.isGroundPounding then
-			if data.state == STATE_WALK then
+			if data.state == STATE_SHOOT then
 				npc:harm(HARM_TYPE_JUMP)
 			elseif data.state == STATE_RAM or data.state == STATE_SPINOUT then
 				SFX.play(2)
@@ -395,7 +414,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 			end
 		
 			if reason == HARM_TYPE_JUMP or reason == HARM_TYPE_SPINJUMP then
-				if data.helmet > 0 then
+				if data.state == STATE_WALK then
 					if type(culprit) == "Player" then
 						if reason == HARM_TYPE_JUMP then
 							if not culprit:mem(0x50,FIELD_BOOL) then
@@ -409,49 +428,81 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 					end
 					eventObj.cancelled = true
 					return
+				elseif data.state == STATE_RAM or data.state == STATE_SPINOUT then
+					SFX.play(2)
+					eventObj.cancelled = true
+					return
+				else
+					SFX.play(2)
 				end
 			end
-			
-			data.health = data.health - 8
-			if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
-			data.hitY = v.y
-			data.state = STATE_HURT
-			Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
-			data.timer = 0
-				
+			if data.state == STATE_WALK or data.state == STATE_SHOOT then
+				data.health = data.health - 8
+				if data.health > 0 then	SFX.play(39) end
+				data.state = STATE_RAM
+				v.ai1 = 0
+				Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
+				data.timer = 0
+			else
+				SFX.play(2)
+			end
 		elseif reason == HARM_TYPE_NPC then
 			--Interact with Superballs and bullets from Marine Pop and Sky Pop for minor damage
 			if culprit then
 				if type(culprit) == "NPC" then
-					if data.helmet == 0 then
+					if data.state == STATE_WALK or data.state == STATE_SHOOT then
 						if culprit.id == 13 or NPC.config[culprit.id].SMLDamageSystem then
 							SFX.play(9)
 							data.health = data.health - 2
 						else
 							data.health = data.health - 8
-							if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
-							data.hitY = v.y
-							data.state = STATE_HURT
+							if data.health > 0 then	SFX.play(39) data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
+							data.state = STATE_RAM
+							v.ai1 = 0
 							Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 							data.timer = 0
 						end
 					else
-						data.helmet = 0
-						SFX.play(3)
-						Effect.spawn(NPC.config[v.id].helmetEffect, v.x + NPC.config[v.id].effectSpawnX, v.y + NPC.config[v.id].effectSpawnY)
+						if v:mem(0x156, FIELD_WORD) <= 0 then
+							SFX.play(3)
+							if culprit then
+								Animation.spawn(75, culprit.x, culprit.y)
+								culprit.speedX = -(culprit.speedX + 2)
+								culprit.speedY = -8
+								if type(culprit) == "NPC" and (culprit.id ~= 195 and culprit.id ~= 50) and NPC.HITTABLE_MAP[culprit.id] then
+									culprit:kill(HARM_TYPE_NPC)
+								end
+							end
+							v:mem(0x156, FIELD_WORD,3)
+						end
 					end
 				else
-					data.health = data.health - 8
-					if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
-					data.hitY = v.y
-					data.state = STATE_HURT
-					Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
-					data.timer = 0
+					if data.state == STATE_WALK or data.state == STATE_SHOOT then
+						data.health = data.health - 8
+						if data.health > 0 then	SFX.play(39) data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
+						data.state = STATE_RAM
+						v.ai1 = 0
+						Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
+						data.timer = 0
+					else
+						if v:mem(0x156, FIELD_WORD) <= 0 then
+							SFX.play(3)
+							if culprit then
+								Animation.spawn(75, culprit.x, culprit.y)
+								culprit.speedX = -(culprit.speedX + 2)
+								culprit.speedY = -8
+								if type(culprit) == "NPC" and (culprit.id ~= 195 and culprit.id ~= 50) and NPC.HITTABLE_MAP[culprit.id] then
+									culprit:kill(HARM_TYPE_NPC)
+								end
+							end
+							v:mem(0x156, FIELD_WORD,3)
+						end
+					end
 				end
 			else
 				for _,n in ipairs(NPC.getIntersecting(v.x, v.y, v.x + v.width, v.y + v.height)) do
 					if NPC.config[n.id].SMLDamageSystem then
-						if data.helmet == 0 then
+						if data.state == STATE_WALK or data.state == STATE_SHOOT then
 							if v:mem(0x156, FIELD_WORD) <= 0 then
 								data.health = data.health - 2
 								v:mem(0x156, FIELD_WORD,5)
@@ -462,42 +513,57 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 								end
 							end
 						else
-							data.helmet = 0
 							SFX.play(3)
-							Effect.spawn(NPC.config[v.id].helmetEffect, v.x + NPC.config[v.id].effectSpawnX, v.y + NPC.config[v.id].effectSpawnY)
 						end
 						return
 					end
 				end
 				
-				if data.helmet == 0 then
+				if data.state == STATE_WALK or data.state == STATE_SHOOT then
 					data.health = data.health - 8
-					if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
+					if data.health > 0 then	SFX.play(39) end
 					data.hitY = v.y
 					data.state = STATE_HURT
 					Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 					data.timer = 0
 				else
-					SFX.play(3)	
-					data.helmet = 0
-					Effect.spawn(NPC.config[v.id].helmetEffect, v.x + NPC.config[v.id].effectSpawnX, v.y + NPC.config[v.id].effectSpawnY)
+					if v:mem(0x156, FIELD_WORD) <= 0 then
+						SFX.play(3)
+						if culprit then
+							Animation.spawn(75, culprit.x, culprit.y)
+							culprit.speedX = -(culprit.speedX + 2)
+							culprit.speedY = -8
+							if type(culprit) == "NPC" and (culprit.id ~= 195 and culprit.id ~= 50) and NPC.HITTABLE_MAP[culprit.id] then
+								culprit:kill(HARM_TYPE_NPC)
+							end
+						end
+						v:mem(0x156, FIELD_WORD,3)
+					end
 				end
 			end
 		elseif v:mem(0x12, FIELD_WORD) == 2 then
 			v:kill(HARM_TYPE_OFFSCREEN)
 		else
-			if data.helmet == 0 then
-				data.state = STATE_HURT
-				data.timer = 0
+			if data.state == STATE_WALK or data.state == STATE_SHOOT then
 				data.health = data.health - 8
-				if data.health > 0 then	SFX.play("WL1 Boss Hit.wav") data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
+				if data.health > 0 then	SFX.play(39) end
 				data.hitY = v.y
+				data.state = STATE_HURT
 				Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
+				data.timer = 0
 			else
-				data.helmet = 0
-				SFX.play(3)
-				Effect.spawn(NPC.config[v.id].helmetEffect, v.x + NPC.config[v.id].effectSpawnX, v.y + NPC.config[v.id].effectSpawnY)
-				eventObj.cancelled = true
+				if v:mem(0x156, FIELD_WORD) <= 0 then
+					SFX.play(3)
+					if culprit then
+						Animation.spawn(75, culprit.x, culprit.y)
+						culprit.speedX = -(culprit.speedX + 2)
+						culprit.speedY = -8
+						if type(culprit) == "NPC" and (culprit.id ~= 195 and culprit.id ~= 50) and NPC.HITTABLE_MAP[culprit.id] then
+							culprit:kill(HARM_TYPE_NPC)
+						end
+					end
+					v:mem(0x156, FIELD_WORD,3)
+				end
 			end
 		end
 		
@@ -510,11 +576,9 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 		end
 		
 		if data.health <= 0 then
-			v:kill(HARM_TYPE_NPC)
+			v:kill(HARM_TYPE_SPINJUMP)
 		elseif data.health > 0 then
-			if data.state == STATE_HURT then
-				v:mem(0x156,FIELD_WORD,60)
-			end
+			v:mem(0x156,FIELD_WORD,20)
 		end
 	else
 		v:kill(HARM_TYPE_LAVA)
@@ -535,7 +599,6 @@ function sampleNPC.onNPCKill(eventObj,v,reason)
 				
 		SFX.play(20)
 	end
-	SFX.play("WL1 Boss Dead.wav")
 end
 
 --Gotta return the library table!
