@@ -33,7 +33,7 @@ local sampleNPCSettings = {
 	playerblock = false,
 	playerblocktop = false, --Also handles other NPCs walking atop this NPC.
 
-	nohurt=true,
+	nohurt=false,
 	nogravity = false,
 	noblockcollision = false,
 	nofireball = false,
@@ -56,23 +56,27 @@ local sampleNPCSettings = {
 	--The effect that spawns when the helmet is knocked off of the penguin
 	killEffect = 10,
 	--The effect that spawns when the boss gets hit
-	bulletID = 17,
-	spinOutBulletSpeedX = 5,
+	bulletID = 695,
+	spinOutBulletSpeedX = 6,
 	--X and Y offsets of the bullet spawns
 	bulletSpawnX = {
-		[1] = 16,
-		[-1] = -16,
+		[1] = 20,
+		[-1] = -20,
 	},
-	bulletSpawnY = -32,
+	bulletSpawnY = -40,
 	walkDelays = {
 		[0] = 64, --Minimum
 		[1] = 160, --Maximum
+	},
+	skidOffset = {
+		[-1] = 0,
+		[1] = 48,
 	},
 	ramDelay = 60,
 	spinoutReady = 60,
 	spinoutDelay = 300,
 	stunnedDelay = 80,
-	shellSpeed = 4,
+	shellSpeed = 5,
 	walkSpeed = 1.5,
 	turnAroundDelay = 48,
 	sfx_cannon_ready = Misc.resolveFile("mechakoopa_blaster_prepare.wav"),
@@ -81,32 +85,31 @@ local sampleNPCSettings = {
 	shootRoundDelay = 48,
 	bulletBillSets = {
 		[0] = {
-			id = cannonID,
-			speedX = 3,
-			speedY = 0
-			delay = 12,
+			id = 695,
+			speedX = 4,
+			speedY = 0,
+			delay = 16,
 			effect = 10,
-			SFX = sfx_cannon,
+			SFX = Misc.resolveFile("mechakoopa_blaster_fire.wav"),
 		},
 		[1] = {
-			id = cannonID,
-			speedX = 3,
-			speedY = 0
-			delay = 12,
+			id = 695,
+			speedX = 4,
+			speedY = 0,
+			delay = 16,
 			effect = 10,
-			SFX = sfx_cannon,
+			SFX = Misc.resolveFile("mechakoopa_blaster_fire.wav"),
 		},
 		[2] = {
-			id = cannonID,
-			speedX = 3,
-			speedY = 0
+			id = 695,
+			speedX = 4,
+			speedY = 0,
 			delay = 60,
 			effect = 10,
-			SFX = sfx_cannon,
+			SFX = Misc.resolveFile("mechakoopa_blaster_fire.wav"),
 		},
 	},
 }
-
 --Applies NPC settings
 npcManager.setNpcSettings(sampleNPCSettings)
 
@@ -169,9 +172,6 @@ function sampleNPC.onTickEndNPC(v)
 	local settings = v.data._settings
 	local config = NPC.config[v.id]
 	
-	local list
-	local npcs
-	
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
@@ -208,7 +208,6 @@ function sampleNPC.onTickEndNPC(v)
 	end
 
 	data.timer = data.timer + 1
-	
 	if data.state == STATE_WALK then
 		--Simply walk about
 		v.speedX = config.walkSpeed * v.direction
@@ -225,10 +224,8 @@ function sampleNPC.onTickEndNPC(v)
 			if data.guaranteed == false then
 				if settings.spinOutSet == 0 then
 					table.insert(options,STATE_SHOOT)
-					table.insert(options,STATE_SHOOT)
 					table.insert(options,STATE_RAM)
 				else
-					table.insert(options,STATE_SHOOT)
 					table.insert(options,STATE_SHOOT)
 					table.insert(options,STATE_RAM)
 					if (settings.spinOutSet == 1) or (settings.spinOutSet == 2 and data.health <= settings.health / 2) then
@@ -237,6 +234,7 @@ function sampleNPC.onTickEndNPC(v)
 				end
 			else
 				table.insert(options,STATE_SHOOT)
+				data.guaranteed = false
 			end
 			if #options > 0 then
 				data.state = RNG.irandomEntry(options)
@@ -252,13 +250,14 @@ function sampleNPC.onTickEndNPC(v)
 		v.speedX = 0
 		v.animationFrame = 2
 		if data.timer == 1 then v.ai5 = 0 end
-		if data.timer == 1 and config.sfx_cannon_ready then SFX.play(config.sfx_cannon_ready.SFX, config.sfx_cannon_ready.delay) end
+		if data.timer == 1 and config.sfx_cannon_ready then SFX.play(config.sfx_cannon_ready) end
 		if data.timer >= config.shootRoundDelay then
 			if config.bulletBillSets[v.ai5] then
 				if data.timer == config.shootRoundDelay then
 					if config.bulletBillSets[v.ai5].SFX then SFX.play(config.bulletBillSets[v.ai5].SFX) end
 					if config.bulletBillSets[v.ai5].id then
-						local n = NPC.spawn(config.bulletBillSets[v.ai5].id, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true)
+						local n = NPC.spawn(config.bulletBillSets[v.ai5].id, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, false, true)
+						n.direction = v.direction
 						if config.bulletBillSets[v.ai5].speedX then
 							n.speedX = config.bulletBillSets[v.ai5].speedX * v.direction
 						end
@@ -267,18 +266,19 @@ function sampleNPC.onTickEndNPC(v)
 						end
 					end
 					if config.bulletBillSets[v.ai5].effect then
-						local a = Animation.spawn(config.bulletBillSets[v.ai5].effect, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section)
+						local a = Animation.spawn(config.bulletBillSets[v.ai5].effect, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY)
 						a.x=a.x-a.width/2
 						a.y=a.y-a.height/2
 					end
 				elseif data.timer >= config.shootRoundDelay + config.bulletBillSets[v.ai5].delay then
-					data.timer = config.shootRoundDelay
+					data.timer = config.shootRoundDelay-1
 					v.ai5 = v.ai5 + 1
 				end
 			else
 				v.ai5 = 0
 				data.timer = 0
 				data.state = STATE_WALK
+				npcutils.faceNearestPlayer(v)
 			end
 		end
 	elseif data.state == STATE_RAM then
@@ -286,6 +286,7 @@ function sampleNPC.onTickEndNPC(v)
 			if data.timer < config.ramDelay then
 				v.animationFrame = 3
 				v.speedX = 0
+				npcutils.faceNearestPlayer(v)
 			else
 				v.animationFrame = math.floor(data.timer / 6) % 4 + 3
 				v.speedX = config.shellSpeed * v.direction
@@ -301,10 +302,14 @@ function sampleNPC.onTickEndNPC(v)
 						Animation.spawn(75,v.x+v.width-16,v.y+v.height/2-16)
 					end
 				end
+				if data.timer >= config.ramDelay + 360 then
+					data.timer = 0
+					v.ai1 = 2
+				end
 			end
-		else
+		elseif v.ai1 == 1 then
 			v.animationFrame = 3
-			if v.colldesBlockBottom then
+			if v.collidesBlockBottom then
 				v.speedX = 0
 			end
 			if data.timer >= config.stunnedDelay then
@@ -312,6 +317,31 @@ function sampleNPC.onTickEndNPC(v)
 				data.state = STATE_WALK
 				npcutils.faceNearestPlayer(v)
 				v.ai1 = 0
+			end
+		else
+			v.animationFrame = 3
+			v.speedX = v.speedX - 0.1 * v.direction
+			local a = Effect.spawn(74, v.x + effectOffsetSkid[v.direction], v.y + v.height)
+			a.x=a.x-a.width/2
+			a.y=a.y-a.height/2
+			if data.timer % 8 == 0 then
+				SFX.play(10)
+			end
+			if v.collidesBlockLeft or v.collidesBlockRight then
+				v.direction = -v.direction
+				SFX.play(3)
+				if v.collidesBlockLeft then
+					Animation.spawn(75,v.x-16,v.y+v.height/2-16)
+				elseif v.collidesBlockRight then
+					Animation.spawn(75,v.x+v.width-16,v.y+v.height/2-16)
+				end
+			end
+			if math.abs(v.speedX) <= 0.2 then
+				v.speedX = 0
+				data.timer = 0
+				v.ai1 = 0
+				data.state = STATE_WALK
+				npcutils.faceNearestPlayer(v)
 			end
 		end
 	elseif data.state == STATE_SPINOUT then
@@ -341,28 +371,40 @@ function sampleNPC.onTickEndNPC(v)
 				v.ai1 = 2
 			end
 			if v.ai2 % 24 == 0 then
-				if config.sfx_cannon then SFX.play(config.sfx_cannon) end
-				local n = NPC.spawn(config.bulletBillSets[v.ai5].id, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, true, true)
-				if config.bulletBillSets[v.ai5].effect then
-					local a = Animation.spawn(config.bulletBillSets[v.ai5].effect, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY)
+				if RNG.randomInt(0,2) > 0 then
+					if config.sfx_cannon then SFX.play(config.sfx_cannon) end
+					local n = NPC.spawn(config.bulletID, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY, v.section, false, true)
+					local a = Animation.spawn(10, v.x + v.width/2 + config.bulletSpawnX[v.direction], v.y + v.height/2 + config.bulletSpawnY)
 					a.x=a.x-a.width/2
 					a.y=a.y-a.height/2
+					n.direction = v.direction * v.ai3
+					n.speedX = config.spinOutBulletspeedX * n.direction
 				end
-				n.speedX = config.spinOutBulletspeedX * v.direction * v.ai3
 			end
 		elseif v.ai1 == 2 then
-			v.ai2 = v.ai2 + 0.5 * v.direction
 			v.animationFrame = math.floor(v.ai2 / 6) % 8 + 7
-			v.speedX = v.speedX - 0.4 * v.direction
-			Effect.spawn(74, v.x + effectOffsetSkid[v.direction], v.y + v.height)
+			v.speedX = v.speedX - 0.1 * v.direction
+			local a = Effect.spawn(74, v.x + effectOffsetSkid[v.direction], v.y + v.height)
+			a.x=a.x-a.width/2
+			a.y=a.y-a.height/2
 			if data.timer % 8 == 0 then
 				SFX.play(10)
 			end
-			if math.abs(v.speedX) <= 0.4 then
+			if v.collidesBlockLeft or v.collidesBlockRight then
+				v.direction = -v.direction
+				SFX.play(3)
+				if v.collidesBlockLeft then
+					Animation.spawn(75,v.x-16,v.y+v.height/2-16)
+				elseif v.collidesBlockRight then
+					Animation.spawn(75,v.x+v.width-16,v.y+v.height/2-16)
+				end
+			end
+			if math.abs(v.speedX) <= 0.2 then
 				v.speedX = 0
 				data.timer = 0
 				v.ai1 = 0
-				data.state = STATE_IDLE
+				data.state = STATE_WALK
+				npcutils.faceNearestPlayer(v)
 			end
 		end
 	end
