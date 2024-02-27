@@ -49,12 +49,13 @@ local sampleNPCSettings = {
 	grabside=false,
 	grabtop=false,
 
-	score = 8,
+	score = 0,
 
 	staticdirection = true,
 	
 	--The effect that spawns when the helmet is knocked off of the penguin
-	killEffect = 10,
+	killEffect = npcID,
+	killScore = 8,
 	--The effect that spawns when the boss gets hit
 	bulletID = 695,
 	spinOutBulletSpeedX = 6,
@@ -130,12 +131,12 @@ npcManager.registerHarmTypes(npcID,
 	{
 		--[HARM_TYPE_JUMP]=10,
 		--[HARM_TYPE_FROMBELOW]=10,
-		--[HARM_TYPE_NPC]=10,
+		[HARM_TYPE_NPC]=sampleNPCSettings.killEffect,
 		--[HARM_TYPE_PROJECTILE_USED]=10,
-		[HARM_TYPE_LAVA]=sampleNPCSettings.killEffect,
+		[HARM_TYPE_LAVA]=13,
 		--[HARM_TYPE_HELD]=10,
 		--[HARM_TYPE_TAIL]=10,
-		[HARM_TYPE_SPINJUMP]=10,
+		--[HARM_TYPE_SPINJUMP]=10,
 		--[HARM_TYPE_OFFSCREEN]=10,
 		--[HARM_TYPE_SWORD]=10,
 	}
@@ -318,7 +319,7 @@ function sampleNPC.onTickEndNPC(v)
 				npcutils.faceNearestPlayer(v)
 				v.ai1 = 0
 			end
-		else
+		elseif v.ai1 == 2 then
 			v.animationFrame = 3
 			v.speedX = v.speedX - 0.1 * v.direction
 			local a = Effect.spawn(74, v.x + effectOffsetSkid[v.direction], v.y + v.height)
@@ -328,25 +329,32 @@ function sampleNPC.onTickEndNPC(v)
 				SFX.play(10)
 			end
 			if v.collidesBlockLeft or v.collidesBlockRight then
-				v.direction = -v.direction
 				SFX.play(3)
 				if v.collidesBlockLeft then
 					Animation.spawn(75,v.x-16,v.y+v.height/2-16)
 				elseif v.collidesBlockRight then
 					Animation.spawn(75,v.x+v.width-16,v.y+v.height/2-16)
 				end
+				v.speedX = -v.speedX
 			end
-			if math.abs(v.speedX) <= 0.2 then
+			if math.abs(v.speedX) <= 0.3 then
 				v.speedX = 0
 				data.timer = 0
 				v.ai1 = 0
 				data.state = STATE_WALK
 				npcutils.faceNearestPlayer(v)
 			end
+		else
+			v.ai1 = 0
+			data.timer = 0
 		end
 	elseif data.state == STATE_SPINOUT then
+		local rotationOffset = 0
+		if v.direction == 1 then
+			rotationOffset = 24
+		end
 		if v.ai1 == 0 then
-			v.animationFrame = math.floor(v.ai2 / 6) % 8 + 7
+			v.animationFrame = math.floor((v.ai2 + 1 + rotationOffset) / 6) % 8 + 7
 			v.speedX = 0
 			if data.timer >= config.spinoutReady then
 				data.timer = 0
@@ -356,9 +364,8 @@ function sampleNPC.onTickEndNPC(v)
 			v.speedX = config.shellSpeed * v.direction
 			v.ai2 = v.ai2 + 1 * v.direction
 			v.ai3 = (math.floor(v.ai2 / 24) % 2) * 2 - 1
-			v.animationFrame = math.floor((v.ai2 + 1) / 6) % 8 + 7
+			v.animationFrame = math.floor((v.ai2 + 1 + rotationOffset) / 6) % 8 + 7
 			if v.collidesBlockLeft or v.collidesBlockRight then
-				v.direction = -v.direction
 				SFX.play(3)
 				if v.collidesBlockLeft then
 					Animation.spawn(75,v.x-16,v.y+v.height/2-16)
@@ -382,7 +389,7 @@ function sampleNPC.onTickEndNPC(v)
 				end
 			end
 		elseif v.ai1 == 2 then
-			v.animationFrame = math.floor(v.ai2 / 6) % 8 + 7
+			v.animationFrame = math.floor((v.ai2 + 1 + rotationOffset) / 6) % 8 + 7
 			v.speedX = v.speedX - 0.1 * v.direction
 			local a = Effect.spawn(74, v.x + effectOffsetSkid[v.direction], v.y + v.height)
 			a.x=a.x-a.width/2
@@ -391,27 +398,53 @@ function sampleNPC.onTickEndNPC(v)
 				SFX.play(10)
 			end
 			if v.collidesBlockLeft or v.collidesBlockRight then
-				v.direction = -v.direction
 				SFX.play(3)
 				if v.collidesBlockLeft then
 					Animation.spawn(75,v.x-16,v.y+v.height/2-16)
 				elseif v.collidesBlockRight then
 					Animation.spawn(75,v.x+v.width-16,v.y+v.height/2-16)
 				end
+				v.speedX = -v.speedX
 			end
-			if math.abs(v.speedX) <= 0.2 then
+			if math.abs(v.speedX) <= 0.3 then
 				v.speedX = 0
 				data.timer = 0
 				v.ai1 = 0
 				data.state = STATE_WALK
 				npcutils.faceNearestPlayer(v)
 			end
+		else
+			v.ai1 = 0
+			data.timer = 0
 		end
+	else
+		data.state = STATE_RAM
+		data.timer = 0
 	end
 	
 	--Flip animation if it changes direction
 	if v.animationFrame >= 0 then
 		v.animationFrame = npcutils.getFrameByFramestyle(v,{frame = frame})
+	end
+
+	if v:mem(0x120, FIELD_BOOL) then
+		v:mem(0x120, FIELD_BOOL, false)
+	end
+
+	if v.collidesBlockLeft then
+		v.direction = 1
+	elseif v.collidesBlockRight then
+		v.direction = -1
+	end
+	if (data.state == STATE_RAM or data.state == STATE_SPINOUT) and v.ai1 > 0 then
+		for k, n in  ipairs(Colliders.getColliding{a = v, b = NPC.HITTABLE, btype = Colliders.NPC, filter = npcFilter}) do
+			if n.id ~= v.id then
+				if n:mem(0x156,FIELD_WORD) <= 0 then
+					n:harm()
+					Animation.spawn(75,n.x,n.y)
+				end
+			end
+		end
 	end
 	
 	--If the player is ground pounding, do all this
@@ -458,6 +491,11 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 			if reason == HARM_TYPE_JUMP or reason == HARM_TYPE_SPINJUMP then
 				if data.state == STATE_WALK then
 					if type(culprit) == "Player" then
+						if (culprit.mount == MOUNT_BOOT or culprit.mount == MOUNT_YOSHI) then
+							eventObj.cancelled = true
+							SFX.play(2)
+							return
+						end
 						if reason == HARM_TYPE_JUMP then
 							if not culprit:mem(0x50,FIELD_BOOL) then
 								culprit:harm()
@@ -498,7 +536,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 							data.health = data.health - 2
 						else
 							data.health = data.health - 8
-							if data.health > 0 then	SFX.play(39) data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
+							if data.health > 0 then	SFX.play(39) end
 							data.state = STATE_RAM
 							v.ai1 = 0
 							Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
@@ -521,7 +559,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 				else
 					if data.state == STATE_WALK or data.state == STATE_SHOOT then
 						data.health = data.health - 8
-						if data.health > 0 then	SFX.play(39) data.effect = Effect.spawn(NPC.config[v.id].stunnedEffect, NPC.config[v.id].effectSpawnX, NPC.config[v.id].effectSpawnY) end
+						if data.health > 0 then	SFX.play(39) end
 						data.state = STATE_RAM
 						v.ai1 = 0
 						Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
@@ -564,7 +602,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 				if data.state == STATE_WALK or data.state == STATE_SHOOT then
 					data.health = data.health - 8
 					if data.health > 0 then	SFX.play(39) end
-					data.hitY = v.y
+					
 					data.state = STATE_HURT
 					Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 					data.timer = 0
@@ -589,7 +627,7 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 			if data.state == STATE_WALK or data.state == STATE_SHOOT then
 				data.health = data.health - 8
 				if data.health > 0 then	SFX.play(39) end
-				data.hitY = v.y
+				
 				data.state = STATE_HURT
 				Misc.givePoints(2, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 				data.timer = 0
@@ -618,7 +656,9 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 		end
 		
 		if data.health <= 0 then
-			v:kill(HARM_TYPE_SPINJUMP)
+			v:kill(HARM_TYPE_NPC)
+			SFX.play(63)
+			Misc.givePoints(sampleNPCSettings.killScore, {x = v.x + (v.width / 2.5),y = v.y + (v.height / 2.5)}, true)
 		elseif data.health > 0 then
 			v:mem(0x156,FIELD_WORD,20)
 		end
