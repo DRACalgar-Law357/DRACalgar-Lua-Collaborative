@@ -239,7 +239,7 @@ function sampleNPC.onDrawNPC(v)
 	if parent.data.bossColour then
 		armColour = parent.data.bossColour
 	end
-	if parent or parent.isValid then
+	if (parent or parent.isValid) and v.state > 1 then
 		Graphics.drawImageToSceneWP( --Arm Pivot
 			img,
 			v.spawnPositionX - config.armWidth / 2 + config.armOffsetX,
