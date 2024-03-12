@@ -1,0 +1,34 @@
+{
+	"style" : "groupbox",
+	"title" : "Vicious Keeper (EX) Settings",
+	"layout": [	
+		{
+			"control": "checkbox",
+			"name": "fire",
+			"title": "Breathe Fire?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "jump",
+			"title": "Jump Around?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "quake",
+			"title": "Jump & Cause Debris?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "call",
+			"title": "Call Enemies from screen?",
+			"text-visible": true,
+			"value-default": true
+		}
+		]
+}

@@ -140,11 +140,12 @@ function sampleNPC.onTickEndNPC(v)
 		-- return
 	end
 	local parent = data.parent
-	if parent.data.phase >= 1 then
+	if parent.data.trackPhase >= 1 then
 		v.stackSpeed = config.stackSpeed
 	else
 		v.stackSpeed = 0
 	end
+	
 	data.dirVectr = vector.v2(
 		(data.locationX) - (v.x + v.width * 0.5),
 		(data.locationY) - (v.y + v.height * 0.5)
@@ -165,54 +166,46 @@ function sampleNPC.onTickEndNPC(v)
 		spawnDistanceX = (v.spawnPositionX)-(v.x+(v.width /2))
         spawnDistanceY = (v.spawnPositionY)-(v.y+(v.height/2))
         spawnDistance  = math.abs(spawnDistanceX)+math.abs(spawnDistanceY)
-	if not parent or not parent.isValid then
-		data.parent = nil
-		v:kill(9)
-		return
-	else
-		if v.state == 0 then --Idle
-			v.animationFrame = math.floor(lunatime.tick() / 8) % 4 + 4 * parent.data.bossColour
-		elseif v.state == 1 then --Aim
-			v.animationFrame = 0 + 4 * parent.data.bossColour
-			data.locationX = plr.x
-			data.locationY = plr.y
-			if v.timer >= config.aimDelay then
-				v.timer = 0
-				v.state = 2
-			end
-		elseif v.state == 2 then --Extend
-			v.animationFrame = 0 + 4 * parent.data.bossColour
-			v.clawOffsetX = v.clawOffsetX + data.dirVectr.x
-			v.clawOffsetY = v.clawOffsetY + data.dirVectr.y
-			if (clawDistance >= config.extendRange) or (playerDistance <= 8) then
-				v.state = 3
-				v.timer = 0
-			end
-			Text.print(playerDistance,110,142)
-			Text.print(clawDistance,110,158)
-		elseif v.state == 3 then --Pinch
-			v.animationFrame = math.clamp(math.floor(v.timer / 8), 0, 3) + 4 * parent.data.bossColour
-			if v.timer >= 32 then
-				v.timer = 0
-				v.state = 4
-			end
-			if v.timer == 16 and config.snipSFX then SFX.play(config.snipSFX) end
-		elseif v.state == 4 then --Retract
-			v.animationFrame = 0 + 4 * parent.data.bossColour
-			v.clawOffsetX = v.clawOffsetX + data.spawnVectr.x
-			v.clawOffsetY = v.clawOffsetY + data.spawnVectr.y
-			if spawnDistance <= config.retractRange then
-				v.state = 0
-				v.timer = 0
-			end
-			Text.print(spawnDistance,110,142)
+		
+	if v.state == 0 then --Idle
+		v.animationFrame = math.floor(lunatime.tick() / 8) % 4 + 4 * parent.data.bossColour
+	elseif v.state == 1 then --Aim
+		v.animationFrame = 0 + 4 * parent.data.bossColour
+		data.locationX = plr.x
+		data.locationY = plr.y
+		if v.timer >= config.aimDelay then
+			v.timer = 0
+			v.state = 2
+		end
+	elseif v.state == 2 then --Extend
+		v.animationFrame = 0 + 4 * parent.data.bossColour
+		v.clawOffsetX = v.clawOffsetX + data.dirVectr.x
+		v.clawOffsetY = v.clawOffsetY + data.dirVectr.y
+		if (clawDistance >= config.extendRange) or (playerDistance <= 8) then
+			v.state = 3
+			v.timer = 0
+		end
+	elseif v.state == 3 then --Pinch
+		v.animationFrame = math.clamp(math.floor(v.timer / 8), 0, 3) + 4 * parent.data.bossColour
+		if v.timer >= 32 then
+			v.timer = 0
+			v.state = 4
+		end
+		if v.timer == 16 and config.snipSFX then SFX.play(config.snipSFX) end
+	elseif v.state == 4 then --Retract
+		v.animationFrame = 0 + 4 * parent.data.bossColour
+		v.clawOffsetX = v.clawOffsetX + data.spawnVectr.x
+		v.clawOffsetY = v.clawOffsetY + data.spawnVectr.y
+		if spawnDistance <= config.retractRange then
+			v.state = 0
+			v.timer = 0
 		end
 	end
 end
 local lowPriorityStates = table.map{1,3,4}
 function sampleNPC.onDrawNPC(v)
 	if v.despawnTimer <= 0 or v.isHidden then return end
-
+	
 	local config = NPC.config[v.id]
 	local data = v.data
 
@@ -235,10 +228,18 @@ function sampleNPC.onDrawNPC(v)
 	local img = Graphics.loadImageResolved("kroctopus_arm.png")
 	--Claw Arms
 	local parent = data.parent
+	
+	if not parent or not parent.isValid then
+		data.parent = nil
+		v:kill(9)
+		return
+	end
+	
 	local armColour
 	if parent.data.bossColour then
 		armColour = parent.data.bossColour
 	end
+	
 	if (parent or parent.isValid) and v.state > 1 then
 		Graphics.drawImageToSceneWP( --Arm Pivot
 			img,

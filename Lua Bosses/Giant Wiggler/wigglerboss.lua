@@ -2,15 +2,16 @@ local rng = require("rng")
 local npcManager = require("npcManager");
 local wiggler = {};
 local npcutils = require("npcs/npcutils")
+local playerStun = require("playerstun")
 
 -- TODO: Implement onNPCIDChange and ice flower mechanics
 
 wiggler.sharedBody = {
 	gfxwidth = 72, 
 	gfxheight = 104, 
-	width = 48,
-	height = 48,
-	gfxoffsety = 16,
+	width = 64,
+	height = 64,
+	gfxoffsety = 8,
 	frames = 4,
 	framespeed = 8,
 	framestyle = 1,
@@ -24,20 +25,20 @@ wiggler.sharedBody = {
 	hitScore = 1,
 	score = 0,
 	spinjumpsafe = true,
-
-	trailcount=4,
+	terminalvelocity = 15, 
+	trailcount=6,
 	trailID = 752,
-	distance = 48,
+	distance = 32,
 	angryID = 753,
-	normalID = 751
+	normalID = 751,
 
 	--Behavior-related
 	health = 25,
-	angryHealth = 5
+	angryHealth = 5,
 	walkingSpeed = 1.5,
 	angryWalkingSpeed = 2.0,
 	speedStack = 0.2,
-	jumpHeight = 9,
+	jumpHeight = 10,
 	jumpStack = 0.2,
 	angryDelay = 400,
 	jumpDelay = 70,
@@ -51,7 +52,6 @@ wiggler.sharedBody = {
 	stunSoundID = 37,
 	hurtSoundID = 39,
 	killSoundID = 9,
-	jumpHeight = 9,
 	moveWhenJumping = false,
 	jumpsThroughBlock = true,
 	jumpCooldown = 250,
@@ -64,7 +64,7 @@ wiggler.sharedTrail = {
 	gfxwidth = 64, 
 	gfxheight = 64, 
 	width = 48,
-	height = 24,
+	height = 48,
 	frames = 4,
 	framespeed = 8,
 	framestyle = 1,
@@ -79,7 +79,7 @@ wiggler.sharedTrail = {
 	spinjumpsafe = true,
 
 	angryID = 754,
-	normalID = 752
+	normalID = 752,
 }
 
 wiggler.speed = {}
@@ -136,8 +136,7 @@ function wiggler.initialize(v)
 	
 	local sec = v:mem(0x146, FIELD_WORD)
 	local dir = v:mem(0xD8,FIELD_FLOAT)
-	local hp = v:mem()
-	
+	v.hp = NPC.config[v.id].health
 	if v.direction == 0 then
 		v.direction = rng.randomInt(0, 1) * 2 - 1
 	end
@@ -251,16 +250,6 @@ function wiggler.onTickHead(v)
 	--horizontal speed
 	local collideVal = v:mem(0x136, FIELD_BOOL)
 	
-	if not collideVal then
-		if (not data.isAngry) and (not v.dontMove) then
-			v.speedX = (cfg.walkingSpeed + cfg.speedStack) * v.direction
-		else
-			if not data.isAngry then
-				v.speedX = 0
-			end
-		end
-	end
-	
 	local grabTimerVal = v:mem(0x12E, FIELD_WORD)
 	local grabPlayerVal = v:mem(0x12C, FIELD_WORD)
 	local grabVal = v:mem(0x130, FIELD_WORD)
@@ -307,19 +296,7 @@ function wiggler.onTickHead(v)
 		end)
 		v.animationTimer = 0
 	end
-	if (data.chaseTimer <= 0) and v.direction == v.spawnDirection then
-		if not data.isAngry then
-			v.speedX = (cfg.walkingSpeed + cfg.speedStack) * v.direction
-		else
-			v.speedX = (cfg.angryWalkingSpeed + cfg.speedStack) * v.direction
-		end
-	elseif data.stillJump == false then
-		if data.chaseTimer ~= nil and data.chaseTimer > 0 then
-			data.chaseTimer = data.chaseTimer - 1
-		end
-	elseif v.collidesBlockBottom then
-		data.stillJump = false
-	end
+	if v.collidesBlockBottom then data.stillJump = false end
 	--Stomp
 	if v.speedY > 1 and NPC.config[v.id].canStomp then
 		v.speedY = v.speedY + .5
@@ -340,11 +317,11 @@ function wiggler.onTickHead(v)
 	end
 	data.blockCheckUp.x = v.x
 	data.blockCheckUp.y = v.y - 128
-	
+	Text.print(v.hp,110,200)
 	data.blockCheckDown.x = v.x
 	data.blockCheckDown.y = v.y + (v.height * 1.7)
 		if v.collidesBlockBottom then --Jumping through blocks, god this code's a mess
-		data.jumpTimer = data.jumpTimer + 1
+			data.jumpTimer = data.jumpTimer + 1
 		if data.jumpTimer == math.random(50, NPC.config[v.id].jumpCooldown) or data.jumpTimer >= NPC.config[v.id].jumpCooldown then
 			data.jumpTimer = 0
 			if NPC.config[v.id].jumpsThroughBlock then
@@ -373,7 +350,6 @@ function wiggler.onTickHead(v)
 						end
 						
 						if NPC.config[v.id].moveWhenJumping == false then
-							v.speedX = 0
 							data.stillJump = true
 						end
 						data.passthrough = 25
@@ -401,14 +377,13 @@ function wiggler.onTickHead(v)
 							SFX.play(NPC.config[v.id].jumpSoundID)
 						end
 						if NPC.config[v.id].moveWhenJumping == false then
-							v.speedX = 0
 							data.stillJump = true
 						end
 						
 						if NPC.config[v.id].isSledge then
-							data.passthrough = 30
+							data.passthrough = 25
 						else
-							data.passthrough = 35
+							data.passthrough = 30
 						end
 					elseif data.triedUp == false then
 						data.jumpTimer = 300
@@ -423,7 +398,6 @@ function wiggler.onTickHead(v)
 					SFX.play(NPC.config[v.id].jumpSoundID)
 				end
 				if NPC.config[v.id].moveWhenJumping == false then
-					v.speedX = 0
 					data.stillJump = true
 				end
 				v.speedY = -NPC.config[v.id].jumpHeight
@@ -438,6 +412,21 @@ function wiggler.onTickHead(v)
 	else
 		v.noblockcollision = false
 	end
+	if v.collidesBlockBottom then
+		if data.triedUp == true then data.triedUp = false end
+		if data.triedDown == true then data.triedDown = false end
+	end
+	Text.print(data.passthrough,110,110)
+	Text.print(data.jumpTimer,110,126)
+	Text.print(data.triedUp,110,142)
+	Text.print(data.triedDown,110,158)
+	if not data.isAngry then
+		if data.stillJump == false then
+			v.speedX = (cfg.walkingSpeed + cfg.speedStack) * v.direction
+		else
+			v.speedX = 0
+		end
+	end
 	if data.isAngry then
 		
 		--DRACalgar Law's note: This is where I do most of my edits to the npc into a boss
@@ -448,7 +437,12 @@ function wiggler.onTickHead(v)
 				data.chaseTimer = cfg.angryDelay
 			end
 		else
-			v.speedX = (cfg.angryWalkingSpeed + cfg.speedStack) * v.direction
+			if data.stillJump == false then
+				v.speedX = (cfg.angryWalkingSpeed + cfg.speedStack) * v.direction
+			else
+				v.speedX = 0
+			end
+			data.chaseTimer = data.chaseTimer - 1
 			if data.chaseTimer <= 0 then
 				data.distance = cfg.distance
 				data.isAngry = false
@@ -474,8 +468,8 @@ function wiggler.onTickHead(v)
 			t:transform(NPC.config[t.id].angryID)
 			t.data._basegame = d
 		end)
-		if NPC.config[v.id].angrySoundID then
-		    SFX.play(NPC.config[v.id].stunSoundID)
+		if NPC.config[v.id].angryChangeSoundID then
+		    SFX.play(NPC.config[v.id].angryChangeSoundID)
 		end
 	end
 end
@@ -516,19 +510,31 @@ function wiggler.onNPCHarm(event,npc,reason,culprit)
 			end
 			SFX.play(9)
 		end
-		if wiggler.trailMap[npc.id] then
-			npc = npc.data._basegame.head
+			if wiggler.trailMap[npc.id] then
+				npc = npc.data._basegame.head
+			end
+			if not npc or not npc.isValid then
+				return
+			end
+			if npc.data._basegame.isAngry then
+				return
+			end
+		if wiggler.headMap[npc.id] and not wiggler.trailMap[npc.id] and npc:mem(0x156, FIELD_WORD) then
+			npc.hp = npc.hp - 1
+			npc:mem(0x156, FIELD_WORD,16)
+			if npc.hp <= 0 then
+				npc:kill(HARM_TYPE_SPINJUMP)
+				return
+			else
+				SFX.play(39)
+			end
+			if npc.hp % 5 == NPC.config[npc.id].angryHealth then
+				if not npc.data._basegame.trackedData then return end
+				if npc.data._basegame.turningAngry then return end
+				npc.data._basegame.turningAngry = true
+				return
+			end
 		end
-		if not npc or not npc.isValid then
-			return
-		end
-		if npc.data._basegame.isAngry then
-			return
-		end
-		if not npc.data._basegame.trackedData then return end
-		if npc.data._basegame.turningAngry then return end
-		npc.data._basegame.turningAngry = true
-		return
 	end
 
 	--[[

@@ -1,0 +1,7 @@
+image = background-1000e.png
+name = "Vicious Keeper Position Point"
+frames = 1
+framespeed = 8
+noshadows = false
+priority = -85
+grid = 16

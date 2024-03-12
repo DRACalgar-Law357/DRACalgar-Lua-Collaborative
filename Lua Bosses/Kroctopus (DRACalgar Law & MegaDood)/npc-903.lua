@@ -62,7 +62,7 @@ local sampleNPCSettings = {
 	grabtop=false,
 	health = 9,
 	clawID = 904,
-	targetSet = 0 --0 preset position, 1 player position
+	centerRange = 384,
 }
 
 --Applies NPC settings
@@ -81,18 +81,6 @@ npcManager.registerHarmTypes(npcID,
 		--HARM_TYPE_SPINJUMP,
 		--HARM_TYPE_OFFSCREEN,
 		HARM_TYPE_SWORD
-	}, 
-	{
-		--[HARM_TYPE_JUMP]=10,
-		--[HARM_TYPE_FROMBELOW]=10,
-		--[HARM_TYPE_NPC]=10,
-		--[HARM_TYPE_PROJECTILE_USED]=10,
-		--[HARM_TYPE_LAVA]={id=13, xoffset=0.5, xoffsetBack = 0, yoffset=1, yoffsetBack = 1.5},
-		--[HARM_TYPE_HELD]=10,
-		--[HARM_TYPE_TAIL]=10,
-		--[HARM_TYPE_SPINJUMP]=10,
-		--[HARM_TYPE_OFFSCREEN]=10,
-		--[HARM_TYPE_SWORD]=10,
 	}
 );
 
@@ -112,13 +100,37 @@ function sampleNPC.onInitAPI()
 	registerEvent(sampleNPC, "onNPCHarm")
 end
 
+local function clawCheck(v)
+	local data = v.data
+	for i=0,2 do
+		if data.claw[i] and data.claw[i].isValid and data.claw[i].state and data.claw[i].state < 1 then
+			data.clawChecks = data.clawChecks + 1
+		end
+	end
+	if data.clawChecks >= 3 then
+		data.clawChecks = 0
+		return true
+	else
+		data.clawChecks = 0
+		return false
+	end
+end
+
 function sampleNPC.onTickEndNPC(v)
 	--Don't act during time freeze
 	if Defines.levelFreeze then return end
 	
 	local data = v.data
 	local config = NPC.config[v.id]
-	data.clawPosition = {
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
+	--If despawned
+	if v.despawnTimer <= 0 then
+		--Reset our properties, if necessary
+		data.initialized = false
+		return
+	end
+
+			data.clawPosition = {
 		--Center
 		[0] = vector.v2(
 			v.x + v.width / 2,
@@ -134,33 +146,26 @@ function sampleNPC.onTickEndNPC(v)
 			v.x + v.width,
 			v.y + v.height / 2 - 64
 			),
-	}
-	data.clawTimer = {
-		[0] = 0,
-		[1] = 0,
-		[2] = 0,
-	}
-	data.clawState = {
-		[0] = 0,
-		[1] = 0,
-		[2] = 0,
-	}
-	--If despawned
-	if v.despawnTimer <= 0 then
-		--Reset our properties, if necessary
-		data.initialized = false
-		return
-	end
+		}
 
 	--Initialize
 	if not data.initialized then
 		--Initialize necessary data.
 		data.initialized = true
 		data.timer = 0
+		--Used to make the corneas of the boss animate correctly and make the claws display correctly
 		data.bossColour = 0
-		data.phase = 0
+		--Tracks the phase, for use with the claw to increase its speed after 3 hits and to actually change into a different phase once it submerges
+		data.trackPhase = 0
+		--The colour of the boss, counts separately to its actual battle phase
+		data.saveColour = data.bossColour
+		--Boss's hit points
 		data.hp = NPC.config[v.id].health
+		--Progress of the fight
 		data.state = 0
+		--Checks if all three claws are idling
+		data.clawChecks = 0
+		
 		data.claw = {
 			--Claw Pincers
 			[0] = NPC.spawn(sampleNPCSettings.clawID,data.clawPosition[0].x,data.clawPosition[0].y,v.section,true,true),
@@ -177,7 +182,7 @@ function sampleNPC.onTickEndNPC(v)
 		data.claw[2].data.parent = v
 		data.claw[2].data.rotation = 45
 	end
-
+	Text.print(data.hp,110,110)
 	--Depending on the NPC, these checks must be handled differently
 	if v.heldIndex ~= 0 --Negative when held by NPCs, positive when held by players
 	or v.isProjectile   --Thrown
@@ -201,12 +206,12 @@ function sampleNPC.onTickEndNPC(v)
 			end
 		end
 	end
-	if data.claw[0] then
-		Text.print(data.claw[0].state,110,110)
-		Text.print(data.claw[0].timer,110,126)
-	end
-	if data.state == STATE_SUBMERGE or data.state == STATE_KILL or data.state == STATE_HURT then
-		v.friendly = true
+	if data.state > 2 then
+		if data.state ~= STATE_HURT then
+			v.friendly = true
+		else
+			v.friendly = false
+		end
 		for i=0,2 do
 			if data.claw[i] and data.claw[i].isValid then
 				data.claw[i].friendly = true
@@ -219,39 +224,79 @@ function sampleNPC.onTickEndNPC(v)
 				data.claw[i].friendly = false
 			end
 		end
+		if data.timer % 120 == 60 and clawCheck(v) then
+			--Phase 1 (0) and 2 (1). It'd direct its one claw at the player
+			local clawDirect1
+			local clawDirect2
+			local clawDirect3
+
+			if data.trackPhase < 2 then
+				if plr.x <= v.x + v.width/2 - config.centerRange/2 then
+					clawDirect = 1
+				elseif plr.x >= v.x + v.width/2 + config.centerRange/2 then
+					clawDirect = 2
+				else
+					clawDirect = 0
+				end
+				if data.claw[clawDirect] and data.claw[clawDirect].isValid and data.claw[clawDirect].state and data.claw[clawDirect].state < 1 then
+					data.claw[clawDirect].state = 1
+				end
+			else
+				--Phase 3 (2). It'd direct one claw at the player and the other at a BGO point.
+				if plr.x <= v.x + v.width/2 - config.centerRange/2 then
+					clawDirect = 1
+				elseif plr.x >= v.x + v.width/2 + config.centerRange/2 then
+					clawDirect = 2
+				else
+					clawDirect = 0
+				end
+				if data.claw[clawDirect] and data.claw[clawDirect].isValid and data.claw[clawDirect].state and data.claw[clawDirect].state < 1 then
+					data.claw[clawDirect].state = 1
+				end
+			end
+		end
+		
 	end
+
 	data.timer = data.timer + 1
 	
 	v.animationFrame = data.bossColour
 	data.eyeFrame = v.animationFrame
 	
-	if data.state == STATE_PHASE0 then
-		--Stuff that controls the arms to attack where the player is, if towards the middle it uses its middle arm, if left or right it uses its left or right arm, and if below it uses its left or right bottom arm
-		if data.timer % 160 == 80 then
-			if data.claw[0] and data.claw[0].isValid and data.claw[0].state and data.claw[0].state < 1 then
-				data.claw[0].state = 1
-			end
-		end
-	elseif data.state == STATE_PHASE1 then
-		--Same as phase 1, just modify the arms to move a bit faster
-	elseif data.state == STATE_PHASE2 then
-		--Same as phase 2, but always make the middle arm move
-	elseif data.state == STATE_SUBMERGE then
-		--Go underwater for a bit then come back up
-	elseif data.state == STATE_KILL then
+	if data.state == STATE_KILL then
 		--Fancy death animation that MegaDood will do
 		for i=0,2 do
 			if data.claw[i] and data.claw[i].isValid and data.claw[i].state ~= 4 then
 				data.claw[i].state = 4
 			end
 		end
-	else
+		
+		if data.timer <= 192 then
+			v.x = v.x + 45 * -data.w * math.sin(math.pi/4*data.timer)
+			v.y = v.y - 56 * -data.w * math.sin(math.pi/2*data.timer)
+		else
+			if data.timer >= 240 then
+				v.y = v.y + 2
+				if data.timer == 368 then
+					v:kill(HARM_TYPE_OFFSCREEN)
+				end
+			end
+		end
+		
+		if data.timer % 16 == 0 then
+			SFX.play(36)
+			Effect.spawn(10, RNG.random(v.x - (v.width / 2) + v.width / 2, v.x + (v.width / 2) + v.width / 2), RNG.random(v.y - v.height / 4, v.y + v.height))
+		end
+		
+	elseif data.state == STATE_HURT then
 		--Hurt animation and retract claws
 		for i=0,2 do
 			if data.claw[i] and data.claw[i].isValid and data.claw[i].state ~= 4 then
 				data.claw[i].state = 4
 			end
 		end
+		v.x = v.x + 45 * -data.w * math.sin(math.pi/4*data.timer)
+		v.y = v.y - 56 * -data.w * math.sin(math.pi/2*data.timer)
 		if data.timer >= 120 then
 			data.timer = 0
 			data.state = STATE_PHASE0
@@ -262,19 +307,13 @@ function sampleNPC.onTickEndNPC(v)
 			end
 		end
 	end
-	if data.hp > config.health*2/3 then
-		data.phase = 0
-	elseif data.hp <= config.health*2/3 and data.hp > config.health*1/3 then
-		data.phase = 1
-	else
-		data.phase = 2
-	end
+	
 	if data.state == STATE_HURT or data.state == STATE_KILL then
 		data.bossColour = 3
 	else
-		data.bossColour = data.phase
+		data.bossColour = data.saveColour
 	end
-	Text.print(data.hp,110,200)
+	
 end
 
 local cornea = Graphics.loadImageResolved("kroctopus_eyes.png")
@@ -288,6 +327,18 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 	if v:mem(0x156, FIELD_WORD) <= 0 then
 		data.hp = data.hp - 1
 		SFX.play(39)
+		
+		--Increment data.hp by 1 when the boss is hit 3 times
+		if data.hp % 3 == 0 and data.hp > 1 then
+			data.saveColour = data.saveColour + 1
+		end
+		
+		--Increase the boss's AI phase every 3 hits
+		if data.hp % 3 == 0 then
+			data.trackPhase = data.state
+			data.state = STATE_SUBMERGE
+		end
+		
 		v:mem(0x156, FIELD_WORD,25)
 		if data.hp <= 0 then
 			data.state = 4
@@ -298,10 +349,6 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 			data.timer = 0
 		end
 	end
-	--[[Increment data.hp by 1 when the boss is hit 3 times
-	if parent.data.hp % 2 == 1 and parent.data.hp > 1 then
-		parent.data.bossColour = parent.data.bossColour + 1
-	end]]
 end
 
 function sampleNPC.onDrawNPC(v)
