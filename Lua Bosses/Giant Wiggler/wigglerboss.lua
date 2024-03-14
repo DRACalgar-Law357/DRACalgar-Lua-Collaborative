@@ -47,14 +47,15 @@ wiggler.sharedBody = {
 	--SFX
 	angryWalkingID = 3,
 	jumpSoundID = 1,
-	angryChangeSoundID = 25,
-	normalChangeSoundID = 37,
+	angryChangeSoundID = 72,
+	normalChangeSoundID = 50,
 	stunSoundID = 37,
 	hurtSoundID = 39,
 	killSoundID = 9,
 	moveWhenJumping = false,
 	jumpsThroughBlock = true,
 	jumpCooldown = 250,
+	hitSet = 0 --0 jump on the head and briefly turn angry and impervious to attacks; 1 same as 0 but the player must jump on its angered segments to turn them to calmed segments in order for the head's anger be calmed and whenever the calmed head is hit, it'll turn into an anger state.
 }
 
 
@@ -309,6 +310,11 @@ function wiggler.onTickHead(v)
 				playerStun.stunPlayer(k, 70)
 			end
 		end
+		local x = v.x - 16
+		local y = v.y + v.height - 32
+
+		Effect.spawn(10, x, y)
+		Effect.spawn(10, x + v.width + 16, y)
 		data.canStomp = false
 		if NPC.config[v.id].stunSoundID then
 		    SFX.play(NPC.config[v.id].stunSoundID)
@@ -443,6 +449,21 @@ function wiggler.onTickHead(v)
 				v.speedX = 0
 			end
 			data.chaseTimer = data.chaseTimer - 1
+			if lunatime.tick() % 32 == 0 then
+				for i=0,1 do
+					local a = Animation.spawn(10,v.x+v.width/2,v.y+v.height*5/8)
+					a.x=a.x-a.width/2
+					a.y=a.y-a.height/2
+					a.speedX = -2 + 4 * i
+				end
+			end
+			if lunatime.tick() % 8 == 0 then
+				local a = Animation.spawn(10,v.x+v.width/2,v.y)
+				a.x=a.x-a.width/2
+				a.y=a.y-a.height/2
+				a.speedX = RNG.random(-2.5,2.5)
+				a.speedY = -3
+			end
 			if data.chaseTimer <= 0 then
 				data.distance = cfg.distance
 				data.isAngry = false
@@ -453,6 +474,9 @@ function wiggler.onTickHead(v)
 					t:transform(NPC.config[t.id].normalID)
 					t.data._basegame = d
 				end)
+				if NPC.config[v.id].normalChangeSoundID then
+					SFX.play(NPC.config[v.id].normalChangeSoundID)
+				end
 			end
 		end
 	elseif data.turningAngry then
