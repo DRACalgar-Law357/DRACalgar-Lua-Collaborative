@@ -543,21 +543,10 @@ function wiggler.onNPCHarm(event,npc,reason,culprit)
 			if npc.data._basegame.isAngry then
 				return
 			end
-		if wiggler.headMap[npc.id] and not wiggler.trailMap[npc.id] and npc:mem(0x156, FIELD_WORD) then
-			npc.hp = npc.hp - 1
-			npc:mem(0x156, FIELD_WORD,16)
-			if npc.hp <= 0 then
-				npc:kill(HARM_TYPE_SPINJUMP)
-				return
-			else
-				SFX.play(39)
-			end
-			if npc.hp % 5 == NPC.config[npc.id].angryHealth then
-				if not npc.data._basegame.trackedData then return end
-				if npc.data._basegame.turningAngry then return end
-				npc.data._basegame.turningAngry = true
-				return
-			end
+			if not npc.data._basegame.trackedData then return end
+			if npc.data._basegame.turningAngry then return end
+			npc.data._basegame.turningAngry = true
+			return
 		end
 	end
 

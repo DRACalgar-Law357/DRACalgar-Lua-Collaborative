@@ -503,7 +503,7 @@ function sampleNPC.onTickEndNPC(v)
 		v:mem(0x120, FIELD_BOOL, false)
 	end
 	
-	if Colliders.collide(plr, v) and not v.friendly and not Defines.cheat_donthurtme and not data.state == STATE_KILL then
+	if Colliders.collide(plr, v) and not v.friendly and not Defines.cheat_donthurtme and not data.state ~= STATE_KILL then
 		plr:harm()
 	end
 end
