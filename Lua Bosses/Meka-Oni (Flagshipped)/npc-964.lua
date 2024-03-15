@@ -511,7 +511,6 @@ function sampleNPC.onTickEndNPC(v)
 					end
 				end
 				data.lastFrameCollision = collidesWithSolid
-			end
 		end
 		if data.timer == 1 then SFX.play(sfx_charge) end
 	else
