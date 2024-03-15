@@ -459,7 +459,7 @@ function sampleNPC.onTickEndNPC(v)
 			plr:harm()
 		end
 		if data.timer >= 90 then
-			data.consecutive = data.consecutive + 1
+			data.consecutive = data.consecutive - 1
 			if data.consecutive <= 0 then
 				data.state = 0
 				data.timer = 0
