@@ -50,15 +50,22 @@ local sampleNPCSettings = {
 	grabside=false,
 	grabtop=false,
 	aimDelay = 16,
-	clawSpeed = 3,
-	stackSpeed = 1,
+	clawSpeed = 3.5,
+	clawPinchSpeed = 5,
 	armWidth=64,
 	armHeight=64,
 	armOffsetX=0,
 	armOffsetY=0,
 	extendRange = 386,
-	retractRange = 4,
-	snipSFX = Misc.resolveFile("kroctopus_snip.ogg")
+	retractRange = 8,
+	snipSFX = Misc.resolveFile("kroctopus_snip.ogg"),
+	--List to contact and harm (processed to being exploded)
+	bombList = {
+		579,
+		135,
+		134,
+		697,
+	},
 }
 
 --Applies NPC settings
@@ -128,6 +135,10 @@ function sampleNPC.onTickEndNPC(v)
 		v.spawnPositionX = 0
 		v.spawnPositionY = 0
 		v.stackSpeed = 0
+		data.directedX = 0
+		data.directedY = 0
+		v.bgoDirect = false
+		data.rotationOffset = 0
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -141,19 +152,19 @@ function sampleNPC.onTickEndNPC(v)
 	end
 	local parent = data.parent
 	if parent.data.trackPhase >= 1 then
-		v.stackSpeed = config.stackSpeed
+		v.stackSpeed = config.clawPinchSpeed
 	else
-		v.stackSpeed = 0
+		v.stackSpeed = config.clawSpeed
 	end
 	
 	data.dirVectr = vector.v2(
 		(data.locationX) - (v.x + v.width * 0.5),
 		(data.locationY) - (v.y + v.height * 0.5)
-		):normalize() * (config.clawSpeed + v.stackSpeed)
+		):normalize() * (v.stackSpeed)
 	data.spawnVectr = vector.v2(
 		(v.spawnPositionX) - (v.x + v.width * 0.5),
 		(v.spawnPositionY) - (v.y + v.height * 0.5)
-		):normalize() * (config.clawSpeed + v.stackSpeed)
+		):normalize() * (v.stackSpeed)
 		local playerDistanceX,playerDistanceY,playerDistance = math.huge,math.huge,math.huge
 		playerDistanceX = (data.locationX)-(v.x+(v.width /2))
         playerDistanceY = (data.locationY)-(v.y+(v.height/2))
@@ -169,15 +180,29 @@ function sampleNPC.onTickEndNPC(v)
 		
 	if v.state == 0 then --Idle
 		v.animationFrame = math.floor(lunatime.tick() / 8) % 4 + 4 * parent.data.bossColour
+		data.rotation = data.mainRotation
 	elseif v.state == 1 then --Aim
 		v.animationFrame = 0 + 4 * parent.data.bossColour
-		data.locationX = plr.x
-		data.locationY = plr.y
+		if v.bgoDirect == false then
+			data.locationX = plr.x+plr.width/2
+			data.locationY = plr.y+plr.height/2
+		else
+			data.locationX = data.directedX
+			data.locationY = data.directedY
+		end
 		if v.timer >= config.aimDelay then
 			v.timer = 0
 			v.state = 2
 		end
 	elseif v.state == 2 then --Extend
+	
+		data.rotationOffset = 90
+		
+		if v.timer == 1 then
+			data.vector = vector(data.locationX-v.x+(-v.width)*0.5, data.locationY-v.y+(-v.height)*0.5):normalize()
+			data.rotation = math.deg(math.atan2(data.vector.y, data.vector.x))
+		end
+		
 		v.animationFrame = 0 + 4 * parent.data.bossColour
 		v.clawOffsetX = v.clawOffsetX + data.dirVectr.x
 		v.clawOffsetY = v.clawOffsetY + data.dirVectr.y
@@ -186,25 +211,40 @@ function sampleNPC.onTickEndNPC(v)
 			v.timer = 0
 		end
 	elseif v.state == 3 then --Pinch
-		v.animationFrame = math.clamp(math.floor(v.timer / 8), 0, 3) + 4 * parent.data.bossColour
-		if v.timer >= 32 then
+		v.animationFrame = math.clamp(math.floor(v.timer / 4), 0, 3) + 4 * parent.data.bossColour
+		if v.timer >= 16 then
 			v.timer = 0
 			v.state = 4
 		end
-		if v.timer == 16 and config.snipSFX then SFX.play(config.snipSFX) end
+		if v.timer == 8 and config.snipSFX then SFX.play(config.snipSFX) end
 	elseif v.state == 4 then --Retract
 		v.animationFrame = 0 + 4 * parent.data.bossColour
 		v.clawOffsetX = v.clawOffsetX + data.spawnVectr.x
 		v.clawOffsetY = v.clawOffsetY + data.spawnVectr.y
 		if spawnDistance <= config.retractRange then
 			v.state = 0
+			if v.bgoDirect == true then v.bgoDirect = false end
+			data.rotationOffset = 0
+			data.rotation = data.mainRotation
 			v.timer = 0
+			v.clawOffsetX = 0
+			v.clawOffsetY = 0
+		end
+	end
+	if v.state > 0 then
+		for _,n in NPC.iterate(sampleNPCSettings.bombList) do
+			if Colliders.collide(n, v) then
+				if n:mem(0x156,FIELD_WORD) <= 0 then
+					n:harm()
+					Animation.spawn(75,n.x,n.y)
+				end
+			end
 		end
 	end
 end
-local lowPriorityStates = table.map{1,3,4}
+
 function sampleNPC.onDrawNPC(v)
-	if v.despawnTimer <= 0 or v.isHidden then return end
+	if v.despawnTimer <= 0 or v.isHidden then v.state = 0 return end
 	
 	local config = NPC.config[v.id]
 	local data = v.data
@@ -218,7 +258,7 @@ function sampleNPC.onDrawNPC(v)
 		scene = true,
 		x = v.x + sampleNPCSettings.gfxoffsetx + sampleNPCSettings.gfxwidth * 0.5,
 		y = v.y - sampleNPCSettings.gfxoffsety + sampleNPCSettings.gfxheight * 0.5,
-		rotation = data.rotation,
+		rotation = data.rotation + data.rotationOffset,
 		width = sampleNPCSettings.gfxwidth,
 		height = sampleNPCSettings.gfxheight,
 		align = imagic.ALIGN_CENTRE,
@@ -254,8 +294,8 @@ function sampleNPC.onDrawNPC(v)
 		)
 		Graphics.drawImageToSceneWP( --Arm 1
 			img,
-			v.x - ((v.x - 3 - v.spawnPositionX) / 1.2) - config.armWidth / 2 + config.armOffsetX,
-			v.y - ((v.y - v.spawnPositionY) / 1.2) - config.armHeight / 2 + config.armOffsetY,
+			v.spawnPositionX + v.clawOffsetX * 0.2 - config.armWidth / 2 + config.armOffsetX,
+			v.spawnPositionY + v.clawOffsetY * 0.2 - config.armHeight / 2 + config.armOffsetY,
 			0,
 			config.armHeight * armColour,
 			config.armWidth,
@@ -265,8 +305,8 @@ function sampleNPC.onDrawNPC(v)
 		)
 		Graphics.drawImageToSceneWP( --Arm 2
 			img,
-			v.x - ((v.x - 9 - v.spawnPositionX) / 1.6) - config.armWidth / 2 + config.armOffsetX,
-			v.y - ((v.y - v.spawnPositionY) / 1.5) - config.armHeight / 2 + config.armOffsetY,
+			v.spawnPositionX + v.clawOffsetX * 0.4 - config.armWidth / 2 + config.armOffsetX,
+			v.spawnPositionY + v.clawOffsetY * 0.4 - config.armHeight / 2 + config.armOffsetY,
 			0,
 			config.armHeight * armColour,
 			config.armWidth,
@@ -276,8 +316,8 @@ function sampleNPC.onDrawNPC(v)
 		)
 		Graphics.drawImageToSceneWP( --Arm 3
 			img,
-			v.x - ((v.x - 24 - v.spawnPositionX) / 2.45) - config.armWidth / 2 + config.armOffsetX,
-			v.y - ((v.y - v.spawnPositionY) / 2) - config.armHeight / 2 + config.armOffsetY,
+			v.spawnPositionX + v.clawOffsetX * 0.6 - config.armWidth / 2 + config.armOffsetX,
+			v.spawnPositionY + v.clawOffsetY * 0.6 - config.armHeight / 2 + config.armOffsetY,
 			0,
 			config.armHeight * armColour,
 			config.armWidth,
@@ -287,8 +327,8 @@ function sampleNPC.onDrawNPC(v)
 		)
 		Graphics.drawImageToSceneWP( --Arm 4
 			img,
-			v.x - ((v.x - 66 - v.spawnPositionX) / 5.3) + 1 - config.armWidth / 2 + config.armOffsetX,
-			v.y - ((v.y - v.spawnPositionY) / 3) - config.armHeight / 2 + config.armOffsetY,
+			v.spawnPositionX + v.clawOffsetX * 0.8 - config.armWidth / 2 + config.armOffsetX,
+			v.spawnPositionY + v.clawOffsetY * 0.8 - config.armHeight / 2 + config.armOffsetY,
 			0,
 			config.armHeight * armColour,
 			config.armWidth,

@@ -1,0 +1,51 @@
+{
+	"style" : "groupbox",
+	"title" : "Kroctopus Settings",
+	"layout": [
+		{
+			"control": "description",
+			"text": "For events that are for rampaging, if you are using a layered spawner that helps fight the boss, usually make that event disappear as soon as it starts rampaging and then have it appear after its rampage."
+		},
+
+        {
+			"control": "lineEdit",
+			"name": "temperDisappear",
+			"title": "Trigger event before rampaging?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        },
+
+        {
+			"control": "lineEdit",
+			"name": "temperAppear",
+			"title": "Trigger event after rampaging?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        },
+
+        {
+			"control": "lineEdit",
+			"name": "first",
+			"title": "Trigger event initially?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        },
+
+		{
+			"control": "lineEdit",
+			"name": "second",
+			"title": "Trigger event upon reaching his second phase?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        },
+		
+		{
+			"control": "lineEdit",
+			"name": "third",
+			"title": "Trigger event upon reaching his third phase?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        }
+	]
+}
+

@@ -63,6 +63,10 @@ local sampleNPCSettings = {
 	health = 9,
 	clawID = 904,
 	centerRange = 384,
+	positionPointBGO = 904,
+	temperCooldown = 600,
+	clawCycle = 60,
+	clawCycleHit = 30
 }
 
 --Applies NPC settings
@@ -95,9 +99,15 @@ local STATE_HURT = 5
 
 --Register events
 function sampleNPC.onInitAPI()
+	npcManager.registerEvent(npcID, sampleNPC, "onStartNPC")
 	npcManager.registerEvent(npcID, sampleNPC, "onTickEndNPC")
 	npcManager.registerEvent(npcID, sampleNPC, "onDrawNPC")
 	registerEvent(sampleNPC, "onNPCHarm")
+end
+local bgoTable
+
+function sampleNPC.onStartNPC(v)
+	bgoTable = BGO.get(NPC.config[v.id].positionPointBGO)
 end
 
 local function clawCheck(v)
@@ -115,12 +125,57 @@ local function clawCheck(v)
 		return false
 	end
 end
-
+--Directs claw based on player horizontal distance
+local function clawPlayerPersonally(v)
+	local data = v.data
+	local config = NPC.config[v.id]
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
+	local clawDirect
+	if plr.x <= v.x + v.width/2 - config.centerRange/2 then
+		clawDirect = 1
+	elseif plr.x >= v.x + v.width/2 + config.centerRange/2 then
+		clawDirect = 2
+	else
+		clawDirect = 0
+	end
+	if data.claw[clawDirect] and data.claw[clawDirect].isValid and data.claw[clawDirect].state and data.claw[clawDirect].state < 1 then
+		data.claw[clawDirect].state = 1
+	end
+end
+--Direct claw randomly at the player
+local function clawPlayerRandomly(v)
+	local data = v.data
+	local config = NPC.config[v.id]
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
+	local clawDirect
+	local decisionClaw = {}
+	--Check each claw if they're readied
+	for i=0,2 do
+		if data.claw[i] and data.claw[i].isValid and data.claw[i].state and data.claw[i].state < 1 then
+			table.insert(decisionClaw,i)
+		end
+	end
+	--Decide one of the readied claws and direct them to the player
+	if #decisionClaw > 0 then
+		if plr.x <= v.x - v.width then
+			clawDirect = 0
+		elseif plr.x >= v.x + v.width then
+			clawDirect = 2
+		else
+			clawDirect = 1
+		end
+		if data.claw[clawDirect] and data.claw[clawDirect].isValid and data.claw[clawDirect].state and data.claw[clawDirect].state < 1 then
+			data.claw[clawDirect].state = 1
+		end
+	end
+end
+--Direct 
 function sampleNPC.onTickEndNPC(v)
 	--Don't act during time freeze
 	if Defines.levelFreeze then return end
 	
 	local data = v.data
+	local settings = v.data._settings
 	local config = NPC.config[v.id]
 	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
 	--If despawned
@@ -165,8 +220,18 @@ function sampleNPC.onTickEndNPC(v)
 		data.state = 0
 		--Checks if all three claws are idling
 		data.clawChecks = 0
+		--Part of animation for eye rolls in state hurt
+		data.pupilRollX = 0
+		data.pupilRollY = 0
+		data.eyeTimer = 0
+		--Checks a random specified BGO and directs its claws to launch there
+		data.location = 0
+		--Temper Cooldown determines its cooldown for its tempered state begun initially and each submerging
+		data.temperTimer = config.temperCooldown
+		--Boolean based on temper timer. Once the temper timer starts or stops incrementing, it toggles and call on events based on it.
+		data.temperToggle = true
 		
-		data.claw = {
+		data.claw = data.claw or {
 			--Claw Pincers
 			[0] = NPC.spawn(sampleNPCSettings.clawID,data.clawPosition[0].x,data.clawPosition[0].y,v.section,true,true),
 			[1] = NPC.spawn(sampleNPCSettings.clawID,data.clawPosition[1].x,data.clawPosition[1].y,v.section,true,true),
@@ -174,15 +239,18 @@ function sampleNPC.onTickEndNPC(v)
 		}
 		data.claw[0]:mem(0x124, FIELD_BOOL, true)
 		data.claw[0].data.parent = v
-		data.claw[0].data.rotation = 0
+		data.claw[0].data.mainRotation = 0
 		data.claw[1]:mem(0x124, FIELD_BOOL, true)
 		data.claw[1].data.parent = v
-		data.claw[1].data.rotation = -45
+		data.claw[1].data.mainRotation = -45
 		data.claw[2]:mem(0x124, FIELD_BOOL, true)
 		data.claw[2].data.parent = v
-		data.claw[2].data.rotation = 45
+		data.claw[2].data.mainRotation = 45
+		--Activate first event
+		if settings.first ~= "" then
+			triggerEvent(settings.first)
+		end
 	end
-	Text.print(data.hp,110,110)
 	--Depending on the NPC, these checks must be handled differently
 	if v.heldIndex ~= 0 --Negative when held by NPCs, positive when held by players
 	or v.isProjectile   --Thrown
@@ -190,8 +258,9 @@ function sampleNPC.onTickEndNPC(v)
 	then
 		v:kill(HARM_TYPE_OFFSCREEN)
 	end
-
+	
 	for i=0,2 do
+		data.claw[i].despawnTimer = v.despawnTimer
 		if data.claw[i] and data.claw[i].isValid then
 			data.claw[i].spawnPositionX = data.clawPosition[i].x
 			data.claw[i].spawnPositionY = data.clawPosition[i].y
@@ -204,67 +273,167 @@ function sampleNPC.onTickEndNPC(v)
 			if data.claw[i].state and data.claw[i].state > 0 then
 				data.claw[i].timer = data.claw[i].timer + 1
 			end
+			--Maintain despawn timer
+			data.claw[i]:mem(0x12A,FIELD_WORD,60)
 		end
 	end
+	data.timer = data.timer + 1
 	if data.state > 2 then
-		if data.state ~= STATE_HURT then
-			v.friendly = true
-		else
-			v.friendly = false
-		end
+		v.friendly = true
 		for i=0,2 do
 			if data.claw[i] and data.claw[i].isValid then
 				data.claw[i].friendly = true
 			end
 		end
+		
+		if data.state == STATE_SUBMERGE then
+			--Maintain despawn timer
+			v:mem(0x12A,FIELD_WORD,60)
+			if data.timer <= 128 then
+				v.y = v.y + 2
+			elseif data.timer >= 192 then
+				v.y = v.y - 2
+				if data.timer >= 319 then
+					data.state = data.trackPhase
+				end
+			end
+			if data.timer == 160 then
+				--Handle events
+				if (settings.second ~= "" and data.trackPhase == 1) then
+					triggerEvent(settings.second)
+				elseif (settings.third ~= "" and data.trackPhase == 2) then
+					triggerEvent(settings.third)
+				end
+				if settings.temperDisappear ~= "" then
+					triggerEvent(settings.temperDisappear)
+				end
+				--Increment saveColour to indicate phase change
+				data.saveColour = math.clamp(data.saveColour + 1, 0, 2)
+			end
+		end
 	else
+		if data.temperTimer > 0 then
+			--Go on temper cooldown
+			data.temperTimer = data.temperTimer - 1
+			if data.temperToggle == false then
+				data.temperToggle = true
+			end
+		else
+			data.temperTimer = 0
+			if data.temperToggle == true then
+				data.temperToggle = false
+				--Handle temperAppear event
+				if settings.temperAppear ~= "" then
+					triggerEvent(settings.temperAppear)
+				end
+			end
+		end
 		v.friendly = false
 		for i=0,2 do
 			if data.claw[i] and data.claw[i].isValid then
 				data.claw[i].friendly = false
 			end
 		end
-		if data.timer % 120 == 60 and clawCheck(v) then
+		if data.timer % config.clawCycle == config.clawCycleHit and clawCheck(v) then
 			--Phase 1 (0) and 2 (1). It'd direct its one claw at the player
-			local clawDirect1
-			local clawDirect2
-			local clawDirect3
-
 			if data.trackPhase < 2 then
-				if plr.x <= v.x + v.width/2 - config.centerRange/2 then
-					clawDirect = 1
-				elseif plr.x >= v.x + v.width/2 + config.centerRange/2 then
-					clawDirect = 2
+				if data.temperTimer <= 0 then
+					clawPlayerPersonally(v)
 				else
-					clawDirect = 0
-				end
-				if data.claw[clawDirect] and data.claw[clawDirect].isValid and data.claw[clawDirect].state and data.claw[clawDirect].state < 1 then
-					data.claw[clawDirect].state = 1
+					if #bgoTable > 0 then
+						data.location = RNG.irandomEntry(bgoTable)
+						local clawDirect
+						if data.location.x <= v.x + v.width/2 - config.centerRange/2 then
+							clawDirect = 1
+						elseif data.location.x >= v.x + v.width/2 + config.centerRange/2 then
+							clawDirect = 2
+						else
+							clawDirect = 0
+						end
+						if data.claw[clawDirect] and data.claw[clawDirect].isValid and data.claw[clawDirect].state and data.claw[clawDirect].state < 1 then
+							if data.claw[clawDirect].bgoDirect == false then
+								data.claw[clawDirect].bgoDirect = true
+								data.claw[clawDirect].data.directedX = data.location.x
+								data.claw[clawDirect].data.directedY = data.location.y
+							end
+							data.claw[clawDirect].state = 1
+						end
+					else
+						clawPlayerRandomly(v)
+					end
 				end
 			else
-				--Phase 3 (2). It'd direct one claw at the player and the other at a BGO point.
-				if plr.x <= v.x + v.width/2 - config.centerRange/2 then
-					clawDirect = 1
-				elseif plr.x >= v.x + v.width/2 + config.centerRange/2 then
-					clawDirect = 2
+				--Phase 3 (2). It'd direct one claws at the player and the other at a BGO point.
+				if data.temperTimer <= 0 then
+					for i=0,1 do
+						if i == 0 then
+							clawPlayerPersonally(v)
+						else
+							if #bgoTable > 0 then
+								data.location = RNG.irandomEntry(bgoTable)
+								local clawDirect
+								local decisionClaw = {}
+								--Check each claw if they're readied
+								for i=0,2 do
+									if data.claw[i] and data.claw[i].isValid and data.claw[i].state and data.claw[i].state < 1 then
+										table.insert(decisionClaw,i)
+									end
+								end
+								--Decide one of the readied claws and direct them to the BGO
+								if #decisionClaw > 0 then
+									local clawDirect = RNG.irandomEntry(decisionClaw)
+									if data.claw[clawDirect] and data.claw[clawDirect].isValid and data.claw[clawDirect].state and data.claw[clawDirect].state < 1 then
+										if data.claw[clawDirect].bgoDirect == false then
+											data.claw[clawDirect].bgoDirect = true
+											data.claw[clawDirect].data.directedX = data.location.x
+											data.claw[clawDirect].data.directedY = data.location.y
+										end
+										data.claw[clawDirect].state = 1
+									end
+								end
+							else
+								clawPlayerRandomly(v)
+							end
+						end
+					end
 				else
-					clawDirect = 0
-				end
-				if data.claw[clawDirect] and data.claw[clawDirect].isValid and data.claw[clawDirect].state and data.claw[clawDirect].state < 1 then
-					data.claw[clawDirect].state = 1
+					for i=0,1 do
+						if #bgoTable > 0 then
+							data.location = RNG.irandomEntry(bgoTable)
+							local clawDirect
+							local decisionClaw = {}
+							--Check each claw if they're readied
+							for i=0,2 do
+								if data.claw[i] and data.claw[i].isValid and data.claw[i].state and data.claw[i].state < 1 then
+									table.insert(decisionClaw,i)
+								end
+							end
+							--Decide one of the readied claws and direct them to the BGO
+							if #decisionClaw > 0 then
+								local clawDirect = RNG.irandomEntry(decisionClaw)
+								if data.claw[clawDirect] and data.claw[clawDirect].isValid and data.claw[clawDirect].state and data.claw[clawDirect].state < 1 then
+									if data.claw[clawDirect].bgoDirect == false then
+										data.claw[clawDirect].bgoDirect = true
+										data.claw[clawDirect].data.directedX = data.location.x
+										data.claw[clawDirect].data.directedY = data.location.y
+									end
+									data.claw[clawDirect].state = 1
+								end
+							end
+						else
+							clawPlayerRandomly(v)
+						end
+					end
 				end
 			end
 		end
 		
 	end
-
-	data.timer = data.timer + 1
 	
 	v.animationFrame = data.bossColour
 	data.eyeFrame = v.animationFrame
 	
 	if data.state == STATE_KILL then
-		--Fancy death animation that MegaDood will do
 		for i=0,2 do
 			if data.claw[i] and data.claw[i].isValid and data.claw[i].state ~= 4 then
 				data.claw[i].state = 4
@@ -298,8 +467,13 @@ function sampleNPC.onTickEndNPC(v)
 		v.x = v.x + 45 * -data.w * math.sin(math.pi/4*data.timer)
 		v.y = v.y - 56 * -data.w * math.sin(math.pi/2*data.timer)
 		if data.timer >= 120 then
-			data.timer = 0
-			data.state = STATE_PHASE0
+			if data.hp % 3 == 0 then
+				data.timer = 0
+				data.state = STATE_SUBMERGE
+			else
+				data.timer = 0
+				data.state = data.trackPhase
+			end
 			for i=0,2 do
 				if data.claw[i] and data.claw[i].isValid and data.claw[i].state ~= 0 then
 					data.claw[i].state = 0
@@ -313,7 +487,6 @@ function sampleNPC.onTickEndNPC(v)
 	else
 		data.bossColour = data.saveColour
 	end
-	
 end
 
 local cornea = Graphics.loadImageResolved("kroctopus_eyes.png")
@@ -328,15 +501,10 @@ function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
 		data.hp = data.hp - 1
 		SFX.play(39)
 		
-		--Increment data.hp by 1 when the boss is hit 3 times
-		if data.hp % 3 == 0 and data.hp > 1 then
-			data.saveColour = data.saveColour + 1
-		end
-		
 		--Increase the boss's AI phase every 3 hits
 		if data.hp % 3 == 0 then
-			data.trackPhase = data.state
-			data.state = STATE_SUBMERGE
+			data.trackPhase = math.clamp(data.trackPhase + 1, 0, 2)
+			data.temperTimer = NPC.config[v.id].temperCooldown
 		end
 		
 		v:mem(0x156, FIELD_WORD,25)
@@ -373,11 +541,18 @@ function sampleNPC.onDrawNPC(v)
 	--Draw the pupils and have them track the player's position
 	data.pupilFrames = data.pupilFrames or Sprite{texture = pupil, frames = 1}
 	data.w = math.pi/65
-	data.xTimer = (v.x - plr.x) / 4
-	data.yTimer = (v.y - plr.y) / 4
-	if data.xTimer >= 0 then data.xTimer = 0 elseif data.xTimer <= -70 then data.xTimer = -70 end
-	if data.yTimer >= 48 then data.yTimer = 48 elseif data.yTimer <= -38 then data.yTimer = -38 end
-	if not (data.state == STATE_KILL or data.state == STATE_HURT) then
+	if data.state ~= STATE_HURT then
+		data.xTimer = (v.x - plr.x) / 4
+		data.yTimer = (v.y - plr.y) / 4
+		if data.xTimer >= 0 then data.xTimer = 0 elseif data.xTimer <= -70 then data.xTimer = -70 end
+		if data.yTimer >= 48 then data.yTimer = 48 elseif data.yTimer <= -38 then data.yTimer = -38 end
+	else
+		data.xTimer = data.xTimer + RNG.randomInt(-4,4) * 5
+		data.yTimer = data.yTimer + RNG.randomInt(-4,4) * 5
+		if data.xTimer >= 0 then data.xTimer = 0 elseif data.xTimer <= -70 then data.xTimer = -70 end
+		if data.yTimer >= 48 then data.yTimer = 48 elseif data.yTimer <= -38 then data.yTimer = -38 end
+	end
+	if not (data.state == STATE_KILL) then
 		data.pupilFrames.position = vector(v.x - 67+v.width/2 + 100 * -data.w * math.cos(data.w*data.xTimer), v.y + 44 + 100 * -data.w * math.sin(data.w*data.yTimer))
 		data.pupilFrames:draw{sceneCoords = true, frame = 1, priority = -77}
 		data.pupilFrames.position = vector(v.x + 46+v.width/2 + 100 * -data.w * math.cos(data.w*data.xTimer), v.y + 44 + 100 * -data.w * math.sin(data.w*data.yTimer))
