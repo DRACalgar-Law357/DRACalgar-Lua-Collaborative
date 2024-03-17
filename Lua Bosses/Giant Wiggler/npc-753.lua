@@ -10,5 +10,4 @@ wiggler.registerHead(npcID, {id = npcID, speed=1.8, framespeed=4, gfxheight = 72
 npcManager.registerHarmTypes(npcID, {HARM_TYPE_JUMP, HARM_TYPE_NPC, HARM_TYPE_SWORD, HARM_TYPE_LAVA, HARM_TYPE_SPINJUMP}, {
 [HARM_TYPE_NPC]=npcID,
 [HARM_TYPE_LAVA]={id=13, xoffset=0.5, xoffsetBack = 0, yoffset=1, yoffsetBack = 1.5}})
-
 return wiggler

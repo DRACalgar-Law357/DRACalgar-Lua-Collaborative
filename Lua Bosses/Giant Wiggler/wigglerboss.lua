@@ -18,7 +18,7 @@ wiggler.sharedBody = {
 	jumphurt=0,
 	nofireball=-1,
 	noiceball=-1,
-	noyoshi=0,
+	noyoshi=-1,
 	nogravity=0,
 	cliffturn=-1,
 	defeatScore = 8,
@@ -28,7 +28,7 @@ wiggler.sharedBody = {
 	terminalvelocity = 15, 
 	trailcount=6,
 	trailID = 752,
-	distance = 32,
+	distance = 48,
 	angryID = 753,
 	normalID = 751,
 
@@ -38,11 +38,13 @@ wiggler.sharedBody = {
 	walkingSpeed = 1.5,
 	angryWalkingSpeed = 2.0,
 	speedStack = 0.2,
-	jumpHeight = 10,
+	jumpHeight = 9,
 	jumpStack = 0.2,
 	angryDelay = 400,
 	jumpDelay = 70,
 	canStomp = true,
+	makeFunniDeath = true,
+	trailEffect = 752,
 
 	--SFX
 	angryWalkingID = 3,
@@ -158,6 +160,9 @@ function wiggler.initialize(v)
 	data.distance = cfg.distance
 	data.isAngry = cfg.angryID == v.id
 	data.canStomp = false
+
+	data.makeFunniDeath = false
+	data.deathTimer = 0
 
 	data.blockCheckUp = Colliders.Box(v.x, v.y - 128, v.width, v.height)
 		
@@ -297,10 +302,35 @@ function wiggler.onTickHead(v)
 		end)
 		v.animationTimer = 0
 	end
+	local normalCount = 0
+	getTrails(v, function(t)
+		local tData = t.data._basegame
+		local parent = tData.trackedData
+		if parent.isValid then
+			if tData.isAngry then
+
+			else
+				normalCount = normalCount + 1
+			end
+		end
+	end)
+	if normalCount >= cfg.trailcount and cfg.hitSet == 1 and data.isAngry and v.collidesBlockBottom then
+		data.distance = cfg.distance
+		data.isAngry = false
+		v:transform(cfg.normalID)
+		v.data._basegame = data
+		--[[getTrails(v, function(t)
+			local d = t.data._basegame
+			t:transform(NPC.config[t.id].normalID)
+			t.data._basegame = d
+		end)]]
+		if NPC.config[v.id].normalChangeSoundID then
+			SFX.play(NPC.config[v.id].normalChangeSoundID)
+		end
+	end
 	if v.collidesBlockBottom then data.stillJump = false end
 	--Stomp
 	if v.speedY > 1 and NPC.config[v.id].canStomp then
-		v.speedY = v.speedY + .5
 		data.canStomp = true
 	end
 	
@@ -323,12 +353,11 @@ function wiggler.onTickHead(v)
 	end
 	data.blockCheckUp.x = v.x
 	data.blockCheckUp.y = v.y - 128
-	Text.print(v.hp,110,200)
 	data.blockCheckDown.x = v.x
 	data.blockCheckDown.y = v.y + (v.height * 1.7)
-		if v.collidesBlockBottom then --Jumping through blocks, god this code's a mess
+		if v.collidesBlockBottom and data.makeFunniDeath == false then --Jumping through blocks, god this code's a mess
 			data.jumpTimer = data.jumpTimer + 1
-		if data.jumpTimer == math.random(50, NPC.config[v.id].jumpCooldown) or data.jumpTimer >= NPC.config[v.id].jumpCooldown then
+		if data.jumpTimer == math.random(50, NPC.config[v.id].jumpCooldown) or data.jumpTimer >= NPC.config[v.id].jumpCooldown and data.makeFunniDeath == false then
 			data.jumpTimer = 0
 			if NPC.config[v.id].jumpsThroughBlock then
 				if data.triedDown == false and data.triedUp == false then
@@ -358,7 +387,7 @@ function wiggler.onTickHead(v)
 						if NPC.config[v.id].moveWhenJumping == false then
 							data.stillJump = true
 						end
-						data.passthrough = 25
+						data.passthrough = 35
 					elseif data.triedDown == false then
 						data.jumpTimer = 300
 						data.jumpsDown = 1
@@ -386,11 +415,7 @@ function wiggler.onTickHead(v)
 							data.stillJump = true
 						end
 						
-						if NPC.config[v.id].isSledge then
-							data.passthrough = 25
-						else
-							data.passthrough = 30
-						end
+						data.passthrough = 35
 					elseif data.triedUp == false then
 						data.jumpTimer = 300
 						data.jumpsDown = 0
@@ -422,78 +447,90 @@ function wiggler.onTickHead(v)
 		if data.triedUp == true then data.triedUp = false end
 		if data.triedDown == true then data.triedDown = false end
 	end
-	Text.print(data.passthrough,110,110)
-	Text.print(data.jumpTimer,110,126)
-	Text.print(data.triedUp,110,142)
-	Text.print(data.triedDown,110,158)
-	if not data.isAngry then
-		if data.stillJump == false then
-			v.speedX = (cfg.walkingSpeed + cfg.speedStack) * v.direction
-		else
-			v.speedX = 0
-		end
-	end
-	if data.isAngry then
-		
-		--DRACalgar Law's note: This is where I do most of my edits to the npc into a boss
-		if data.turningAngry then
-			data.chaseTimer = data.chaseTimer - 1
-			if data.chaseTimer <= 0 then
-				data.turningAngry = false
-				data.chaseTimer = cfg.angryDelay
-			end
-		else
+	if data.makeFunniDeath == false then
+		if not data.isAngry then
 			if data.stillJump == false then
-				v.speedX = (cfg.angryWalkingSpeed + cfg.speedStack) * v.direction
+				v.speedX = (cfg.walkingSpeed + cfg.speedStack) * v.direction
 			else
 				v.speedX = 0
 			end
-			data.chaseTimer = data.chaseTimer - 1
-			if lunatime.tick() % 32 == 0 then
-				for i=0,1 do
-					local a = Animation.spawn(10,v.x+v.width/2,v.y+v.height*5/8)
+		end
+		if data.isAngry then
+			
+			--DRACalgar Law's note: This is where I do most of my edits to the npc into a boss
+			if data.turningAngry then
+				data.chaseTimer = data.chaseTimer - 1
+				if data.chaseTimer <= 0 then
+					data.turningAngry = false
+					data.chaseTimer = cfg.angryDelay
+				end
+			else
+				if data.stillJump == false then
+					v.speedX = (cfg.angryWalkingSpeed + cfg.speedStack) * v.direction
+				else
+					v.speedX = 0
+				end
+				data.chaseTimer = data.chaseTimer - 1
+				if lunatime.tick() % 32 == 0 then
+					for i=0,1 do
+						local a = Animation.spawn(10,v.x+v.width/2,v.y+v.height*5/8)
+						a.x=a.x-a.width/2
+						a.y=a.y-a.height/2
+						a.speedX = -2 + 4 * i
+					end
+				end
+				if lunatime.tick() % 8 == 0 then
+					local a = Animation.spawn(10,v.x+v.width/2,v.y)
 					a.x=a.x-a.width/2
 					a.y=a.y-a.height/2
-					a.speedX = -2 + 4 * i
+					a.speedX = RNG.random(-2.5,2.5)
+					a.speedY = -3
+				end
+				if data.chaseTimer <= 0 and v.collidesBlockBottom and cfg.hitSet == 0 then
+					data.distance = cfg.distance
+					data.isAngry = false
+					v:transform(cfg.normalID)
+					v.data._basegame = data
+					getTrails(v, function(t)
+						local d = t.data._basegame
+						t:transform(NPC.config[t.id].normalID)
+						t.data._basegame = d
+					end)
+					if NPC.config[v.id].normalChangeSoundID then
+						SFX.play(NPC.config[v.id].normalChangeSoundID)
+					end
 				end
 			end
-			if lunatime.tick() % 8 == 0 then
-				local a = Animation.spawn(10,v.x+v.width/2,v.y)
-				a.x=a.x-a.width/2
-				a.y=a.y-a.height/2
-				a.speedX = RNG.random(-2.5,2.5)
-				a.speedY = -3
-			end
-			if data.chaseTimer <= 0 then
-				data.distance = cfg.distance
-				data.isAngry = false
-				v:transform(cfg.normalID)
-				v.data._basegame = data
-				getTrails(v, function(t)
-					local d = t.data._basegame
-					t:transform(NPC.config[t.id].normalID)
-					t.data._basegame = d
-				end)
-				if NPC.config[v.id].normalChangeSoundID then
-					SFX.play(NPC.config[v.id].normalChangeSoundID)
-				end
+		elseif data.turningAngry and v.collidesBlockBottom then
+			data.chaseTimer = 65
+			data.distance = cfg.distance
+			data.isAngry = true
+			v:transform(cfg.angryID)
+			v.speedX = 0
+			v.speedY = 0
+			v.data._basegame = data
+			getTrails(v, function(t)
+				local d = t.data._basegame
+				t:transform(NPC.config[t.id].angryID)
+				t.data._basegame = d
+			end)
+			if NPC.config[v.id].angryChangeSoundID then
+				SFX.play(NPC.config[v.id].angryChangeSoundID)
 			end
 		end
-	elseif data.turningAngry then
-		data.chaseTimer = 65
-		data.distance = cfg.distance
-		data.isAngry = true
-		v:transform(cfg.angryID)
+	else
+		data.deathTimer = data.deathTimer + 1
 		v.speedX = 0
-		v.speedY = 0
-		v.data._basegame = data
-		getTrails(v, function(t)
-			local d = t.data._basegame
-			t:transform(NPC.config[t.id].angryID)
-			t.data._basegame = d
-		end)
-		if NPC.config[v.id].angryChangeSoundID then
-		    SFX.play(NPC.config[v.id].angryChangeSoundID)
+		if data.deathTimer >= 128 then
+			for i=1,cfg.trailcount do
+				local a = Animation.spawn(cfg.trailEffect,v.x+v.width/2,v.y+v.height/2)
+				a.x=a.x-a.width/2
+				a.y=a.y-a.height/2
+				a.speedX = RNG.random(-3,3)
+				a.speedY = -RNG.random(2,6)
+			end
+			v:kill(HARM_TYPE_SPINJUMP)
+			Explosion.spawn(v.x + v.width/2, v.y + v.height/2, 4)
 		end
 	end
 end
@@ -502,9 +539,9 @@ function wiggler.onTickBody(v)
 	if Defines.levelFreeze or v.isHidden or v:mem(0x12A, FIELD_WORD) <= 0 or v.data._basegame.trackedData == nil then
 		return
 	end
-	
+	local cfg = NPC.config[v.id]
 	local data = v.data._basegame
-	
+	data.isAngry = cfg.angryID == v.id
 	if data.wigglerPrevX == nil then
 		data.wigglerPrevX = v.x
 	end
@@ -522,6 +559,8 @@ function wiggler.onTickBody(v)
 end
 
 function wiggler.onNPCHarm(event,npc,reason,culprit)
+	local cfg = NPC.config[npc.id]
+	local data = npc.data._basegame
 	if not (wiggler.headMap[npc.id] or wiggler.trailMap[npc.id]) then
 		return
 	end
@@ -534,19 +573,36 @@ function wiggler.onNPCHarm(event,npc,reason,culprit)
 			end
 			SFX.play(9)
 		end
-			if wiggler.trailMap[npc.id] then
-				npc = npc.data._basegame.head
+		if wiggler.trailMap[npc.id] then
+			if data.isAngry and NPC.config[npc.data._basegame.head.id].hitSet == 1 then
+				SFX.play(2)
+				local d = npc.data._basegame
+				npc:transform(NPC.config[npc.id].normalID)
+				npc.data._basegame = d
 			end
-			if not npc or not npc.isValid then
-				return
+		elseif wiggler.headMap[npc.id] then
+			if (not data.isAngry and not data.turningAngry) then
+				if not data.makeFunniDeath then
+					if npc:mem(0x156, FIELD_WORD) <= 0 then
+						npc.hp = npc.hp - 1
+						SFX.play(39)
+						npc:mem(0x156, FIELD_WORD,12)
+						if (npc.hp % cfg.angryHealth == 0 and cfg.hitSet == 0 and npc.hp > 0) or (cfg.hitSet == 1) then
+							npc.data._basegame.turningAngry = true
+						end
+					end
+					if npc.hp <= 0 then
+						SFX.play(38)
+						if cfg.makeFunniDeath == false then
+							npc:kill(HARM_TYPE_NPC)
+						else
+							data.makeFunniDeath = true
+						end
+					end
+				end
+			else
+
 			end
-			if npc.data._basegame.isAngry then
-				return
-			end
-			if not npc.data._basegame.trackedData then return end
-			if npc.data._basegame.turningAngry then return end
-			npc.data._basegame.turningAngry = true
-			return
 		end
 	end
 
@@ -575,13 +631,13 @@ function wiggler.onNPCHarm(event,npc,reason,culprit)
 		end
 	]]
 
-	if wiggler.trailMap[npc.id] and reason ~= 9 then
+	--[[if wiggler.trailMap[npc.id] and reason ~= 9 then
 		local v = npc.data._basegame.head
 		if v.isValid then
 			v:harm(reason)
 			getTrails(v, function(t) t:harm(9) end)
 		end
-	end
+	end]]
 end
 
 return wiggler;
