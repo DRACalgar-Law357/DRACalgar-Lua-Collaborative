@@ -33,17 +33,13 @@ wiggler.sharedBody = {
 	normalID = 751,
 
 	--Behavior-related
-	health = 25,
 	angryHealth = 5,
 	walkingSpeed = 1.5,
-	angryWalkingSpeed = 2.0,
-	speedStack = 0.2,
+	angryWalkingSpeed = 2.5,
 	jumpHeight = 9,
-	jumpStack = 0.2,
 	angryDelay = 400,
 	jumpDelay = 70,
 	canStomp = true,
-	makeFunniDeath = true,
 	trailEffect = 752,
 
 	--SFX
@@ -55,9 +51,7 @@ wiggler.sharedBody = {
 	hurtSoundID = 39,
 	killSoundID = 9,
 	moveWhenJumping = false,
-	jumpsThroughBlock = true,
 	jumpCooldown = 250,
-	hitSet = 0 --0 jump on the head and briefly turn angry and impervious to attacks; 1 same as 0 but the player must jump on its angered segments to turn them to calmed segments in order for the head's anger be calmed and whenever the calmed head is hit, it'll turn into an anger state.
 }
 
 
@@ -136,10 +130,26 @@ function wiggler.initialize(v)
 	if v.data._basegame.trackedData then return end
 	
 	local data = v.data._basegame
+	local settings v.data._settings
 	
 	local sec = v:mem(0x146, FIELD_WORD)
 	local dir = v:mem(0xD8,FIELD_FLOAT)
-	v.hp = NPC.config[v.id].health
+	--set the hit set 0 for whenever the head takes a set of hits, it'll temporarily turn into an angry state and calm down after some time; 1 same as 0 but the angered segments must get hit to turn into calmed segments, the head won't calm down until all of its segments are calmed down.
+	settings.hitSet = settings.hitSet or 0
+	--Determines its hitpoints, if its hitSet is 0, it multiplies alongside its angryHealth, changing the v.hp but keeps it concisely as intended.
+	settings.health = settings.health or 5
+	--When defeated, if set to true, it stays in place and exploded in bts, leaving its segments dropping down. If set to false, it'll instantly die in a wiggle death effect.
+	settings.makeFunniDeath = settings.makeFunniDeath or false
+	--If set to 0, it won't jump. If set to 1, it'll jump up. If set to 2, it'll jump both and down through blocks.
+	settings.jumpSet = settings.jumpSet or 0
+
+	if settings.hitSet == 0 then
+		v.hp = settings.health * NPC.config[v.id].angryHealth
+		data.hitSegments = false
+	else
+		v.hp = settings.health
+		data.hitSegments = true
+	end
 	if v.direction == 0 then
 		v.direction = rng.randomInt(0, 1) * 2 - 1
 	end
@@ -239,7 +249,7 @@ end
 function wiggler.onTickHead(v)
 	if Defines.levelFreeze then return end
 	local data = v.data._basegame
-	
+	local settings = v.data._settings
 	local onScreenValue = v:mem(0x12A, FIELD_WORD)
 	local containVal = v:mem(0x138, FIELD_WORD)
 	
@@ -314,7 +324,7 @@ function wiggler.onTickHead(v)
 			end
 		end
 	end)
-	if normalCount >= cfg.trailcount and cfg.hitSet == 1 and data.isAngry and v.collidesBlockBottom then
+	if normalCount >= cfg.trailcount and settings.hitSet == 1 and data.isAngry and v.collidesBlockBottom then
 		data.distance = cfg.distance
 		data.isAngry = false
 		v:transform(cfg.normalID)
@@ -359,7 +369,7 @@ function wiggler.onTickHead(v)
 			data.jumpTimer = data.jumpTimer + 1
 		if data.jumpTimer == math.random(50, NPC.config[v.id].jumpCooldown) or data.jumpTimer >= NPC.config[v.id].jumpCooldown and data.makeFunniDeath == false then
 			data.jumpTimer = 0
-			if NPC.config[v.id].jumpsThroughBlock then
+			if settings.jumpSet == 2 then
 				if data.triedDown == false and data.triedUp == false then
 					data.jumpsDown = math.random(0, 1)
 				elseif data.triedDown and data.triedUp then
@@ -424,7 +434,7 @@ function wiggler.onTickHead(v)
 					data.triedDown = true
 				end
 				data.blockDetect = nil
-			else
+			elseif settings.jumpSet == 1 then
 				if NPC.config[v.id].jumpSoundID > 0 then
 					SFX.play(NPC.config[v.id].jumpSoundID)
 				end
@@ -450,7 +460,7 @@ function wiggler.onTickHead(v)
 	if data.makeFunniDeath == false then
 		if not data.isAngry then
 			if data.stillJump == false then
-				v.speedX = (cfg.walkingSpeed + cfg.speedStack) * v.direction
+				v.speedX = (cfg.walkingSpeed) * v.direction
 			else
 				v.speedX = 0
 			end
@@ -466,7 +476,7 @@ function wiggler.onTickHead(v)
 				end
 			else
 				if data.stillJump == false then
-					v.speedX = (cfg.angryWalkingSpeed + cfg.speedStack) * v.direction
+					v.speedX = (cfg.angryWalkingSpeed) * v.direction
 				else
 					v.speedX = 0
 				end
@@ -486,7 +496,7 @@ function wiggler.onTickHead(v)
 					a.speedX = RNG.random(-2.5,2.5)
 					a.speedY = -3
 				end
-				if data.chaseTimer <= 0 and v.collidesBlockBottom and cfg.hitSet == 0 then
+				if data.chaseTimer <= 0 and v.collidesBlockBottom and settings.hitSet == 0 then
 					data.distance = cfg.distance
 					data.isAngry = false
 					v:transform(cfg.normalID)
@@ -561,48 +571,49 @@ end
 function wiggler.onNPCHarm(event,npc,reason,culprit)
 	local cfg = NPC.config[npc.id]
 	local data = npc.data._basegame
+	local settings = npc.data._settings
 	if not (wiggler.headMap[npc.id] or wiggler.trailMap[npc.id]) then
 		return
 	end
-	if reason == 1 or reason == 8 then
-		event.cancelled = true
-		
-		if culprit.__type == "Player" then
-			if reason == 8 then
-				Colliders.bounceResponse(culprit, 6)
-			end
-			SFX.play(9)
+	event.cancelled = true
+	
+	if culprit.__type == "Player" then
+		if reason == 8 then
+			Colliders.bounceResponse(culprit, 6)
 		end
-		if wiggler.trailMap[npc.id] then
-			if data.isAngry and NPC.config[npc.data._basegame.head.id].hitSet == 1 then
-				SFX.play(2)
-				local d = npc.data._basegame
-				npc:transform(NPC.config[npc.id].normalID)
-				npc.data._basegame = d
-			end
-		elseif wiggler.headMap[npc.id] then
-			if (not data.isAngry and not data.turningAngry) then
-				if not data.makeFunniDeath then
-					if npc:mem(0x156, FIELD_WORD) <= 0 then
-						npc.hp = npc.hp - 1
-						SFX.play(39)
-						npc:mem(0x156, FIELD_WORD,12)
-						if (npc.hp % cfg.angryHealth == 0 and cfg.hitSet == 0 and npc.hp > 0) or (cfg.hitSet == 1) then
-							npc.data._basegame.turningAngry = true
-						end
-					end
-					if npc.hp <= 0 then
-						SFX.play(38)
-						if cfg.makeFunniDeath == false then
-							npc:kill(HARM_TYPE_NPC)
-						else
-							data.makeFunniDeath = true
-						end
+		SFX.play(9)
+	end
+	if wiggler.trailMap[npc.id] then
+		if data.isAngry and npc.data._basegame.head.data._basegame.hitSegments == true then
+			SFX.play(2)
+			local d = npc.data._basegame
+			npc:transform(NPC.config[npc.id].normalID)
+			npc.data._basegame = d
+		end
+	elseif wiggler.headMap[npc.id] then
+		if (not data.isAngry and not data.turningAngry) then
+			if not data.makeFunniDeath then
+				if npc:mem(0x156, FIELD_WORD) <= 0 then
+					npc.hp = npc.hp - 1
+					SFX.play(39)
+					Misc.givePoints(NPC.config[npc.id].hitScore, {x = v.x + (v.width / 2),y = v.y + (v.height / 2)}, true)
+					npc:mem(0x156, FIELD_WORD,12)
+					if (npc.hp % cfg.angryHealth == 0 and settings.hitSet == 0 and npc.hp > 0) or (settings.hitSet == 1) then
+						npc.data._basegame.turningAngry = true
 					end
 				end
-			else
-
+				if npc.hp <= 0 then
+					SFX.play(38)
+					Misc.givePoints(NPC.config[npc.id].defeatScore, {x = v.x + (v.width / 2),y = v.y + (v.height / 2)}, true)
+					if settings.makeFunniDeath == false then
+						npc:kill(HARM_TYPE_NPC)
+					else
+						data.makeFunniDeath = true
+					end
+				end
 			end
+		else
+
 		end
 	end
 
