@@ -16,7 +16,7 @@ local sampleNPCSettings = {
 	gfxheight = 64,
 	gfxwidth = 32,
 	--Hitbox size. Bottom-center-bound to sprite size.
-	width = 32,
+	width = 48,
 	height = 48,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
@@ -54,8 +54,10 @@ local sampleNPCSettings = {
 	landDelay = 12,
 	bulletID = 752,
 	bulletDelay = 48,
-	sfx_jumpout = 0,
-	sfx_shoot = 0,
+	sfx_mockliquid = 
+	sfx_jumpout = 2,
+	sfx_jumpin = 24,
+	sfx_shoot = nil,
 }
 
 --Applies NPC settings
@@ -262,7 +264,7 @@ function sampleNPC.onTickEndNPC(v)
 				end
 			else
 				if data.jumpOut then
-					if data.timer == 96 then SFX.play(24) end
+					if data.timer == 96 and then SFX.play(24) end
 					--If not at the same y-coords as when it got hit
 					if v.y > data.hitY then
 						if data.falling == false then
