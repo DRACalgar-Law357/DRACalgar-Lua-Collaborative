@@ -21,7 +21,6 @@ wiggler.sharedBody = {
 	noyoshi=-1,
 	nogravity=0,
 	cliffturn=-1,
-	defeatScore = 8,
 	hitScore = 1,
 	score = 0,
 	spinjumpsafe = true,
@@ -130,7 +129,7 @@ function wiggler.initialize(v)
 	if v.data._basegame.trackedData then return end
 	
 	local data = v.data._basegame
-	local settings v.data._settings
+	local settings = v.data._settings
 	
 	local sec = v:mem(0x146, FIELD_WORD)
 	local dir = v:mem(0xD8,FIELD_FLOAT)
@@ -153,7 +152,7 @@ function wiggler.initialize(v)
 	if v.direction == 0 then
 		v.direction = rng.randomInt(0, 1) * 2 - 1
 	end
-	
+	data.jumpSet = settings.jumpSet
 	local cfg = NPC.config[v.id]
 	
 	v.noblockcollision = false
@@ -171,6 +170,7 @@ function wiggler.initialize(v)
 	data.isAngry = cfg.angryID == v.id
 	data.canStomp = false
 
+	data.canFunni = settings.makeFunniDeath
 	data.makeFunniDeath = false
 	data.deathTimer = 0
 
@@ -324,7 +324,7 @@ function wiggler.onTickHead(v)
 			end
 		end
 	end)
-	if normalCount >= cfg.trailcount and settings.hitSet == 1 and data.isAngry and v.collidesBlockBottom then
+	if normalCount >= cfg.trailcount and data.hitSegments == true and data.isAngry and v.collidesBlockBottom then
 		data.distance = cfg.distance
 		data.isAngry = false
 		v:transform(cfg.normalID)
@@ -369,7 +369,7 @@ function wiggler.onTickHead(v)
 			data.jumpTimer = data.jumpTimer + 1
 		if data.jumpTimer == math.random(50, NPC.config[v.id].jumpCooldown) or data.jumpTimer >= NPC.config[v.id].jumpCooldown and data.makeFunniDeath == false then
 			data.jumpTimer = 0
-			if settings.jumpSet == 2 then
+			if data.jumpSet == 2 then
 				if data.triedDown == false and data.triedUp == false then
 					data.jumpsDown = math.random(0, 1)
 				elseif data.triedDown and data.triedUp then
@@ -434,7 +434,7 @@ function wiggler.onTickHead(v)
 					data.triedDown = true
 				end
 				data.blockDetect = nil
-			elseif settings.jumpSet == 1 then
+			elseif data.jumpSet == 1 then
 				if NPC.config[v.id].jumpSoundID > 0 then
 					SFX.play(NPC.config[v.id].jumpSoundID)
 				end
@@ -496,7 +496,7 @@ function wiggler.onTickHead(v)
 					a.speedX = RNG.random(-2.5,2.5)
 					a.speedY = -3
 				end
-				if data.chaseTimer <= 0 and v.collidesBlockBottom and settings.hitSet == 0 then
+				if data.chaseTimer <= 0 and v.collidesBlockBottom and data.hitSegments == false then
 					data.distance = cfg.distance
 					data.isAngry = false
 					v:transform(cfg.normalID)
@@ -577,7 +577,7 @@ function wiggler.onNPCHarm(event,npc,reason,culprit)
 	end
 	event.cancelled = true
 	
-	if culprit.__type == "Player" then
+	if culprit and culprit.__type == "Player" then
 		if reason == 8 then
 			Colliders.bounceResponse(culprit, 6)
 		end
@@ -596,7 +596,7 @@ function wiggler.onNPCHarm(event,npc,reason,culprit)
 				if npc:mem(0x156, FIELD_WORD) <= 0 then
 					npc.hp = npc.hp - 1
 					SFX.play(39)
-					Misc.givePoints(NPC.config[npc.id].hitScore, {x = v.x + (v.width / 2),y = v.y + (v.height / 2)}, true)
+					Misc.givePoints(NPC.config[npc.id].hitScore, {x = npc.x + (npc.width / 2),y = npc.y + (npc.height / 2)}, true)
 					npc:mem(0x156, FIELD_WORD,12)
 					if (npc.hp % cfg.angryHealth == 0 and settings.hitSet == 0 and npc.hp > 0) or (settings.hitSet == 1) then
 						npc.data._basegame.turningAngry = true
@@ -604,8 +604,7 @@ function wiggler.onNPCHarm(event,npc,reason,culprit)
 				end
 				if npc.hp <= 0 then
 					SFX.play(38)
-					Misc.givePoints(NPC.config[npc.id].defeatScore, {x = v.x + (v.width / 2),y = v.y + (v.height / 2)}, true)
-					if settings.makeFunniDeath == false then
+					if npc.data._basegame.canFunni == false then
 						npc:kill(HARM_TYPE_NPC)
 					else
 						data.makeFunniDeath = true
