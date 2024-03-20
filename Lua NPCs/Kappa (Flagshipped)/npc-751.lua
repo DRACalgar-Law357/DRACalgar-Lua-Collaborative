@@ -11,16 +11,16 @@ local npcID = NPC_ID
 local sampleNPCSettings = {
 	id = npcID,
 	--Sprite size
-	gfxheight = 64,
+	gfxheight = 48,
 	gfxwidth = 48,
 	--Hitbox size. Bottom-center-bound to sprite size.
-	width = 32,
-	height = 48,
+	width = 40,
+	height = 40,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
 	gfxoffsety = 0,
 	--Frameloop-related
-	frames = 5,
+	frames = 3,
 	framestyle = 1,
 	framespeed = 8, --# frames between frame change
 	--Movement speed. Only affects speedX by default.
@@ -46,15 +46,11 @@ local sampleNPCSettings = {
 
 	grabside=false,
 	grabtop=false,
-	cliffturn = true,
+	cliffturn = false,
 	walkSpeed = 1,
-	bulletID = 752,
-	bulletDelay = 48,
 	sfx_mockliquid = 72,
 	sfx_jumpout = 2,
 	sfx_jumpin = 24,
-	sfx_shoot = nil,
-	projectilespeed = 4,
 }
 
 --Applies NPC settings
@@ -75,16 +71,16 @@ npcManager.registerHarmTypes(npcID,
 		HARM_TYPE_SWORD
 	}, 
 	{
-		[HARM_TYPE_JUMP]=899,
-		[HARM_TYPE_FROMBELOW]=899,
-		[HARM_TYPE_NPC]=899,
-		[HARM_TYPE_PROJECTILE_USED]=899,
-		[HARM_TYPE_LAVA]=899,
-		[HARM_TYPE_HELD]=899,
-		[HARM_TYPE_TAIL]=899,
+		[HARM_TYPE_JUMP]=npcID,
+		[HARM_TYPE_FROMBELOW]=npcID,
+		[HARM_TYPE_NPC]=npcID,
+		[HARM_TYPE_PROJECTILE_USED]=npcID,
+		[HARM_TYPE_LAVA]=npcID,
+		[HARM_TYPE_HELD]=npcID,
+		[HARM_TYPE_TAIL]=npcID,
 		[HARM_TYPE_SPINJUMP]=10,
 		--[HARM_TYPE_OFFSCREEN]=10,
-		[HARM_TYPE_SWORD]=899,
+		[HARM_TYPE_SWORD]=npcID,
 	}
 );
 
@@ -92,7 +88,6 @@ npcManager.registerHarmTypes(npcID,
 local STATE_HIDE = 0
 local STATE_WALK = 1
 local STATE_JUMP = 2
-local STATE_SHOOT = 3
 
 --Register events
 function sampleNPC.onInitAPI()
@@ -106,9 +101,6 @@ function sampleNPC.onTickEndNPC(v)
 	local data = v.data
 	local settings = v.data._settings
 	local config = NPC.config[v.id]
-	
-	local list
-	local npcs
 	
 	--If despawned
 	if v.despawnTimer <= 0 then
@@ -127,8 +119,8 @@ function sampleNPC.onTickEndNPC(v)
 		elseif settings.behaviorSet == 1 then
 			--Initially starts walking
 			data.state = STATE_WALK
-		elseif settings.behaviorSet == 2 or settings.behaviorSet == 3 then
-			--It'll hide in place under the screen and jumps up and down periodically, set the behaviorSet to 3 and it'll shoot a projectile when it starts falling down.
+		elseif settings.behaviorSet == 2 then
+			--It'll hide in place under the screen and jumps up and down periodically.
 			data.state = STATE_HIDE
 			v.y = camera.y + 640
 			data.holdY = v.y
@@ -156,11 +148,6 @@ function sampleNPC.onTickEndNPC(v)
 		if data.timer >= settings.walkDelay and v:mem(0x12C, FIELD_WORD) == 0 then
 			data.timer = 0
 			local options = {}
-			if settings.doShoot > 0 then
-				for i=1,settings.doShoot do
-					table.insert(options,STATE_SHOOT)
-				end
-			end
 			if settings.doJump > 0 then
 				for i=1,settings.doJump do
 					table.insert(options,STATE_JUMP)
@@ -176,13 +163,13 @@ function sampleNPC.onTickEndNPC(v)
 			end
 		end
 		--Animation stays consistent regardless of what happens
-		v.animationFrame = math.floor(data.timer / 10) % 2
+		v.animationFrame = math.floor(data.timer / 8) % 2
 	elseif data.state == STATE_JUMP then
 		--Animation
 		if v.noblockcollision then
-			v.animationFrame = 3
+			v.animationFrame = 2
 		else
-			v.animationFrame = 4
+			v.animationFrame = 2
 		end
 		--Make it jump offscreen, then when at the bottom have it come back up
 		if not v.collidesBlockBottom then data.timer = 0 end
@@ -201,7 +188,7 @@ function sampleNPC.onTickEndNPC(v)
 	elseif data.state == STATE_HIDE then
 		--Animation
 		if data.jumpOut then
-			v.animationFrame = 4
+			v.animationFrame = 3
 		else
 			v.animationFrame = 3
 		end
@@ -220,9 +207,9 @@ function sampleNPC.onTickEndNPC(v)
 				
 				--Animation
 				if v.noblockcollision then
-					v.animationFrame = 3
+					v.animationFrame = 2
 				else
-					v.animationFrame = 4
+					v.animationFrame = 2
 					--When finally touching the ground at the end of the state, go back to walking
 					if v.collidesBlockBottom then
 						data.timer = 0
@@ -249,35 +236,15 @@ function sampleNPC.onTickEndNPC(v)
 						v.speedY = -6
 					end
 				else
-					--When there, start falling again and if behaviorSet is set to 3, shoot a projectile
-					local targetedplayer = Player.getNearest(v.x + v.width / 2, v.y + v.height / 2)
-
-					if data.falling == false and settings.behaviorSet == 3 then
-						local originX = v.x + 0.5 * v.width
-						local originY = v.y + 0.5 * v.height + 8
-						local projectile = NPC.spawn(NPC.config[v.id].bulletID, originX, originY,
-													 targetedplayer.section, false, true)
-						if NPC.config[v.id].sfx_shoot then SFX.play(NPC.config[v.id].sfx_shoot) end
-						if v.direction == DIR_LEFT then
-							projectile.direction = DIR_LEFT
-						else
-							projectile.direction = DIR_RIGHT
-						end
-			
-						projectile.speedX = NPC.config[v.id].projectilespeed * v.direction
-						local traveltime = math.max((targetedplayer.x - originX) / projectile.speedX, 1)
-						projectile.speedY = (targetedplayer.y - originY) / traveltime
-						projectile.speedY = math.min(math.max(projectile.speedY, -2), 2)
-					end
-
+					--When there, start falling again
 					data.falling = true
 				end
 				
 				--Animation
 				if data.falling == false then
-					v.animationFrame = 3
+					v.animationFrame = 2
 				else
-					v.animationFrame = 4
+					v.animationFrame = 2
 					--When finally touching the bottom of the screen at the end of the state, go back to hiding
 					if v.y >= camera.y + 640 then
 						data.timer = 0
@@ -296,30 +263,6 @@ function sampleNPC.onTickEndNPC(v)
 					if NPC.config[v.id].sfx_jumpout then SFX.play(NPC.config[v.id].sfx_jumpout) end
 				end
 			end
-		end
-	elseif data.state == STATE_SHOOT then
-		v.animationFrame = 2
-		v.speedX = 0
-		local targetedplayer = Player.getNearest(v.x + v.width / 2, v.y + v.height / 2)
-
-		if data.timer >= NPC.config[v.id].bulletDelay then
-			local originX = v.x + 0.5 * v.width
-			local originY = v.y + 0.5 * v.height + 8
-			local projectile = NPC.spawn(NPC.config[v.id].bulletID, originX, originY,
-										 targetedplayer.section, false, true)
-			if NPC.config[v.id].sfx_shoot then SFX.play(NPC.config[v.id].sfx_shoot) end
-			if v.direction == DIR_LEFT then
-				projectile.direction = DIR_LEFT
-			else
-				projectile.direction = DIR_RIGHT
-			end
-
-			projectile.speedX = NPC.config[v.id].projectilespeed * v.direction
-			local traveltime = math.max((targetedplayer.x - originX) / projectile.speedX, 1)
-			projectile.speedY = (targetedplayer.y - originY) / traveltime
-			projectile.speedY = math.min(math.max(projectile.speedY, -2), 2)
-			data.timer = 0
-			data.state = STATE_WALK
 		end
 	end
 	

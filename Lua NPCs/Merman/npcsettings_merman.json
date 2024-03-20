@@ -1,0 +1,83 @@
+{
+	"style" : "groupbox",
+	"title" : "Merman Settings",
+	"layout": [
+		{
+			"control": "spinBox",
+			"name": "leapDelay",
+			"title": "Leap Delay",
+			"type": "int",
+			"tooltip": "If their <b>Behavior Set</b> is set to 'Hide - Don't Shoot' or 'Hide - Shoot', it'll use this value to determine its delay to leap out of the water.",
+			"value-default": 150,
+			"value-min": 1,
+			"value-max": 9999
+		},
+		{
+			"control": "spinBox",
+			"name": "walkDelay",
+			"title": "Walk Delay",
+			"type": "int",
+			"tooltip": "If their <b>Behavior Set</b> is set to 'Patrol - Hide' or 'Patrol - Walk', it'll use this value to determine its delay to leap out of the water.",
+			"value-default": 150,
+			"value-min": 1,
+			"value-max": 9999
+		},
+		{
+			"control": "spinBox",
+			"name": "leapRange",
+			"title": "Horizontal Range to Leap",
+			"type": "int",
+			"tooltip": "Whenever a player gets close to its set horizontal position, it starts leaping out.",
+			"value-default": 192,
+			"value-min": 1,
+			"value-max": 99999
+		},
+
+		{
+			"control": "description",
+			"text": "Behaviors"
+		},
+
+		{
+			"control": "combobox",
+			"name": "behaviorSet",
+			"title": "Behavior Sets",
+			"tooltip": "If set to 'Patrol - Hide' or 'Patrol - Walk', it'll behave by walking around and either shoot or jump off, hiding in place of the water and then jumping back on. It'd intialize behaviors either walking or hiding in place. If set to 'Hide - Don't Shoot' or 'Hide - Shoot', it'd initially hide in place and jump out periodically. If set to 'Hide - Shoot', it'd spew a projectile.",
+			"elements": ["Patrol - Hide", "Patrol - Walk", "Hide - Don't Shoot", "Hide - Shoot"],
+			"value-default": 0
+		},
+
+
+		{
+			"control": "spinBox",
+			"name": "doJump",
+			"title": "Jump Outcomes",
+			"type": "int",
+			"tooltip": "Determines an outcome either it jumps or not. It will never jump off, if set to 0. This only applies to behavior sets of patrolling",
+			"value-default": 1,
+			"value-min": 0,
+			"value-max": 10
+		},
+		{
+			"control": "spinBox",
+			"name": "doWalk",
+			"title": "Walk Outcomes",
+			"type": "int",
+			"tooltip": "Determines an outcome either it keeps walking or not. If set to 0, it will choose elsewhere. This only applies to behavior sets of patrolling",
+			"value-default": 1,
+			"value-min": 0,
+			"value-max": 10
+		},
+		{
+			"control": "spinBox",
+			"name": "doShoot",
+			"title": "Shoot Outcomes",
+			"type": "int",
+			"tooltip": "Determines an outcome either it shoots or not. If set to 0, it will never shoot. This only applies to behavior sets of patrolling",
+			"value-default": 1,
+			"value-min": 0,
+			"value-max": 10
+		}
+	]
+}
+
