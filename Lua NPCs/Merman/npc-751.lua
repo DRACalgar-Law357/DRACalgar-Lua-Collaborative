@@ -106,6 +106,7 @@ function sampleNPC.onTickEndNPC(v)
 	local data = v.data
 	local settings = v.data._settings
 	local config = NPC.config[v.id]
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
 	
 	--If despawned
 	if v.despawnTimer <= 0 then
