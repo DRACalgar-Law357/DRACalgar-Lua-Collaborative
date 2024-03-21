@@ -116,6 +116,8 @@ function sampleNPC.onTickEndNPC(v)
 		if settings.behaviorSet == 0 then
 			--Initially hides in place, readying to jump out and walk around
 			data.state = STATE_HIDE
+			v.y = camera.y + 640
+			data.holdY = v.y
 		elseif settings.behaviorSet == 1 then
 			--Initially starts walking
 			data.state = STATE_WALK

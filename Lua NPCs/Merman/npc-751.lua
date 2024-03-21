@@ -107,9 +107,6 @@ function sampleNPC.onTickEndNPC(v)
 	local settings = v.data._settings
 	local config = NPC.config[v.id]
 	
-	local list
-	local npcs
-	
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
@@ -124,6 +121,8 @@ function sampleNPC.onTickEndNPC(v)
 		if settings.behaviorSet == 0 then
 			--Initially hides in place, readying to jump out and walk around
 			data.state = STATE_HIDE
+			v.y = camera.y + 640
+			data.holdY = v.y
 		elseif settings.behaviorSet == 1 then
 			--Initially starts walking
 			data.state = STATE_WALK
