@@ -11,16 +11,16 @@ local npcID = NPC_ID
 local sampleNPCSettings = {
 	id = npcID,
 	--Sprite size
-	gfxheight = 64,
+	gfxheight = 80,
 	gfxwidth = 48,
 	--Hitbox size. Bottom-center-bound to sprite size.
 	width = 32,
-	height = 48,
+	height = 64,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
 	gfxoffsety = 0,
 	--Frameloop-related
-	frames = 5,
+	frames = 4,
 	framestyle = 1,
 	framespeed = 8, --# frames between frame change
 	--Movement speed. Only affects speedX by default.
@@ -51,10 +51,11 @@ local sampleNPCSettings = {
 	bulletID = 752,
 	bulletDelay = 48,
 	sfx_mockliquid = 72,
-	sfx_jumpout = 2,
+	sfx_jumpout = 1,
 	sfx_jumpin = 24,
 	sfx_shoot = nil,
 	projectilespeed = 4,
+	jumpCooldown = 320,
 }
 
 --Applies NPC settings
@@ -122,6 +123,7 @@ function sampleNPC.onTickEndNPC(v)
 		if settings.behaviorSet == 0 then
 			--Initially hides in place, readying to jump out and walk around
 			data.state = STATE_HIDE
+			data.positionY = v.y
 			v.y = camera.y + 640
 			data.holdY = v.y
 		elseif settings.behaviorSet == 1 then
@@ -130,12 +132,14 @@ function sampleNPC.onTickEndNPC(v)
 		elseif settings.behaviorSet == 2 or settings.behaviorSet == 3 then
 			--It'll hide in place under the screen and jumps up and down periodically, set the behaviorSet to 3 and it'll shoot a projectile when it starts falling down.
 			data.state = STATE_HIDE
+			data.positionY = v.y
 			v.y = camera.y + 640
 			data.holdY = v.y
 		end
 		data.timer = 0
 		data.jumpOut = false
 		data.falling = false
+		data.jumpCooldown = 0
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -147,7 +151,11 @@ function sampleNPC.onTickEndNPC(v)
 	end
 
 	data.timer = data.timer + 1
-
+	if data.jumpCooldown > 0 then
+		data.jumpCooldown = data.jumpCooldown - 1
+	else
+		data.jumpCooldown = 0
+	end
 	if data.state == STATE_WALK then
 		--Simply walk about
 		v.speedX = config.walkSpeed * v.direction
@@ -178,38 +186,40 @@ function sampleNPC.onTickEndNPC(v)
 		--Animation stays consistent regardless of what happens
 		v.animationFrame = math.floor(data.timer / 10) % 2
 	elseif data.state == STATE_JUMP then
+		v.speedX = 0
 		--Animation
 		if v.noblockcollision then
-			v.animationFrame = 3
+			v.animationFrame = 2
 		else
-			v.animationFrame = 4
+			v.animationFrame = 2
 		end
 		--Make it jump offscreen, then when at the bottom have it come back up
 		if not v.collidesBlockBottom then data.timer = 0 end
 		if v.y >= camera.y + 640 then
 			data.state = STATE_HIDE
 			data.holdY = v.y
+			data.jumpCooldown = NPC.config[v.id].jumpCooldown
 			if NPC.config[v.id].sfx_mockliquid then SFX.play(NPC.config[v.id].sfx_mockliquid) end
 		end
 		--Right at the start of the state, jump offscreen
 		if v.collidesBlockBottom then
 			v.speedY = -5
-			data.hitY = v.y
+			data.positionY = v.y
 			v.noblockcollision = true
 			if NPC.config[v.id].sfx_jumpin then SFX.play(NPC.config[v.id].sfx_jumpin) end
 		end
 	elseif data.state == STATE_HIDE then
 		--Animation
 		if data.jumpOut then
-			v.animationFrame = 4
+			v.animationFrame = 2
 		else
-			v.animationFrame = 3
+			v.animationFrame = 2
 		end
 		if settings.behaviorSet == 0 or settings.behaviorSet == 1 then
 			if data.jumpOut then
 				if data.timer == 1 and NPC.config[v.id].sfx_jumpout then SFX.play(NPC.config[v.id].sfx_jumpout) end
 				--If not at the same y-coords as when it got hit
-				if v.y > data.hitY then
+				if v.y > data.positionY then
 					if v.noblockcollision then
 						v.speedY = -6
 					end
@@ -220,9 +230,9 @@ function sampleNPC.onTickEndNPC(v)
 				
 				--Animation
 				if v.noblockcollision then
-					v.animationFrame = 3
+					v.animationFrame = 2
 				else
-					v.animationFrame = 4
+					v.animationFrame = 2
 					--When finally touching the ground at the end of the state, go back to walking
 					if v.collidesBlockBottom then
 						data.timer = 0
@@ -235,16 +245,19 @@ function sampleNPC.onTickEndNPC(v)
 				v.despawnTimer = 180
 				v.animationFrame = -50
 				v.y = data.holdY
-				if math.abs((plr.x + plr.width/2) - (v.x + v.width / 2)) <= settings.jumpRange then
+				if math.abs((plr.x + plr.width/2) - (v.x + v.width / 2)) <= settings.leapRange and data.jumpCooldown <= 0 then
 					data.timer = 0
+					data.falling = false
 					data.jumpOut = true
 					if NPC.config[v.id].sfx_jumpout then SFX.play(NPC.config[v.id].sfx_jumpout) end
+					npcutils.faceNearestPlayer(v)
 				end
+				v.noblockcollision = true
 			end
 		else
 			if data.jumpOut then
 				--If not at the same y-coords as when it got hit
-				if v.y > data.hitY then
+				if v.y > data.positionY then
 					if data.falling == false then
 						v.speedY = -6
 					end
@@ -275,13 +288,14 @@ function sampleNPC.onTickEndNPC(v)
 				
 				--Animation
 				if data.falling == false then
-					v.animationFrame = 3
+					v.animationFrame = 2
 				else
-					v.animationFrame = 4
+					v.animationFrame = 2
 					--When finally touching the bottom of the screen at the end of the state, go back to hiding
 					if v.y >= camera.y + 640 then
 						data.timer = 0
 						data.jumpOut = false
+						data.falling = false
 						if NPC.config[v.id].sfx_mockliquid then SFX.play(NPC.config[v.id].sfx_mockliquid) end
 					end
 				end
@@ -291,20 +305,23 @@ function sampleNPC.onTickEndNPC(v)
 				v.animationFrame = -50
 				v.y = data.holdY
 				if data.timer >= settings.leapDelay then
+					data.falling = false
 					data.timer = 0
 					data.jumpOut = true
 					if NPC.config[v.id].sfx_jumpout then SFX.play(NPC.config[v.id].sfx_jumpout) end
+					npcutils.faceNearestPlayer(v)
 				end
 			end
+			v.noblockcollision = true
 		end
 	elseif data.state == STATE_SHOOT then
-		v.animationFrame = 2
+		v.animationFrame = 3
 		v.speedX = 0
 		local targetedplayer = Player.getNearest(v.x + v.width / 2, v.y + v.height / 2)
 
 		if data.timer >= NPC.config[v.id].bulletDelay then
 			local originX = v.x + 0.5 * v.width
-			local originY = v.y + 0.5 * v.height + 8
+			local originY = v.y + 0.5 * v.height - 20
 			local projectile = NPC.spawn(NPC.config[v.id].bulletID, originX, originY,
 										 targetedplayer.section, false, true)
 			if NPC.config[v.id].sfx_shoot then SFX.play(NPC.config[v.id].sfx_shoot) end
