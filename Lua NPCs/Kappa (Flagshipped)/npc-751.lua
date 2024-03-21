@@ -49,8 +49,9 @@ local sampleNPCSettings = {
 	cliffturn = false,
 	walkSpeed = 1,
 	sfx_mockliquid = 72,
-	sfx_jumpout = 2,
+	sfx_jumpout = 1,
 	sfx_jumpin = 24,
+	jumpCooldown = 320,
 }
 
 --Applies NPC settings
@@ -101,7 +102,7 @@ function sampleNPC.onTickEndNPC(v)
 	local data = v.data
 	local settings = v.data._settings
 	local config = NPC.config[v.id]
-	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
@@ -116,6 +117,7 @@ function sampleNPC.onTickEndNPC(v)
 		if settings.behaviorSet == 0 then
 			--Initially hides in place, readying to jump out and walk around
 			data.state = STATE_HIDE
+			data.positionY = v.y
 			v.y = camera.y + 640
 			data.holdY = v.y
 		elseif settings.behaviorSet == 1 then
@@ -124,12 +126,14 @@ function sampleNPC.onTickEndNPC(v)
 		elseif settings.behaviorSet == 2 then
 			--It'll hide in place under the screen and jumps up and down periodically.
 			data.state = STATE_HIDE
+			data.positionY = v.y
 			v.y = camera.y + 640
 			data.holdY = v.y
 		end
 		data.timer = 0
 		data.jumpOut = false
 		data.falling = false
+		data.jumpCooldown = 0
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -141,13 +145,18 @@ function sampleNPC.onTickEndNPC(v)
 	end
 
 	data.timer = data.timer + 1
+	if data.jumpCooldown > 0 then
+		data.jumpCooldown = data.jumpCooldown - 1
+	else
+		data.jumpCooldown = 0
+	end
 
 	if data.state == STATE_WALK then
 		--Simply walk about
 		v.speedX = config.walkSpeed * v.direction
 		data.turnTimer = 0
 		
-		if data.timer >= settings.walkDelay and v:mem(0x12C, FIELD_WORD) == 0 then
+		if data.timer >= settings.walkDelay and v:mem(0x12C, FIELD_WORD) == 0 and v.collidesBlockBottom then
 			data.timer = 0
 			local options = {}
 			if settings.doJump > 0 then
@@ -168,6 +177,7 @@ function sampleNPC.onTickEndNPC(v)
 		v.animationFrame = math.floor(data.timer / 8) % 2
 	elseif data.state == STATE_JUMP then
 		--Animation
+		v.speedX = 0
 		if v.noblockcollision then
 			v.animationFrame = 2
 		else
@@ -183,7 +193,8 @@ function sampleNPC.onTickEndNPC(v)
 		--Right at the start of the state, jump offscreen
 		if v.collidesBlockBottom then
 			v.speedY = -5
-			data.hitY = v.y
+			data.jumpCooldown = NPC.config[v.id].jumpCooldown
+			data.positionY = v.y
 			v.noblockcollision = true
 			if NPC.config[v.id].sfx_jumpin then SFX.play(NPC.config[v.id].sfx_jumpin) end
 		end
@@ -198,7 +209,7 @@ function sampleNPC.onTickEndNPC(v)
 			if data.jumpOut then
 				if data.timer == 1 and NPC.config[v.id].sfx_jumpout then SFX.play(NPC.config[v.id].sfx_jumpout) end
 				--If not at the same y-coords as when it got hit
-				if v.y > data.hitY then
+				if v.y > data.positionY then
 					if v.noblockcollision then
 						v.speedY = -6
 					end
@@ -224,16 +235,19 @@ function sampleNPC.onTickEndNPC(v)
 				v.despawnTimer = 180
 				v.animationFrame = -50
 				v.y = data.holdY
-				if math.abs((plr.x + plr.width/2) - (v.x + v.width / 2)) <= settings.jumpRange then
+				if math.abs((plr.x + plr.width/2) - (v.x + v.width / 2)) <= settings.leapRange and data.jumpCooldown <= 0 then
 					data.timer = 0
+					data.falling = false
 					data.jumpOut = true
 					if NPC.config[v.id].sfx_jumpout then SFX.play(NPC.config[v.id].sfx_jumpout) end
+					npcutils.faceNearestPlayer(v)
 				end
+				v.noblockcollision = true
 			end
 		else
 			if data.jumpOut then
 				--If not at the same y-coords as when it got hit
-				if v.y > data.hitY then
+				if v.y > data.positionY then
 					if data.falling == false then
 						v.speedY = -6
 					end
@@ -251,6 +265,7 @@ function sampleNPC.onTickEndNPC(v)
 					if v.y >= camera.y + 640 then
 						data.timer = 0
 						data.jumpOut = false
+						data.falling = false
 						if NPC.config[v.id].sfx_mockliquid then SFX.play(NPC.config[v.id].sfx_mockliquid) end
 					end
 				end
@@ -260,11 +275,14 @@ function sampleNPC.onTickEndNPC(v)
 				v.animationFrame = -50
 				v.y = data.holdY
 				if data.timer >= settings.leapDelay then
+					data.falling = false
 					data.timer = 0
 					data.jumpOut = true
 					if NPC.config[v.id].sfx_jumpout then SFX.play(NPC.config[v.id].sfx_jumpout) end
+					npcutils.faceNearestPlayer(v)
 				end
 			end
+			v.noblockcollision = true
 		end
 	end
 	
