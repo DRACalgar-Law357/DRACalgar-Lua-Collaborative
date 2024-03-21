@@ -235,7 +235,7 @@ function sampleNPC.onTickEndNPC(v)
 				v.despawnTimer = 180
 				v.animationFrame = -50
 				v.y = data.holdY
-				if (plr.x + plr.width/2) - (v.x + v.width / 2) <= math.abs(settings.jumpRange) then
+				if math.abs((plr.x + plr.width/2) - (v.x + v.width / 2)) <= settings.jumpRange then
 					data.timer = 0
 					data.jumpOut = true
 					if NPC.config[v.id].sfx_jumpout then SFX.play(NPC.config[v.id].sfx_jumpout) end

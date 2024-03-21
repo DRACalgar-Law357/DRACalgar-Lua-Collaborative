@@ -12,35 +12,35 @@ local npcID = NPC_ID
 local gigaPhantoSettings = {
 	id = npcID,
 	--Sprite size
-	gfxheight = 76,
-	gfxwidth = 80,
+	gfxheight = 192,
+	gfxwidth = 192,
 	--Hitbox size. Bottom-center-bound to sprite size.
-	width = 76,
-	height = 76,
+	width = 64,
+	height = 64,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
-	gfxoffsety = 0,
+	gfxoffsety = 64,
 	--Frameloop-related
-	frames = 16,
+	frames = 1,
 	framestyle = 0,
 	framespeed = 8, --# frames between frame change
 	--Movement speed. Only affects speedX by default.
 	speed = 1,
 	--Collision-related
-	npcblock = false,
-	npcblocktop = false, --Misnomer, affects whether thrown NPCs bounce off the NPC.
-	playerblock = false,
-	playerblocktop = false, --Also handles other NPCs walking atop this NPC.
+	npcblock = true,
+	npcblocktop = true, --Misnomer, affects whether thrown NPCs bounce off the NPC.
+	playerblock = true,
+	playerblocktop = true, --Also handles other NPCs walking atop this NPC.
 
 	nohurt=true,
 	nogravity = true,
-	noblockcollision = true,
+	noblockcollision = false,
 	nofireball = true,
 	noiceball = true,
 	noyoshi= true,
 	nowaterphysics = true,
 	--Various interactions
-	jumphurt = true, --If true, spiny-like
+	jumphurt = false, --If true, spiny-like
 	spinjumpsafe = false, --If true, prevents player hurt when spinjumping
 	harmlessgrab = false, --Held NPC hurts other NPCs if false
 	harmlessthrown = false, --Thrown NPC hurts other NPCs if false
@@ -50,10 +50,10 @@ local gigaPhantoSettings = {
 	staticdirection = true,
 	prop1Image = Graphics.loadImageResolved("npc-"..npcID.."-prop1.png"),
 	prop2Image = Graphics.loadImageResolved("npc-"..npcID.."-prop2.png"),
-	prop1OffsetX = 36,
-	prop1OffsetY = 26,
-	prop2OffsetX = 36,
-	prop2OffsetY = 26,
+	prop1OffsetX = 0,
+	prop1OffsetY = 0,
+	prop2OffsetX = 0,
+	prop2OffsetY = 0,
 	prop2Height = 76,
 	headHeight = 76,
 	iFramesSet = 0,
@@ -62,16 +62,6 @@ local gigaPhantoSettings = {
 	--Set 1 defines the same from Set 0 but whenever the boss has been harmed, it stacks up the iFramesDelay the more. The catch is that when the boss has been left alone after getting harmed, it resets the iFramesStacks so that the player can be able to jump on the boss for some time again.
 	iFramesDelay = 32,
 	iFramesDelayStack = 48,
-
-	bombArray = {
-		134,
-		135,
-		166,
-		25,
-		348,
-		210,
-		579,
-	},
 	
 	--A config that uses Enjil's/Emral's freezeHighlight.lua; if set to true the lua file of it needs to be in the local or episode folder.
 	useFreezeHightLight = true
@@ -111,13 +101,14 @@ npcManager.registerHarmTypes(npcID,
 local STATE = {
 	IDLE = 0,
 	CHASE = 1,
-	SUMMON = 2,
-	CALLEVENT = 7,
-	SHOOT = 3,
-	SHOCKWAVE = 4,
-	LOB = 5,
-	RETURN = 6,
+	BARRAGE = 2,
+	DASH = 3,
+	LOB = 4,
+	ICICLE = 5,
+	FROST = 6,
+	SNOWTRAP = 7,
 	KILL = 8,
+	KAMIKAZE = 9,
 }
 
 local function handleFlyAround(v,data,config,settings)
