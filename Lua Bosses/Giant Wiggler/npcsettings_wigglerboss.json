@@ -43,6 +43,14 @@
 			"tooltip": "When Defeated and set this to true, it stays in place and then explodes in bits.",
 			"text-visible": true,
 			"value-default": false
+		},
+		{
+			"control": "checkbox",
+			"name": "isStomping",
+			"title": "Make Things To Fall?",
+			"tooltip": "Makes a short hop of a stomp, causing NPCs to fall from specified BGOs",
+			"text-visible": true,
+			"value-default": false
 		}
 	]
 }

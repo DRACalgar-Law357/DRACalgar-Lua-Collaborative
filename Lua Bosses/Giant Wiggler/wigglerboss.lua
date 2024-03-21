@@ -20,7 +20,7 @@ wiggler.sharedBody = {
 	noiceball=-1,
 	noyoshi=-1,
 	nogravity=0,
-	cliffturn=-1,
+	cliffturn=false,
 	hitScore = 1,
 	score = 0,
 	spinjumpsafe = true,
@@ -51,6 +51,14 @@ wiggler.sharedBody = {
 	killSoundID = 9,
 	moveWhenJumping = false,
 	jumpCooldown = 250,
+	positionPointBGO = 997,
+	indicateID = 791,
+	quaketable = {
+		759,
+	},
+	fallAmount = 3,
+	fallConsecutive = 2,
+	quakeSpawnDelay = 48,
 }
 
 
@@ -141,6 +149,8 @@ function wiggler.initialize(v)
 	settings.makeFunniDeath = settings.makeFunniDeath or false
 	--If set to 0, it won't jump. If set to 1, it'll jump up. If set to 2, it'll jump both and down through blocks.
 	settings.jumpSet = settings.jumpSet or 0
+	--If set true, periodically, it will make a short hop to cause things to fall from specified points that is if there is a specified BGO around.
+	settings.isStomping = settings.isStomping or false
 
 	if settings.hitSet == 0 then
 		v.hp = settings.health * NPC.config[v.id].angryHealth
@@ -169,6 +179,11 @@ function wiggler.initialize(v)
 	data.distance = cfg.distance
 	data.isAngry = cfg.angryID == v.id
 	data.canStomp = false
+	data.bgoTable = BGO.get(NPC.config[v.id].positionPointBGO)
+	data.stompTimer = 0
+	data.isStomping = settings.isStomping
+	data.stomping = false
+	data.stompDelay = RNG.randomInt(300,420)
 
 	data.canFunni = settings.makeFunniDeath
 	data.makeFunniDeath = false
@@ -347,7 +362,7 @@ function wiggler.onTickHead(v)
 	if data.canStomp and v.collidesBlockBottom then
 		for k, p in ipairs(Player.get()) do --Section copypasted from the Sledge Bros. code
 			if p:isGroundTouching() and not playerStun.isStunned(k) and v:mem(0x146, FIELD_WORD) == player.section then
-				playerStun.stunPlayer(k, 70)
+				playerStun.stunPlayer(k, 48)
 			end
 		end
 		local x = v.x - 16
@@ -365,9 +380,42 @@ function wiggler.onTickHead(v)
 	data.blockCheckUp.y = v.y - 128
 	data.blockCheckDown.x = v.x
 	data.blockCheckDown.y = v.y + (v.height * 1.7)
-		if v.collidesBlockBottom and data.makeFunniDeath == false then --Jumping through blocks, god this code's a mess
-			data.jumpTimer = data.jumpTimer + 1
-		if data.jumpTimer == math.random(50, NPC.config[v.id].jumpCooldown) or data.jumpTimer >= NPC.config[v.id].jumpCooldown and data.makeFunniDeath == false then
+	if v.collidesBlockBottom and data.makeFunniDeath == false then --Jumping through blocks, god this code's a mess
+		data.jumpTimer = data.jumpTimer + 1
+		data.stompTimer = data.stompTimer + 1
+		if data.stomping == true and #data.bgoTable > 0 then
+			local fallAmount = NPC.config[v.id].fallAmount
+			local consecutive = NPC.config[v.id].fallConsecutive
+			Routine.setFrameTimer(NPC.config[v.id].quakeSpawnDelay, (function() 
+				for i=1,fallAmount do
+					data.location = RNG.irandomEntry(data.bgoTable)
+					local n = NPC.spawn(NPC.config[v.id].indicateID, data.location.x, data.location.y, v.section, true, true)
+					n.x=n.x+16
+					n.y=n.y+16
+					n.ai1 = 48
+					n.ai2 = RNG.irandomEntry(NPC.config[v.id].quaketable)
+					n.ai3 = 0
+				end
+				end), consecutive, false)
+			Defines.earthquake = 6
+			
+			local x = v.x - 32
+			local y = v.y + v.height - 32
+
+			Effect.spawn(10, x, y)
+			Effect.spawn(10, x + v.width + 32, y)
+			data.stomping = false
+		end
+		if data.stompTimer == data.stompDelay and data.stomping == false then
+			data.stompTimer = 0
+			data.stompDelay = RNG.randomInt(300,420)
+			v.speedY = -3.5
+			if NPC.config[v.id].jumpSoundID > 0 then
+				SFX.play(NPC.config[v.id].jumpSoundID)
+			end
+			data.stomping = true
+		end
+		if data.jumpTimer == math.random(50, NPC.config[v.id].jumpCooldown) or data.jumpTimer >= NPC.config[v.id].jumpCooldown and data.stomping == false then
 			data.jumpTimer = 0
 			if data.jumpSet == 2 then
 				if data.triedDown == false and data.triedUp == false then
@@ -531,6 +579,8 @@ function wiggler.onTickHead(v)
 	else
 		data.deathTimer = data.deathTimer + 1
 		v.speedX = 0
+		v.friendly = true
+		getTrails(v, function(t) t.friendly = true end)
 		if data.deathTimer >= 128 then
 			for i=1,cfg.trailcount do
 				local a = Animation.spawn(cfg.trailEffect,v.x+v.width/2,v.y+v.height/2)

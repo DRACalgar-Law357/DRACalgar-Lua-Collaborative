@@ -1,0 +1,7 @@
+image = background-997e.png
+name = "Giant Wiggler Quake Spawn Point"
+frames = 1
+framespeed = 8
+noshadows = false
+priority = -85
+grid = 16
