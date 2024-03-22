@@ -5,7 +5,7 @@ local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
 local freeze = require("freezeHighlight")
 --Create the library table
-local gigaPhanto = {}
+local cryoBlaster = {}
 --NPC_ID is dynamic based on the name of the library file
 local npcID = NPC_ID
 --Defines NPC config for our NPC. You can remove superfluous definitions.
@@ -51,6 +51,7 @@ local cryoBlasterSettings = {
 	crystalProjectileID = 911,
 	diamondSawID = 912,
 	iceRockID = 906,
+	iceShard = 850,
 	prop1Image = Graphics.loadImageResolved("npc-"..npcID.."-prop1.png"),
 	prop2Image = Graphics.loadImageResolved("npc-"..npcID.."-prop2.png"),
 	prop1OffsetX = 32,
@@ -69,6 +70,8 @@ local cryoBlasterSettings = {
 	cannonLeftY = 0,
 	cannonRightX = 96,
 	cannonRightY = 0,
+	blastEffectDuration = 8,
+	blastEffectScale = 1.25,
 	iFramesSet = 0,
 	--An iFrame system that has the boss' frame be turned invisible from the set of frames periodically.
 	--Set 0 defines its hurtTimer until it is at its iFramesDelay
@@ -163,13 +166,13 @@ local hurtCooldown = 160
 local hpboarder = Graphics.loadImage("hpconboss.png")
 local hpfill = Graphics.loadImage("hpfillboss.png")
 --Register events
-function gigaPhanto.onInitAPI()
-	npcManager.registerEvent(npcID, gigaPhanto, "onTickEndNPC")
-	npcManager.registerEvent(npcID, gigaPhanto, "onDrawNPC")
-	registerEvent(gigaPhanto, "onNPCHarm")
+function cryoBlaster.onInitAPI()
+	npcManager.registerEvent(npcID, cryoBlaster, "onTickEndNPC")
+	npcManager.registerEvent(npcID, cryoBlaster, "onDrawNPC")
+	registerEvent(cryoBlaster, "onNPCHarm")
 end
 
-function gigaPhanto.onTickEndNPC(v)
+function cryoBlaster.onTickEndNPC(v)
 	--Don't act during time freeze
 	if Defines.levelFreeze then return end
 	
@@ -214,6 +217,7 @@ function gigaPhanto.onTickEndNPC(v)
 		data.movementTimer = 0
 		data.movementSet = 0
 		data.movementDelay = RNG.randomInt(360,600)
+		data.blastEffectTimer = 0
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -227,6 +231,7 @@ function gigaPhanto.onTickEndNPC(v)
 	end
 	data.timer = data.timer + 1
 	data.movementTimer = data.movementTimer + 1
+	data.blastEffectTimer = math.max(0,data.blastEffectTimer - 1)
 	data.dirVectr = vector.v2(
 		(v.spawnX + 32) - (v.x + v.width * 0.5),
 		(v.spawnY + 48) - (v.y + v.height * 0.5)
@@ -253,11 +258,80 @@ function gigaPhanto.onTickEndNPC(v)
 			table.insert(options,STATE.ICE)
 			table.insert(options,STATE.TRAPPED_PLAYER)
 			table.insert(options,STATE.DIAMOND_SAW)
+			table.insert(options,STATE.BARRAGE)
 			if #options > 0 then
 				data.state = RNG.irandomEntry(options)
 			end
 			data.statelimit = data.state
 
+		end
+	elseif data.state == STATE.BARRAGE then
+		v.animationFrame = 0
+		if data.timer == 1 then v.ai1 = 0 v.ai2 = 0 end
+		if data.timer == 8 then
+			Routine.setFrameTimer(10, (function() 
+				data.blastEffectTimer = config.blastEffectDuration
+				SFX.play(22)
+				if v.ai1 == 0 then
+					v.ai2 = 0
+					for i=0,3 do
+						local dir = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10) * v.direction)
+						local dirl = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10) * v.direction)
+						local dirr = -vector.right2:rotate(90 * (v.ai2 + 1) - (v.ai1 * 10) * v.direction)
+						if i == 0 then
+							local n = NPC.spawn(NPC.config[v.id].iceRockID, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY, v.section, false, true)
+						
+							n.speedX = 
+							n.speedY = 
+							Effect.spawn(10, v.x + v.width/2 + config.cannonUpX + 8, v.y + v.height/2 + config.cannonUpY + 8)
+						elseif i == 1 then
+
+						elseif i == 2 then
+
+						elseif i == 3 then
+
+						end
+						v.ai2 = v.ai2 + 1
+					end
+				else
+					for i=0,3 do
+						local dir = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10) * v.direction)
+						local dirl = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10) * v.direction)
+						local dirr = -vector.right2:rotate(90 * (v.ai2 + 1) - (v.ai1 * 10) * v.direction)
+						if i == 0 then
+	
+						elseif i == 1 then
+	
+						elseif i == 2 then
+	
+						elseif i == 3 then
+	
+						end
+						v.ai2 = v.ai2 + 1
+					end
+					for i=0,3 do
+						local dir = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10) * v.direction)
+						local dirl = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10) * v.direction)
+						local dirr = -vector.right2:rotate(90 * (v.ai2 + 1) - (v.ai1 * 10) * v.direction)
+						if i == 0 then
+	
+						elseif i == 1 then
+	
+						elseif i == 2 then
+	
+						elseif i == 3 then
+	
+						end
+						v.ai2 = v.ai2 + 1
+					end
+				end
+				v.ai1 = v.ai1 + 1
+				end), 4, false)
+		end
+		if data.timer >= 84 then
+			data.timer = 0
+			v.ai1 = 0
+			data.state = STATE.IDLE
 		end
 	elseif data.state == STATE.ICE then
 		v.animationFrame = 0
@@ -341,7 +415,7 @@ function gigaPhanto.onTickEndNPC(v)
 		end
 	end
 	
-	--Give Giga Phanto some i-frames to make the fight less cheesable
+	--Give Cryo Blaster some i-frames to make the fight less cheesable
 	--iFrames System made by MegaDood & DRACalgar Law
 	if NPC.config[v.id].iFramesSet == 1 then
         if data.hurting == false then
@@ -366,7 +440,7 @@ function gigaPhanto.onTickEndNPC(v)
 		data.hurtTimer = data.hurtTimer + 1
 		
 		if data.hurtTimer == 1 then
-		    SFX.play("sfx_playerhurt.wav")
+		    SFX.play("s3k_damage.ogg")
 		end
 		
 		if data.hurtTimer % 8 <= 4 and data.hurtTimer > 8 then
@@ -394,11 +468,11 @@ function gigaPhanto.onTickEndNPC(v)
 		plr:harm()
 	end
 end
-function gigaPhanto.onNPCHarm(eventObj, v, reason, culprit)
+function cryoBlaster.onNPCHarm(eventObj, v, reason, culprit)
 	local data = v.data
 	if v.id ~= npcID then return end
 
-			if data.iFrames == false and data.state ~= STATE.KILL and data.state ~= STATE.CALLEVENT and data.state ~= STATE.RETURN then
+			if data.iFrames == false and data.state ~= STATE.KILL and data.state ~= STATE.KAMIKAZE then
 				local fromFireball = (culprit and culprit.__type == "NPC" and culprit.id == 13 )
 				local hpd = 10
 				if fromFireball then
@@ -458,27 +532,26 @@ function gigaPhanto.onNPCHarm(eventObj, v, reason, culprit)
 				if NPC.config[v.id].useFreezeHightLight == true then
 					freeze.set(48)
 				end
-				SFX.play(63)
-				for _,n in ipairs(NPC.get()) do
+				--[[for _,n in ipairs(NPC.get()) do
 					if n.id == NPC.config[v.id].shockwaveID or n.id == NPC.config[v.id].bombArray or n.id == NPC.config[v.id].phantoNormalID or n.id == NPC.config[v.id].phantoAggroID or n.id == NPC.config[v.id].phantoFuriousID or n.id == NPC.config[v.id].orbID or n.id == NPC.config[v.id].projectileID then
 						if n.x + n.width > camera.x and n.x < camera.x + camera.width and n.y + n.height > camera.y and n.y < camera.y + camera.height then
 							n:kill(9)
 							Animation.spawn(10, n.x, n.y)
 						end
 					end
-				end
+				end]]
 			elseif data.health > 0 then
 				v:mem(0x156,FIELD_WORD,60)
 			end
 	eventObj.cancelled = true
 end
 local lowPriorityStates = table.map{1,3,4}
-function gigaPhanto.onDrawNPC(v)
+function cryoBlaster.onDrawNPC(v)
 	local data = v.data
 	local settings = v.data._settings
 	local config = NPC.config[v.id]
 
-	if v.legacyBoss == true and data.state ~= STATE_KILL and data.health then
+	if v.legacyBoss == true and data.state ~= STATE.KILL and data.state ~= STATE.KAMIKAZE and data.health then
 		Graphics.drawImage(hpboarder, 740, 120)
 		local healthoffset = 126
 		healthoffset = healthoffset-(126*(data.health/settings.hp))
@@ -519,7 +592,7 @@ function gigaPhanto.onDrawNPC(v)
 		sceneCoords = true,
 		centered = true,
 		priority = priority,
-		rotation = data.rotation,
+		rotation = data.prop1rotation,
 	}
 
 	local img = config.prop2Image
@@ -534,7 +607,7 @@ function gigaPhanto.onDrawNPC(v)
 		sceneCoords = true,
 		centered = true,
 		priority = priority-45,
-		rotation = data.rotation,
+		rotation = data.prop2rotation,
 	}
 
 	local img = Graphics.sprites.npc[v.id].img
@@ -552,13 +625,13 @@ function gigaPhanto.onDrawNPC(v)
         priority = priority,
         rotation = data.rotation,
     }
-
 	data.baseYPos = Sprite{texture = txture}
-
+	local scale = 1*math.lerp(1,config.blastEffectScale,data.blastEffectTimer/config.blastEffectDuration)
+	data.baseYPos.scale = vector.v2(scale)
 	local plr = npcutils.getNearestPlayer(v)
 	data.baseYPos.position = vector(v.x, plr.y + 4)
 	npcutils.hideNPC(v)
 end
 
 --Gotta return the library table!
-return gigaPhanto
+return cryoBlaster

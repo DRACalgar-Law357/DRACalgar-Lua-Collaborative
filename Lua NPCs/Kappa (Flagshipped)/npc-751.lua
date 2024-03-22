@@ -31,7 +31,7 @@ local sampleNPCSettings = {
 	playerblock = false,
 	playerblocktop = false, --Also handles other NPCs walking atop this NPC.
 
-	nohurt=true,
+	nohurt=false,
 	nogravity = false,
 	noblockcollision = false,
 	nofireball = false,

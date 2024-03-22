@@ -31,7 +31,7 @@ local sampleNPCSettings = {
 	playerblock = false,
 	playerblocktop = false, --Also handles other NPCs walking atop this NPC.
 
-	nohurt=true,
+	nohurt=false,
 	nogravity = false,
 	noblockcollision = false,
 	nofireball = false,
@@ -53,7 +53,7 @@ local sampleNPCSettings = {
 	sfx_mockliquid = 72,
 	sfx_jumpout = 1,
 	sfx_jumpin = 24,
-	sfx_shoot = nil,
+	sfx_shoot = Misc.resolveFile("cvdx_merman_croak.ogg"),
 	projectilespeed = 4,
 	jumpCooldown = 320,
 }
