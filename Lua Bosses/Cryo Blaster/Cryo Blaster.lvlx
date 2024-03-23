@@ -5,7 +5,7 @@ SECTION
 SC:0;L:-200000;R:-199040;T:-200600;B:-200000;MZ:24;MF:"Cryo Blaster/19. Main Theme.mp3";BG:61;XTRA:"{\n    \"effects\"\: {\n        \"screenEffects\"\: 13\,\n        \"weather\"\: 2\n    }\n}\n";
 SECTION_END
 STARTPOINT
-ID:1;X:-199708;Y:-200182;D:1;
+ID:1;X:-199804;Y:-200182;D:1;
 STARTPOINT_END
 BLOCK
 ID:160;X:-200000;Y:-200128;W:32;H:32;
@@ -165,6 +165,7 @@ ID:99;X:-199072;Y:-200032;
 BGO_END
 NPC
 ID:354;X:-199520;Y:-200544;D:-1;LR:"goal";
+ID:833;X:-199552;Y:-200480;D:-1;BS:1;
 NPC_END
 LAYERS
 LR:"Default";
