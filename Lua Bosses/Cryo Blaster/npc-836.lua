@@ -195,7 +195,6 @@ function cryoBlaster.onTickEndNPC(v)
 		end
 		chasePlayers(v)
 		v.speedX = math.clamp(v.speedX + 0.2 * v.data._basegame.direction, -6, 6)
-		Text.print(v.ai1,110,110)
 		if v.collidesBlockBottom then
 			SFX.play("s3k_shoot.ogg")
 			v.speedY = -10

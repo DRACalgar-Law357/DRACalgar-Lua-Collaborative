@@ -172,6 +172,43 @@ local function handleFlyAround(v,data,config,settings)
 	npcutils.faceNearestPlayer(v)
 end
 
+local function getDistance(k,p)
+	return k.x + k.width/2 < p.x + p.width/2
+end
+
+local function getDistanceY(k,p)
+	return k.y + k.height/2 < p.y + p.height/2
+end
+
+local function setDir(dir, v)
+	if (dir and v.data._basegame.direction == 1) or (v.data._basegame.direction == -1 and not dir) then return end
+	if dir then
+		v.data._basegame.direction = 1
+	else
+		v.data._basegame.direction = -1
+	end
+end
+
+local function setDirY(dir, v)
+	if (dir and v.data.verticalDirection == 1) or (v.data.verticalDirection == -1 and not dir) then return end
+	if dir then
+		v.data.verticalDirection = 1
+	else
+		v.data.verticalDirection = -1
+	end
+end
+
+local function chasePlayers(v)
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
+	local dir1 = getDistance(v, plr)
+	setDir(dir1, v)
+end
+local function chasePlayersY(v)
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
+	local dir1 = getDistanceY(v, plr)
+	setDirY(dir1, v)
+end
+
 local hurtCooldown = 160
 
 local hpboarder = Graphics.loadImage("hpconboss.png")
@@ -207,7 +244,7 @@ function cryoBlaster.onTickEndNPC(v)
 		data.initialized = true
 
 		settings.hp = settings.hp or 120
-
+		data.w = math.pi/65
 		data.timer = data.timer or 2
 		data.hurtTimer = data.hurtTimer or 0
 		data.iFrames = false
@@ -237,6 +274,7 @@ function cryoBlaster.onTickEndNPC(v)
 		data.prop2rotation = 0
 		data.prop1Timer = 0
 		data.prop2Timer = 0
+		data.verticalDirection = 0
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -281,7 +319,7 @@ function cryoBlaster.onTickEndNPC(v)
 				if config.pulsey then
 					data.sprSizey = 1.5
 				end
-				SFX.play("Missile.wav")
+				SFX.play("Air Bullet.wav")
 				local n = NPC.spawn(RNG.irandomEntry{config.flurryID,config.bombID,config.iceSpikeID}, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
 				
 				n.speedX = 0
@@ -298,6 +336,7 @@ function cryoBlaster.onTickEndNPC(v)
 			table.insert(options,STATE.BARRAGE)
 			table.insert(options,STATE.SHURIKEN)
 			table.insert(options,STATE.SNOWTRAP)
+			table.insert(options,STATE.DASH)
 			if #options > 0 then
 				data.state = RNG.irandomEntry(options)
 			end
@@ -316,12 +355,62 @@ function cryoBlaster.onTickEndNPC(v)
 		if v.ai1 == 0 then
 			prop1rotator = easing.inQuad(data.timer, prop1rotator, 3 - prop1rotator, 56)
 			prop2rotator = easing.inQuad(data.timer, prop2rotator, 3 - prop2rotator, 56)
+			if data.timer > 64 then
+				v.x = v.x + 45 * -data.w * math.sin(math.pi/4*data.timer)
+				v.y = v.y - 56 * -data.w * math.sin(math.pi/2*data.timer)
+			end
+			if data.timer >= 128 then
+				v.ai1 = 1
+				data.timer = 0
+				v.speedY = RNG.random(-2,2)
+			end
 		elseif v.ai1 == 1 then
 			prop1rotator = 3
 			prop2rotator = 3
+			chasePlayers(v)
+			chasePlayersY(v)
+			v.speedX = math.clamp(v.speedX + 0.2 * v.data._basegame.direction, -5, 5)
+			v.speedY = math.clamp(v.speedY + 0.2 * data.verticalDirection, -5, 5)
+			if data.timer >= 360 then
+				data.timer = 0
+				v.ai1 = 2
+			end
+			if v.collidesBlockBottom or v.collidesBlockUp then
+				v.speedY = -v.speedY
+				SFX.play("s3k_shoot.ogg")
+				Defines.earthquake = 5
+			end
+			if v.collidesBlockLeft or v.collidesBlockRight then
+				v.speedX = -v.speedX
+				SFX.play("s3k_shoot.ogg")
+				Defines.earthquake = 5
+			end
 		elseif v.ai1 == 2 then
-			prop1rotator = easing.outQuad(data.timer, prop1rotator, 3 - prop1rotator, 56)
-			prop2rotator = easing.outQuad(data.timer, prop2rotator, 3 - prop2rotator, 56)
+			prop1rotator = easing.outQuad(data.timer, prop1rotator, 0 - prop1rotator, 56)
+			prop2rotator = easing.outQuad(data.timer, prop2rotator, 0 - prop2rotator, 56)
+			local stopX = false
+			local stopY = false
+			if math.abs(v.speedX) <= 0.1 then
+				v.speedX = 0
+				stopX = true
+			else
+				v.speedX = v.speedX * 0.97
+			end
+			if math.abs(v.speedY) <= 0.1 then
+				v.speedY = 0
+				stopY = true
+			else
+				v.speedY = v.speedY * 0.97
+			end
+			if stopX and stopY then
+				v.speedX = 0
+				v.speedY = 0
+				v.ai1 = 0
+				data.timer = 0
+				data.state = STATE.IDLE
+				data.movementSet = 0
+				data.movementTimer = 0
+			end
 		end
 		data.prop1rotation = data.prop1rotation + prop1rotator * prop1rotatedirection
 		data.prop2rotation = data.prop2rotation + prop2rotator * prop2rotatedirection
@@ -756,7 +845,7 @@ function cryoBlaster.onDrawNPC(v)
 	local data = v.data
 	local settings = v.data._settings
 	local config = NPC.config[v.id]
-
+	data.w = math.pi/65
 	if hpboarder and hpfill and v.legacyBoss == true and data.state ~= STATE.KILL and data.state ~= STATE.KAMIKAZE and data.health then
 		Graphics.drawImage(hpboarder, 740, 120)
 		local healthoffset = 126
