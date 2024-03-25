@@ -57,6 +57,7 @@ local cryoBlasterSettings = {
 	shurikenID = 836,
 	bombID = 134,
 	flurryID = 374,
+	iceSpikeID = 837,
 	prop1Image = Graphics.loadImageResolved("npc-"..npcID.."-prop1.png"),
 	prop2Image = Graphics.loadImageResolved("npc-"..npcID.."-prop2.png"),
 	prop1OffsetX = 32,
@@ -207,7 +208,7 @@ function cryoBlaster.onTickEndNPC(v)
 
 		settings.hp = settings.hp or 120
 
-		data.timer = data.timer or 0
+		data.timer = data.timer or 2
 		data.hurtTimer = data.hurtTimer or 0
 		data.iFrames = false
 		data.health = settings.hp
@@ -255,7 +256,7 @@ function cryoBlaster.onTickEndNPC(v)
 		(v.spawnX + 32) - (v.x + v.width * 0.5),
 		(v.spawnY + 48) - (v.y + v.height * 0.5)
 		):normalize() * 5
-	if data.moving then
+	if data.moving and data.state ~= STATE.KILL and data.state ~= STATE.RETURN and data.state ~= STATE.DASH then
 		handleFlyAround(v,data,config,settings)
 		if data.movementTimer >= data.movementDelay then
 			data.movementDelay = RNG.randomInt(360,600)
@@ -272,7 +273,7 @@ function cryoBlaster.onTickEndNPC(v)
 		v.animationFrame = 0
 		if data.timer == 1 then
 			data.rndTimer = RNG.randomInt(80,144)
-			if RNG.randomInt(0,2) == 0 then
+			if RNG.randomInt(0,2) > 0 then
 				if config.pulsex then
 					data.sprSizex = 1.5
 				end
@@ -280,21 +281,12 @@ function cryoBlaster.onTickEndNPC(v)
 				if config.pulsey then
 					data.sprSizey = 1.5
 				end
-				local rng = RNG.randomInt(0,2)
 				SFX.play("Missile.wav")
-				if rng == 0 then
-					local n = NPC.spawn(NPC.config[v.id].bombID, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
-						
-					n.speedX = 0
-					n.speedY = 3
-					Effect.spawn(10, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY)
-				else
-					local n = NPC.spawn(NPC.config[v.id].flurryID, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
-						
-					n.speedX = 0
-					n.speedY = 3
-					Effect.spawn(10, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY)
-				end
+				local n = NPC.spawn(RNG.irandomEntry{config.flurryID,config.bombID,config.iceSpikeID}, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
+				
+				n.speedX = 0
+				n.speedY = 3
+				Effect.spawn(10, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY)
 			end
 		end
 		if data.timer >= data.rndTimer then
@@ -312,6 +304,28 @@ function cryoBlaster.onTickEndNPC(v)
 			data.statelimit = data.state
 
 		end
+	elseif data.state == STATE.DASH then
+		v.animationFrame = 0
+		local prop1rotator = 0
+		local prop1rotatedirection = v.direction
+		local prop2rotator = 0
+		local prop2rotatedirection = -v.direction
+		if data.timer == 1 and v.ai1 == 0 then
+			SFX.play("PU-Glaceon-Ice-Shard-Activate.wav")
+		end
+		if v.ai1 == 0 then
+			prop1rotator = easing.inQuad(data.timer, prop1rotator, 3 - prop1rotator, 56)
+			prop2rotator = easing.inQuad(data.timer, prop2rotator, 3 - prop2rotator, 56)
+		elseif v.ai1 == 1 then
+			prop1rotator = 3
+			prop2rotator = 3
+		elseif v.ai1 == 2 then
+			prop1rotator = easing.outQuad(data.timer, prop1rotator, 3 - prop1rotator, 56)
+			prop2rotator = easing.outQuad(data.timer, prop2rotator, 3 - prop2rotator, 56)
+		end
+		data.prop1rotation = data.prop1rotation + prop1rotator * prop1rotatedirection
+		data.prop2rotation = data.prop2rotation + prop2rotator * prop2rotatedirection
+
 	elseif data.state == STATE.SHURIKEN then
 		v.animationFrame = 0
 		local prop1rotator = 0
