@@ -165,7 +165,7 @@ function cryoBlaster.onTickEndNPC(v)
 			if v.collidesBlockLeft or v.collidesBlockRight then
 				v.speedX = 0
 				data.timer = 0
-				if v.ai1 >= 2 then
+				if v.ai1 >= 1 then
 					v.ai1 = 0
 					data.state = 2
 					SFX.play("s3k_shoot.ogg")
@@ -199,7 +199,7 @@ function cryoBlaster.onTickEndNPC(v)
 			SFX.play("s3k_shoot.ogg")
 			v.speedY = -10
 			Defines.earthquake = 7
-			if v.ai1 >= 4 then
+			if v.ai1 >= 2 then
 				v.ai1 = 0
 				data.state = 3
 				v.speedX = 0

@@ -5,6 +5,7 @@ local easing = require("ext/easing")
 local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
 local freeze = require("freezeHighlight")
+local afterimages = require("afterimages")
 --Create the library table
 local cryoBlaster = {}
 --NPC_ID is dynamic based on the name of the library file
@@ -82,6 +83,10 @@ local cryoBlasterSettings = {
 	shardIncrement = 6,
 	shardTimer = 10,
 	snowSpeed = 5,
+	spinHitboxWidth = 72,
+	spinHitboxHeight = 72,
+	spinHitboxX = 0,
+	spinHitboxY = 0,
 	iFramesSet = 0,
 	--An iFrame system that has the boss' frame be turned invisible from the set of frames periodically.
 	--Set 0 defines its hurtTimer until it is at its iFramesDelay
@@ -90,7 +95,8 @@ local cryoBlasterSettings = {
 	iFramesDelayStack = 48,
 	
 	--A config that uses Enjil's/Emral's freezeHighlight.lua; if set to true the lua file of it needs to be in the local or episode folder.
-	useFreezeHightLight = true
+	useFreezeHightLight = true,
+	debug = false,
 }
 
 --Applies NPC settings
@@ -190,11 +196,11 @@ local function setDir(dir, v)
 end
 
 local function setDirY(dir, v)
-	if (dir and v.data.verticalDirection == 1) or (v.data.verticalDirection == -1 and not dir) then return end
+	if (dir and v.data._basegame.verticalDirection == 1) or (v.data._basegame.verticalDirection == -1 and not dir) then return end
 	if dir then
-		v.data.verticalDirection = 1
+		v.data._basegame.verticalDirection = 1
 	else
-		v.data.verticalDirection = -1
+		v.data._basegame.verticalDirection = -1
 	end
 end
 
@@ -228,7 +234,6 @@ function cryoBlaster.onTickEndNPC(v)
 	local settings = v.data._settings
 	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
 	local config = NPC.config[v.id]
-	
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
@@ -237,7 +242,6 @@ function cryoBlaster.onTickEndNPC(v)
 		data.hurtTimer = 0
 		return
 	end
-
 	--Initialize
 	if not data.initialized then
 		--Initialize necessary data.
@@ -311,7 +315,7 @@ function cryoBlaster.onTickEndNPC(v)
 		v.animationFrame = 0
 		if data.timer == 1 then
 			data.rndTimer = RNG.randomInt(80,144)
-			if RNG.randomInt(0,2) > 0 then
+			if RNG.randomInt(0,1) == 0 then
 				if config.pulsex then
 					data.sprSizex = 1.5
 				end
@@ -320,7 +324,7 @@ function cryoBlaster.onTickEndNPC(v)
 					data.sprSizey = 1.5
 				end
 				SFX.play("Air Bullet.wav")
-				local n = NPC.spawn(RNG.irandomEntry{config.flurryID,config.bombID,config.iceSpikeID}, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
+				local n = NPC.spawn(RNG.irandomEntry{config.flurryID,config.bombID}, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
 				
 				n.speedX = 0
 				n.speedY = 3
@@ -353,37 +357,62 @@ function cryoBlaster.onTickEndNPC(v)
 			SFX.play("PU-Glaceon-Ice-Shard-Activate.wav")
 		end
 		if v.ai1 == 0 then
-			prop1rotator = easing.inQuad(data.timer, prop1rotator, 3 - prop1rotator, 56)
-			prop2rotator = easing.inQuad(data.timer, prop2rotator, 3 - prop2rotator, 56)
+			v.speedX = 0
+			v.speedY = 0
+			prop1rotator = easing.inQuad(data.timer, prop1rotator, 12 - prop1rotator, 56)
+			prop2rotator = easing.inQuad(data.timer, prop2rotator, 12 - prop2rotator, 56)
 			if data.timer > 64 then
 				v.x = v.x + 45 * -data.w * math.sin(math.pi/4*data.timer)
 				v.y = v.y - 56 * -data.w * math.sin(math.pi/2*data.timer)
 			end
+			if data.timer == 120 then
+				SFX.play("powerup1.ogg")
+			end
 			if data.timer >= 128 then
 				v.ai1 = 1
 				data.timer = 0
-				v.speedY = RNG.random(-2,2)
+				v.speedY = -3
+				v.speedX = 0
 			end
 		elseif v.ai1 == 1 then
-			prop1rotator = 3
-			prop2rotator = 3
+			data.spinBox = Colliders.Box(v.x - (v.width * 1.2), v.y - (v.height * 1), config.spinHitboxWidth, config.spinHitboxHeight)
+			data.spinBox.x = v.x + v.width/2 - data.spinBox.width/2 + config.spinHitboxX
+			data.spinBox.y = v.y + v.height/2 - data.spinBox.height/2 + config.spinHitboxY
+			
+			if config.debug == true then
+				data.spinBox:Debug(true)
+			end
+			prop1rotator = 12
+			prop2rotator = 12
 			chasePlayers(v)
 			chasePlayersY(v)
-			v.speedX = math.clamp(v.speedX + 0.2 * v.data._basegame.direction, -5, 5)
-			v.speedY = math.clamp(v.speedY + 0.2 * data.verticalDirection, -5, 5)
+			afterimages.create(v, 24, Color.cyan, true, 0)
 			if data.timer >= 360 then
 				data.timer = 0
 				v.ai1 = 2
 			end
 			if v.collidesBlockBottom or v.collidesBlockUp then
-				v.speedY = -v.speedY
+				if v.collidesBlockBottom then v.speedY = -2 elseif v.collidesBlockUp then v.speedY = 2 end
 				SFX.play("s3k_shoot.ogg")
 				Defines.earthquake = 5
 			end
 			if v.collidesBlockLeft or v.collidesBlockRight then
-				v.speedX = -v.speedX
+				if v.collidesBlockLeft then v.speedX = 2 elseif v.collidesBlockRight then v.speedX = -2 end
 				SFX.play("s3k_shoot.ogg")
 				Defines.earthquake = 5
+			end
+			v.speedX = math.clamp(v.speedX + 0.1 * v.data._basegame.direction, -5, 5)
+			v.speedY = math.clamp(v.speedY + 0.1 * v.data._basegame.verticalDirection, -5, 5)
+			if Colliders.collide(plr,data.spinBox) then
+				plr:harm()
+			end
+			for k, n in  ipairs(Colliders.getColliding{a = data.spinBox, b = NPC.HITTABLE, btype = Colliders.NPC, filter = npcFilter}) do
+				if n.id ~= v.id then
+					if n:mem(0x156,FIELD_WORD) <= 0 then
+						n:harm()
+						Animation.spawn(75,n.x,n.y)
+					end
+				end
 			end
 		elseif v.ai1 == 2 then
 			prop1rotator = easing.outQuad(data.timer, prop1rotator, 0 - prop1rotator, 56)
@@ -405,10 +434,12 @@ function cryoBlaster.onTickEndNPC(v)
 			if stopX and stopY then
 				v.speedX = 0
 				v.speedY = 0
+				data.prop1rotation = 0
+				data.prop2rotation = 0
 				v.ai1 = 0
 				data.timer = 0
 				data.state = STATE.IDLE
-				data.movementSet = 0
+				data.movementSet = 1
 				data.movementTimer = 0
 			end
 		end
@@ -429,7 +460,7 @@ function cryoBlaster.onTickEndNPC(v)
 			prop2rotator = easing.inQuad(data.timer, prop2rotator, 3 - prop2rotator, 56)
 			data.prop1rotation = data.prop1rotation + prop1rotator * prop1rotatedirection
 			data.prop2rotation = data.prop2rotation + prop2rotator * prop2rotatedirection
-			if data.timer >= 180 then
+			if data.timer >= 120 then
 				data.shurikenDisplay = false
 				data.timer = 0
 				SFX.play("PU-AlolanNinetales-Blizzard-Activate.wav")
@@ -737,10 +768,6 @@ function cryoBlaster.onTickEndNPC(v)
 		if data.hurtTimer == 1 then
 		    SFX.play("s3k_damage.ogg")
 		end
-		
-		if data.hurtTimer % 8 <= 4 and data.hurtTimer > 8 then
-			v.animationFrame = -50
-		end
 		if data.hurtTimer >= data.iFramesDelay then
 			v.friendly = false
 			data.iFrames = false
@@ -871,7 +898,7 @@ function cryoBlaster.onDrawNPC(v)
 	--Text.print(v.x, 8,8)
 	--Text.print(data.timer, 8,32)
 
-	if v:mem(0x156,FIELD_WORD) > 0 then
+	if data.iFrames then
 		opacity = math.sin(lunatime.tick()*math.pi*0.25)*0.1 + 0.9
 	end
 	if data.shurikenDisplay then
@@ -917,7 +944,7 @@ function cryoBlaster.onDrawNPC(v)
 		end
 
 		-- Drawing --
-		data.img:draw{frame = v.animationFrame, sceneCoords = true, priority = priority}
+		data.img:draw{frame = v.animationFrame, sceneCoords = true, priority = priority, opacity = opacity}
 	end
 end
 
