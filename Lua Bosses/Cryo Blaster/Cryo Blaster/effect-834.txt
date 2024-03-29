@@ -1,0 +1,7 @@
+[1]
+frames = 4
+framespeed = 6
+framestyle=0
+lifetime = 24
+priority = -69
+gravity = 0.05

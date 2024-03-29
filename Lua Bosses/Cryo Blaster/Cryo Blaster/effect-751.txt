@@ -1,0 +1,63 @@
+[first]
+onTick=TICK_SLOWDOWN
+variants=8
+lifetime=40
+xOffset=-2:2
+yOffset=32:40
+gravity=0.1
+
+[1]
+template=first
+sound=4
+img=751
+speedX = -2:2
+speedY = -3:3
+
+[2]
+template=first
+img=751
+variant=1
+speedX = -2:2
+speedY = -3:3
+
+[3]
+template=first
+img=751
+variant=2
+speedX = -2:2
+speedY = -3:3
+
+[4]
+template=first
+img=751
+variant=3
+speedX = -2:2
+speedY = -3:3
+
+[5]
+template=first
+img=751
+variant=4
+speedX = -2:2
+speedY = -3:3
+
+[6]
+template=first
+img=751
+variant=5
+speedX = -2:2
+speedY = -3:3
+
+[7]
+template=first
+img=751
+variant=6
+speedX = -2:2
+speedY = -3:3
+
+[8]
+template=first
+img=751
+variant=7
+speedX = -2:2
+speedY = -3:3
