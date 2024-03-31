@@ -1,0 +1,7 @@
+[1]
+import=AI_DROP
+frames=1
+framestyle=1
+xAlign=MID
+yAlign=MID
+priority=-5.1

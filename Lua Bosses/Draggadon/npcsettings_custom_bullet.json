@@ -1,0 +1,17 @@
+{
+	"style" : "groupbox",
+	"title" : "Bullet Bill Settings",
+	"layout": [
+		{
+			"control": "spinBox",
+			"name": "rotation",
+			"title": "Rotation",
+			"type": "double",
+			"tooltip": "The starting rotation of the NPC.",
+			"value-default": 0,
+			"value-min": -360,
+			"value-max": 360,
+			"decimals": 2
+		}
+	]
+}

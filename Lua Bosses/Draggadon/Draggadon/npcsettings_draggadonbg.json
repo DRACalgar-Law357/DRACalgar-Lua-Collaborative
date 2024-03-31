@@ -1,0 +1,116 @@
+{
+	"style" : "groupbox",
+	"title" : "Draggadon (In The BG) Settings",
+	"layout": [
+		{
+			"control": "spinBox",
+			"name": "depthX",
+			"title": "Horizontal Parallax",
+			"type": "double",
+			"tooltip": "The amount of parallax that the draggadon will have on it's X Axis, where 1 is following the camera and 0 is nothing.",
+			"value-default": 0.5,
+			"value-min": -10,
+			"value-max": 10
+		},
+		{
+			"control": "spinBox",
+			"name": "depthY",
+			"title": "Vertical Parallax",
+			"type": "double",
+			"tooltip": "The amount of parallax that the draggadon will have on it's Y Axis, where 1 is following the camera and 0 is nothing.",
+			"value-default": 0.5,
+			"value-min": -10,
+			"value-max": 10
+		},
+		{
+			"control": "spinBox",
+			"name": "limitL",
+			"title": "Left Limit",
+			"type": "double",
+			"tooltip": "A limit to where the draggadon can move, measured in 32x32 Blocks.",
+			"value-default": 120,
+			"value-min": -1,
+			"value-max": 10000
+		},
+		{
+			"control": "spinBox",
+			"name": "limitR",
+			"title": "Right Limit",
+			"type": "double",
+			"tooltip": "A limit to where the draggadon can move, measured in 32x32 Blocks.",
+			"value-default": 120,
+			"value-min": -1,
+			"value-max": 10000
+		},
+		{
+			"control": "spinBox",
+			"name": "limitU",
+			"title": "Up Limit",
+			"type": "double",
+			"tooltip": "A limit to where the draggadon can move, measured in 32x32 Blocks.",
+			"value-default": 120,
+			"value-min": -1,
+			"value-max": 10000
+		},
+		{
+			"control": "spinBox",
+			"name": "limitD",
+			"title": "Down Limit",
+			"type": "double",
+			"tooltip": "A limit to where the draggadon can move, measured in 32x32 Blocks.",
+			"value-default": 120,
+			"value-min": -1,
+			"value-max": 10000
+		},
+		{
+			"control": "spinBox",
+			"name": "Cooldown",
+			"title": "Cooldown Between Rounds",
+			"type": "double",
+			"tooltip": "How much time the draggadon will wait to shoot either breathed fireballs or rain down fireballs after one round is finished, measured in seconds.",
+			"value-default": 2,
+			"value-min": 0,
+			"value-max": 120
+		},
+		{
+			"control": "spinBox",
+			"name": "DBFB",
+			"title": "Delay between breathed Projectiles",
+			"type": "double",
+			"tooltip": "The delay between breathed fireballs on a single round, measured in seconds.",
+			"value-default": 0.2,
+			"value-min": 0,
+			"value-max": 60
+		},
+		{
+			"control": "spinBox",
+			"name": "FPRB",
+			"title": "Breathe Fireballs per Round",
+			"type": "int",
+			"tooltip": "How many breathed Fireballs will be shot after the Cooldown between rounds finishes.",
+			"value-default": 4,
+			"value-min": 1,
+			"value-max": 20
+		},
+		{
+			"control": "spinBox",
+			"name": "DBFR",
+			"title": "Delay between raining Projectiles",
+			"type": "double",
+			"tooltip": "The delay between breathed fireballs on a single round, measured in seconds.",
+			"value-default": 0.2,
+			"value-min": 0,
+			"value-max": 60
+		},
+		{
+			"control": "spinBox",
+			"name": "FPRR",
+			"title": "Raining Fireballs per Round",
+			"type": "int",
+			"tooltip": "How many breathed Fireballs will be shot after the Cooldown between rounds finishes.",
+			"value-default": 8,
+			"value-min": 1,
+			"value-max": 20
+		}
+	]
+}

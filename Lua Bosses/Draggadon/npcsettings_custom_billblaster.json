@@ -1,0 +1,58 @@
+{
+	"style" : "groupbox",
+	"title" : "Bill Blaster Settings",
+	"layout": [
+		{
+			"control": "itemSelect",
+			"name": "projectileID",
+			"title": "Projectile",
+			"type": "npcorcoins",
+			"tooltip": "Which NPC to fire from the blaster (use none to fire regular Bullet Bills).",
+			"value-default": 0
+		},
+		{
+			"control": "spinBox",
+			"name": "baseLength",
+			"title": "Base Length",
+			"type": "int",
+			"tooltip": "How tall, in blocks, the base of the NPC is.",
+			"value-default": 1,
+			"value-min": 0,
+			"value-max": 64
+		},
+		{
+			"control": "spinBox",
+			"name": "delay",
+			"title": "Delay",
+			"type": "int",
+			"tooltip": "The number of ticks between attempts to fire the Bill Blaster.",
+			"value-default": 200,
+			"value-min": 0,
+			"value-max": 999
+		},
+		{
+			"control": "spinBox",
+			"name": "maximumShots",
+			"title": "Maximum Shots",
+			"type": "int",
+			"tooltip": "How many shots the NPC can make before it will stop shooting. This will not reset when despawning. Use 0 to make it never stop.",
+			"value-default": 0,
+			"value-min": 0,
+			"value-max": 999
+		},
+		{
+			"control": "comboBox",
+			"name": "shotDirection",
+			"title": "Shot Direction",
+			"elements": ["At Nearest Player","Left","Right"],
+			"value-default": 0
+		},
+		{
+			"control": "checkBox",
+			"name": "useLocalTimer",
+			"title": "Use Local Timer",
+			"tooltip": "If checked, will use its own timer rather than a global one.",
+			"value-default": false
+		}
+	]
+}
