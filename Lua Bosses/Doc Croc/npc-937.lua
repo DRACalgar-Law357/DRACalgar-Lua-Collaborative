@@ -928,16 +928,12 @@ function docCroc.onTickEndNPC(v)
 		v.speedX = 0
 		v.speedY = 0
 		v.friendly = true
-		if lunatime.tick() % 64 > 4 then 
-			v.animationFrame = 0
-		else
-			v.animationFrame = -50
-		end
+		v.animationFrame = 0
 		if data.timer % 12 == 0 then
 			local a = Animation.spawn(config.effectExplosion1ID, math.random(v.x, v.x + v.width), math.random(v.y, v.y + v.height))
 			a.x=a.x-a.width/2
 			a.y=a.y-a.height/2
-			SFX.play("s3k_detonate.ogg")
+			SFX.play(43)
 		end
 		if data.timer >= 250 then
 			v:kill(HARM_TYPE_NPC)
