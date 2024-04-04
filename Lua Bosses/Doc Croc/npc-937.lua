@@ -8,6 +8,19 @@ klonoa.UngrabableNPCs[NPC_ID] = true
 local docCroc = {}
 --NPC_ID is dynamic based on the name of the library file
 local npcID = NPC_ID
+--A list of states Doc Croc can take in
+local STATE = {
+	IDLE = 0,
+	TELEPORT = 1,
+	INTRO = 2,
+	VIAL = 3,
+	SHOCKWAVE = 4,
+	DRONE = 5,
+	ENERGY1 = 6,
+	ENERGY2 = 7,
+	MUSHROOM = 8,
+	KILL = 9,
+}
 --Defines NPC config for our NPC. You can remove superfluous definitions.
 local docCrocSettings = {
 	id = npcID,
@@ -48,26 +61,160 @@ local docCrocSettings = {
 	grabside=false,
 	grabtop=false,
 	staticdirection = true,
+	hp = 24,
+	hpDecStrong = 4,
+	hpDecWeak = 1,
+	--The drone chases the player and disappears after a set of frames; used in STATE.DRONE
 	droneID = 944,
-	flaskID = 943,
+	--The vials spout SMW Fireballs after a collision; used in STATE.VIAL
+	vialID = 943,
+	--Spreads shockwaves and explodes after a collision; used in STATE.SHOCKWAVE
 	shockwaveBombID = 941,
+	--This Energy Ball after a set amount of frames will target at the player's position and turn into a different Energy Ball; used in STATE.ENERGY2
 	energyBall1ID = 938,
-	energyBall2ID = 939,
-	energyBall3ID = 940,
-	mushroomID = 9,
+	--This Energy Ball is just a straight projectile; used in STATE.ENERGY1
+	energyBall2ID = 940,
+	--A vial that spawns a non-moving mushroom; used in STATE.MUSHROOM
+	mushroomID = 946,
+	--These are the NPCs that Doc Croc will drop after each attack generally used in dropTable and dropPinchTable
 	bombID = 136,
-
+	springID = 26,
+	--A config component in which is used in a non-pinch state, he goes over the procedures in certain attacks what to spawn after each
+	dropTable = {
+		[STATE.ENERGY1] = bombID,
+		[STATE.SHOCKWAVE] = springID,
+		[STATE.ENERGY2] = bombID,
+		[STATE.VIAL] = springID,
+	},
+	--A config component in which is used in a pinch state, he goes over a randomized selection of what NPC to drop (may put 0 to have him not drop anything)
+	dropPinchTable = {
+		0,
+		bombID,
+		springID,
+	}
+	--A config component in which sets the patterns in order for Doc Croc to follow in
+	patternTable = {
+		[0] = STATE.ENERGY1,
+		[1] = STATE.SHOCKWAVE,
+		[2] = STATE.ENERGY2,
+		[3] = STATE.VIAL,
+	},
+	--A config component in which Doc Croc will randomly choose. He'll still have a chance to choose to throw  mushroom vial.
+	alloutTable = {
+		[0] = STATE.ENERGY1,
+		[1] = STATE.SHOCKWAVE,
+		[2] = STATE.ENERGY2,
+		[3] = STATE.VIAL,
+		[4] = STATE.DRONE
+	},
 	effectExplosion1ID = 10,
-	effectExplosion2ID = 10,
+	effectExplosion2ID = 937,
 	spawnX = 0,
 	spawnY = 12,
 	pulsex = false, -- controls the scaling of the sprite when firing
 	pulsey = false,
-	idleDelayInit = 96,
-	idleDelayDecreaseStrong = 8,
-	idleDelayDecreaseMinor = 2,
-	iFramesDelay = 64,
+	idleDelay = 70,
+	springDelayUntilDisappear = 330,
+	droneDelayUntilDisappear = 240,
+	energyBall1Sets = {
+		[0] = {
+			speed = 4,
+			initAngle = 18,
+			angleIncrement = 18,
+		},
+		[1] = {
+			speed = 4,
+			initAngle = -18,
+			angleIncrement = -18,
+		},
+	}
+	energyBall1DelayBefore = 16,
+	energyBall1DelayAfter = 8,
+	energyBall2Speed = 4,
+	energyBall2InitAngle = 180,
+	energyBall2InitAngleDirOffset = 10,
+	energyBall2AngleIncrement = 40,
+	energyBall2Consecutive = 3,
+	energyBall2Style = 0, --0 - Shoots 2 volleys on each increment and direction; 1 - Shoots 1 volley on a random init direction and increments on an angle.
+	energyBall2DelayBefore = 16,
+	energyBall2DelayAfter = 8,
+	vialSet = {
+		--From left to right
+		[0] = {
+			[0] = {
+				speed = 4,
+				angle = 245,
+			},
+			[1] = {
+				speed = 4,
+				angle = 180,
+			},
+			[2] = {
+				speed = 4,
+				angle = 115,
+			},
+		},
+		--From right to left
+		[1] = {
+			[0] = {
+				speed = 4,
+				angle = 115,
+			},
+			[1] = {
+				speed = 4,
+				angle = 180,
+			},
+			[2] = {
+				speed = 4,
+				angle = 245,
+			},
+		},
+	},
+	vialDelayBefore = 16,
+	vialDelayAfter = 8,
+	shockwaveDelayBefore = 16,
+	shockwaveDelayAfter = 8,
+	droneDelayBefore = 16,
+	droneDelayAfter = 8,
+	hurtDelay = 56,
+	teleportBGOID = 937, --Uses these BGOs to teleport there
+	teleportToSpawnPoint = true,
+	--SFX List
+	sfx_energyBall1 = 16,
+	sfx_energyBall2 = 16,
+	sfx_androidDeploy = 18,
+	sfx_vialDrop = 18,
+	sfx_bombDeploy = 18,
+	sfx_dropNPC = 18,
+	sfx_dropMushroomVial = 18,
+	sfx_hurt = 39,
+	sfx_smallExplosion = 22,
+	sfx_bigExplosion = 43,
+	sfx_teleportDisappear = nil,
+	sfx_teleportAppear = nil,
+	sfx_introClick = nil,
+	sfx_introFlyIn = nil,
+	--For appealing SFX voices
+	--[[sfx_voiceAttackTable = {
+		nil,
+		nil,
+	},
+	sfx_voiceHurtTable = {
+		nil,
+		nil,
+	},
+	sfx_voiceIntro = nil,
+	sfx_voiceDefeat1 = nil,
+	sfx_voiceDefeat2 = nil,
+	]]
+	mushroomFrequency = 1, --Uses this config in a pinch state to throw a mushroom vial. Can only be used once when used.
 
+	iFramesDelay = 60,
+	pinchHP = 16, --As the hp goes over this config, Doc Croc shifts into pinch mode; used in pinchSet 0
+	pinchSet = 0, --0 - initially becomes in a non-pinch state and then until Doc Croc's hp goes over a set of pinchHP, he'll become in a pinch state, becoming more aggressive (he can also drop a mushroom vial by chance); 1 - initially becomes in a non-pinch state, following a pattern table; 2 - initially becomes in a pinch state, will not volley a mushroom vial, will follow randomized attacks
+	--Configs to either drop a randomized choice or a specified choice in either of the pinch states (if true, uses an rng table to help decide what to drop or not; if false, uses a specified state from a table to help what to drop)
+	dropNPCStyleNonPinchRandomly = false,
+	dropNPCStylePinchRandomly = true,
 }
 
 --Applies NPC settings
@@ -76,7 +223,7 @@ npcManager.setNpcSettings(docCrocSettings)
 --Register the vulnerable harm types for this NPC. The first table defines the harm types the NPC should be affected by, while the second maps an effect to each, if desired.
 npcManager.registerHarmTypes(npcID,
 	{
-		--HARM_TYPE_JUMP,
+		HARM_TYPE_JUMP,
 		HARM_TYPE_FROMBELOW,
 		HARM_TYPE_NPC,
 		HARM_TYPE_PROJECTILE_USED,
@@ -92,7 +239,7 @@ npcManager.registerHarmTypes(npcID,
 		--[HARM_TYPE_FROMBELOW]=10,
 		--[HARM_TYPE_NPC]=docCrocSettings.effectExplosion2ID,
 		--[HARM_TYPE_PROJECTILE_USED]=10,
-		--[HARM_TYPE_LAVA]={id=13, xoffset=0.5, xoffsetBack = 0, yoffset=1, yoffsetBack = 1.5},
+		[HARM_TYPE_LAVA]={id=13, xoffset=0.5, xoffsetBack = 0, yoffset=1, yoffsetBack = 1.5},
 		--[HARM_TYPE_HELD]=10,
 		--[HARM_TYPE_TAIL]=10,
 		--[HARM_TYPE_SPINJUMP]=10,
@@ -100,16 +247,6 @@ npcManager.registerHarmTypes(npcID,
 		--[HARM_TYPE_SWORD]=10,
 	}
 );
-
-local STATE = {
-	IDLE = 0,
-	TELEPORT = 1,
-	FLASK = 2,
-	SHOCKWAVE = 3,
-	DRONE = 4,
-
-	KILL = 7,
-}
 
 --Register events
 function docCroc.onInitAPI()
@@ -123,7 +260,6 @@ function docCroc.onTickEndNPC(v)
 	if Defines.levelFreeze then return end
 	
 	local data = v.data
-	local settings = v.data._settings
 	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
 	local config = NPC.config[v.id]
 	--If despawned
@@ -137,22 +273,21 @@ function docCroc.onTickEndNPC(v)
 	if not data.initialized then
 		--Initialize necessary data.
 		data.initialized = true
-
-		settings.hp = settings.hp or 80
 		data.w = math.pi/65
-		data.timer = data.timer or 2
+		data.timer = data.timer or 0
 		data.hurtTimer = data.hurtTimer or 0
 		data.iFrames = false
-		data.health = settings.hp
+		data.health = config.hp
 		data.state = STATE.IDLE
-		data.iFramesDelay = NPC.config[v.id].iFramesDelay
+		data.iFramesDelay = config.iFramesDelay
 		data.statelimit = 0
 		v.ai1 = 0
 		v.ai2 = 0
 		v.ai3 = 0
-		data.idleDelay = docCrocSettings.idleDelayInit
+		data.idleDelay = config.idleDelay
 		data.sprSizex = 1
 		data.sprSizey = 1
+		data.pinch = false
 		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = docCrocSettings.frames, texture = Graphics.sprites.npc[v.id].img}
 		data.angle = 0
 	end
@@ -167,65 +302,24 @@ function docCroc.onTickEndNPC(v)
 		data.timer = 0
 	end
 	data.timer = data.timer + 1
-	data.movementTimer = data.movementTimer + 1
 	if not data.teleporting then
 		data.sprSizex = math.max(data.sprSizex - 0.05, 1)
 		data.sprSizey = math.max(data.sprSizey - 0.05, 1)
 	else
 		data.sprSizey = 1
 	end
-	data.dirVectr = vector.v2(
-		(v.spawnX + 32) - (v.x + v.width * 0.5),
-		(v.spawnY + 48) - (v.y + v.height * 0.5)
-		):normalize() * 5
-	if data.moving and data.state ~= STATE.KILL and data.state ~= STATE.RETURN and data.state ~= STATE.DASH and data.state ~= STATE.LASER and data.state ~= STATE.FROST then
-		handleFlyAround(v,data,config,settings)
-		if data.movementTimer >= data.movementDelay then
-			data.movementDelay = RNG.randomInt(360,600)
-			local options = {}
-			if data.movementSet ~= 0 then table.insert(options,0) end
-			if data.movementSet ~= 1 then table.insert(options,1) end
-			if #options > 0 then
-				data.movementSet = RNG.irandomEntry(options)
-			end
-			data.movementTimer = 0
-		end
-	end
 	if data.state == STATE.IDLE then
 		v.animationFrame = 0
-		if data.timer == 32 then
-			data.rndTimer = RNG.randomInt(80,144) + 32
-			if RNG.randomInt(0,2) > 0 then
-				if config.pulsex then
-					data.sprSizex = 1.5
-				end
-		
-				if config.pulsey then
-					data.sprSizey = 1.5
-				end
-				SFX.play("Air Bullet.wav")
-				local n = NPC.spawn(RNG.irandomEntry{config.flurryID,config.bombID,config.iceSpikeID}, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
-				
-				n.speedX = 0
-				n.speedY = 3
-				Effect.spawn(10, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY)
-			end
-		end
-		if data.timer >= data.rndTimer then
+		if data.timer >= config.idleDelay then
 			data.timer = 0
-			local options = {}
-			table.insert(options,STATE.ICE)
-			table.insert(options,STATE.DIAMOND_SAW)
-			table.insert(options,STATE.BARRAGE)
-			table.insert(options,STATE.SHURIKEN)
-			table.insert(options,STATE.SNOWTRAP)
-			table.insert(options,STATE.DASH)
-			table.insert(options,STATE.LASER)
-			table.insert(options,STATE.FROST)
-			if #options > 0 then
-				data.state = RNG.irandomEntry(options)
+			if data.pinch then
+				local options = {}
+				if #options > 0 then
+					data.state = RNG.irandomEntry(options)
+				end
+			else
+
 			end
-			data.statelimit = data.state
 
 		end
 	elseif data.state == STATE.ICICLE then
