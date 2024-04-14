@@ -1,8 +1,0 @@
-[1]
-frames = 5
-framespeed = 6
-framestyle=0
-lifetime = 24
-priority = -43
-yAlign = BOTTOM
-spawnBindY = BOTTOM
