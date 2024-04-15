@@ -20,6 +20,7 @@ local STATE = {
 	ENERGY2 = 7,
 	MUSHROOM = 8,
 	KILL = 9,
+	HURT = 10,
 }
 --Defines NPC config for our NPC. You can remove superfluous definitions.
 local docCrocSettings = {
@@ -113,6 +114,8 @@ local docCrocSettings = {
 	spawnY = 12,
 	pulsex = false, -- controls the scaling of the sprite when firing
 	pulsey = false,
+	teleportx = true,
+	teleporty = true,
 	idleDelay = 70,
 	springDelayUntilDisappear = 330,
 	droneDelayUntilDisappear = 240,
@@ -195,7 +198,7 @@ local docCrocSettings = {
 	sfx_introClick = nil,
 	sfx_introFlyIn = nil,
 	--For appealing SFX voices
-	--[[sfx_voiceAttackTable = {
+	sfx_voiceAttackTable = {
 		nil,
 		nil,
 	},
@@ -206,7 +209,7 @@ local docCrocSettings = {
 	sfx_voiceIntro = nil,
 	sfx_voiceDefeat1 = nil,
 	sfx_voiceDefeat2 = nil,
-	]]
+
 	mushroomFrequency = 1, --Uses this config in a pinch state to throw a mushroom vial. Can only be used once when used.
 	mushroomHP = 16, --As the hp goes over this config, Doc Croc will have a chance to drop a mushroom vial.
 	iFramesDelay = 60,
@@ -253,6 +256,11 @@ function docCroc.onInitAPI()
 	npcManager.registerEvent(npcID, docCroc, "onTickEndNPC")
 	npcManager.registerEvent(npcID, docCroc, "onDrawNPC")
 	registerEvent(docCroc, "onNPCHarm")
+end
+
+local function pressButtonAnimate(v,data,config,chooseNewAnimation)
+	if data.timer == 1 and chooseNewAnimation then data.pressButtonAnimate = RNG.randomInt(0,1) end
+	v.animationFrame = 1 + data.pressButtonAnimate
 end
 
 local function decideAttack(v,data,config,pinch)
@@ -332,12 +340,13 @@ function docCroc.onTickEndNPC(v)
 		v.ai1 = 0
 		v.ai2 = 0
 		v.ai3 = 0
-		data.idleDelay = config.idleDelay
 		data.sprSizex = 1
 		data.sprSizey = 1
 		data.pinch = false
 		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = docCrocSettings.frames, texture = Graphics.sprites.npc[v.id].img}
 		data.angle = 0
+		data.bgoTable = BGO.get(NPC.config[v.id].positionPointBGO)
+		if config.teleportToSpawnPoint then table.insert(data.bgoTable,vector.v2(v.spawnX + v.width/2, v.spawnY + v.height/2)) end
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -354,195 +363,71 @@ function docCroc.onTickEndNPC(v)
 		data.sprSizex = math.max(data.sprSizex - 0.05, 1)
 		data.sprSizey = math.max(data.sprSizey - 0.05, 1)
 	else
-		data.sprSizey = 1
+		if config.teleportx == false then data.sprSizex = 1 end
+		if config.teleporty == false then data.sprSizey = 1 end
 	end
 	if data.state == STATE.IDLE then
 		v.animationFrame = 0
+		v.speedX =  0
+		v.speedY = 0
 		if data.timer >= config.idleDelay then
 			data.timer = 0
-			decideAttack(v,data,config,data.pinch)
+			data.state = STATE.TELEPORT
+			--decideAttack(v,data,config,data.pinch)
 		end
-	elseif data.state == STATE.ICICLE then
-		v.animationFrame = 0
-		if data.timer == 1 and v.ai1 == 0 then
-			SFX.play("Missile.wav")
-			v.speedY = -6
+	elseif data.state == STATE.MUSHROOM then
+		pressButtonAnimate(v,data,config,true)
+		if data.timer == 1 then
+			if config.sfx_dropMushroomVial then SFX.play(config.sfx_dropMushroomVial) end
+			local n = NPC.spawn(config.mushroomID, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			n.speedX = 0
+			n.speedY = 1
 		end
-		if v.ai1 == 0 then
-			v.speedX = 0
-			v.speedY = math.clamp(v.speedY + 0.4, -6, 8)
-			if v.collidesBlockBottom then
-				v.ai1 = 1
-				data.timer = 0
-				data.spotLimit = v.y + v.height/2
-				data.spotY = v.y + v.height/2
-				v.speedY = 0
-				v.speedX = 0
-				Defines.earthquake = 5
-				SFX.play("Mech Stomp.wav")
-				for i=0,1 do
-					local a = Animation.spawn(10,v.x+v.width/2,v.y+v.height*7/8)
-					a.x=a.x-a.width/2
-					a.y=a.y-a.height/2
-					a.speedX = -2 + 4 * i
-				end
-			end
-		elseif v.ai1 == 1 then
-			v.speedX = 0
-			v.speedY = 0
-			if data.timer <= 60 and data.timer % 10 == 5 then
-				for i=0,2 do
-					local ptl = Animation.spawn(80, math.random(v.x, v.x + v.width) - 4, math.random(v.y, v.y + v.height) - 4)
-					ptl.speedY = -2
-					ptl.x=ptl.x-ptl.width/2
-					ptl.y=ptl.y-ptl.height/2
-				end
-				SFX.play(59)
-			end
-			if data.timer == 60 then
-				data.icicling = true
-				SFX.play("ffvi_stun.wav")
-			end
-			if data.timer >= 120 then
-				data.timer = 0
-				v.ai1 = 2
-			end
-		elseif v.ai1 == 2 then
-			chasePlayers(v)
-			v.speedX = math.clamp(v.speedX + 0.15 * v.data._basegame.direction, -6, 6)
-			v.speedY = math.clamp(v.speedY + 0.2, -6, 8)
-			if v.direction == -v.data._basegame.direction then
-				v.direction = -v.direction
-				SFX.play("swipe.ogg")
-			end
-			if data.timer >= 300 then
-				data.timer = 0
-				v.ai1 = 0
-				data.icicling = false
-			end
-		elseif v.ai1 == 3 then
-			local stopX = false
-			local stopY = false
-			if math.abs(v.speedX) <= 0.1 then
-				v.speedX = 0
-				stopX = true
-			else
-				v.speedX = v.speedX * 0.97
-			end
-			if math.abs(v.speedY) <= 0.1 then
-				v.speedY = 0
-				stopY = true
-			else
-				v.speedY = v.speedY * 0.97
-			end
-			if stopX and stopY then
-				v.speedX = 0
-				v.speedY = 0
-				data.prop1rotation = 0
-				data.prop2rotation = 0
-				v.ai1 = 0
-				data.timer = 0
-				data.state = STATE.IDLE
-				v.speedY = -3
-				data.movementSet = 1
-				data.movementTimer = 0
-			end
+		if data.timer >= 64 then
+			data.timer = 0
+			data.state = STATE.TELEPORT
 		end
-	elseif data.state == STATE.FROST then
-		v.animationFrame = 0
-		if data.timer == 1 and v.ai1 == 0 then
+	elseif data.state == STATE.DRONE then
+		pressButtonAnimate(v,data,config,true)
+		if data.timer == 1 then
+			if config.sfx_androidDeploy then SFX.play(config.sfx_androidDeploy) end
+			local n = NPC.spawn(config.mushroomID, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			n.speedX = 0
+			n.speedY = 1
+		end
+		if data.timer >= 64 then
+			data.timer = 0
+			data.state = STATE.TELEPORT
+		end
+	elseif data.state == STATE.TELEPORT then
+		if data.timer == 1 then
 			if sfx_teleportDisappear then SFX.play(sfx_teleportDisappear) end
 			v.friendly = true
 		end
-		if v.ai1 == 0 then
-			v.speedX = 0
-			v.speedY = 0
-			data.teleporting = true
-			if data.teleporting then
-				if data.timer <= 64 then
-					data.sprSizex = math.max(data.sprSizex - 0.05, 0)
-					data.sprSizey = math.max(data.sprSizey - 0.05, 1)
-					data.sprSizex1 = data.sprSizex
-					data.sprSizey1 = data.sprSizey
-					data.sprSizex2 = data.sprSizex
-					data.sprSizey2 = data.sprSizey
-				else
-					data.sprSizex = math.min(data.sprSizex + 0.05, 1)
-					data.sprSizey = math.min(data.sprSizey + 0.05, 1)
-					data.sprSizex1 = data.sprSizex
-					data.sprSizey1 = data.sprSizey
-					data.sprSizex2 = data.sprSizex
-					data.sprSizey2 = data.sprSizey
-				end
-				if data.timer == 64 then
-					v.x,v.y = plr.x + plr.width/2 - v.width/2, plr.y + plr.height/2 - v.height/2 - 160
-					v.friendly = false
-				end
-			end
-			if data.timer >= 128 then
-				data.teleporting = false
-				v.ai1 = 1
-				v.friendly = false
-				data.timer = 0
-			end
-		elseif v.ai1 == 1 then
-			if data.timer % 6 == 3 and data.timer <= 100 then
-				if config.pulsex then
-					data.sprSizex = 1.5
-				end
-		
-				if config.pulsey then
-					data.sprSizey = 1.5
-				end
-				SFX.play("CryoFrostEmit.wav")
-				local n = NPC.spawn(NPC.config[v.id].frostID, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
-				n.speedX = RNG.randomInt(-3,3)
-				n.speedY = 6
-				Effect.spawn(10, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY)
-			end
-			chasePlayers(v)
-			v.speedX = math.clamp(v.speedX + 0.15 * v.data._basegame.direction, -6, 6)
-			v.speedY = math.sin(-data.timer/12)*6 / 3.5
-			if data.timer >= 120 then
-				data.timer = 0
-				v.ai1 = 2
-			end
-			for k, p in ipairs(Player.get()) do --Section copypasted from the Sledge Bros. code
-				if playerStun.isStunned(k) then
-					data.timer = 0
-					v.speedX = 0
-					v.speedY = 0
-					v.ai1 = 0
-					data.state = STATE.TRAPPED_PLAYER
-				end
-			end
-		elseif v.ai1 == 2 then
-			local stopX = false
-			local stopY = false
-			if math.abs(v.speedX) <= 0.1 then
-				v.speedX = 0
-				stopX = true
+		pressButtonAnimate(v,data,config,true)
+		v.speedX = 0
+		v.speedY = 0
+		data.teleporting = true
+		if data.teleporting then
+			if data.timer <= 64 then
+				if config.teleportx then data.sprSizex = math.max(data.sprSizex - 0.05, 0) end
+				if config.teleporty then data.sprSizey = math.max(data.sprSizey - 0.05, 0) end
 			else
-				v.speedX = v.speedX * 0.97
+				if config.teleportx then data.sprSizex = math.min(data.sprSizex + 0.05, 1) end
+				if config.teleporty then data.sprSizey = math.min(data.sprSizey + 0.05, 1) end
 			end
-			if math.abs(v.speedY) <= 0.1 then
-				v.speedY = 0
-				stopY = true
-			else
-				v.speedY = v.speedY * 0.97
+			if data.timer == 64 then
+				if sfx_teleportAppear then SFX.play(sfx_teleportAppear) end
+				data.location = RNG.irandomEntry(data.bgoTable)
+				v.x = data.location.x + BGO.config[config.teleportBGOID].width/2 - v.width/2
+				v.y = data.location.y + BGO.config[config.teleportBGOID].height/2 - v.height/2
 			end
-			if data.timer >= 64 then
-				v.speedX = 0
-				v.speedY = 0
-				data.prop1rotation = 0
-				data.prop2rotation = 0
-				v.ai1 = 0
-				data.timer = 0
-				data.state = STATE.IDLE
-				v.speedY = -3
-				data.movementSet = 1
-				data.movementTimer = 0
-			end
+		end
+		if data.timer >= 128 then
+			data.teleporting = false
+			v.friendly = false
+			data.timer = 0
+			data.state = STATE.IDLE
 		end
 	elseif data.state == STATE.LASER then
 		v.animationFrame = 0
@@ -1036,28 +921,6 @@ function docCroc.onTickEndNPC(v)
 				data.timer = 0
 			end
 		end
-	elseif data.state == STATE.RETURN then
-		if math.abs(v.spawnX - v.x) <= 12 and math.abs(v.spawnY - v.y) <= 64 then
-			v.x = v.spawnX
-			v.y = v.spawnY
-			v.speedX = 0
-			v.speedY = 0
-			--When enough time has passed, go into an attack phase
-			if data.timer >= 96 then
-				if data.shuriken and data.shuriken.isValid then
-					data.state = STATE.SHURIKEN
-				else
-					data.state = STATE.IDLE
-				end
-				data.timer = 0
-			end
-			npcutils.faceNearestPlayer(v)
-		else
-			v.speedX = data.dirVectr.x
-			v.speedY = data.dirVectr.y
-			data.timer = 0
-		end
-		v.animationFrame = 0
     else
 		v.speedX = 0
 		v.speedY = 0
@@ -1076,30 +939,14 @@ function docCroc.onTickEndNPC(v)
 	
 	--Give Doc Croc some i-frames to make the fight less cheesable
 	--iFrames System made by MegaDood & DRACalgar Law
-	if NPC.config[v.id].iFramesSet == 1 then
-        if data.hurting == false then
-            data.hurtCooldownTimer = 0
-            data.iFramesStack = -1
-        else
-            data.hurtCooldownTimer = data.hurtCooldownTimer + 1
-            local stacks = (NPC.config[v.id].iFramesDelayStack * data.iFramesStack)
-            if stacks < 0 then
-                stacks = 0
-            end
-            data.iFramesDelay = NPC.config[v.id].iFramesDelay + stacks
-            if data.hurtCooldownTimer >= hurtCooldown then
-                data.hurtCooldownTimer = 0
-                data.hurting = false
-                data.iFramesStack = -1
-            end
-        end
-    end
 	if data.iFrames then
 		v.friendly = true
 		data.hurtTimer = data.hurtTimer + 1
 		
 		if data.hurtTimer == 1 then
-		    SFX.play("s3k_damage.ogg")
+		    if config.sfx_hurt then SFX.play(sfx_hurt) end
+			data.state = STATE.HURT
+			data.timer = 0
 		end
 		if data.hurtTimer >= data.iFramesDelay then
 			v.friendly = false
@@ -1115,33 +962,34 @@ function docCroc.onTickEndNPC(v)
 		});
 	end
 	
-	--Prevent Cryo Blaster from turning around when he hits NPCs because they make him get stuck
+	--Prevent Doc Croc from turning around when he hits NPCs because they make him get stuck
 	if v:mem(0x120, FIELD_BOOL) then
 		v:mem(0x120, FIELD_BOOL, false)
 	end
-	if Colliders.collide(plr, v) and not v.friendly and data.state ~= STATE.KILL and not Defines.cheat_donthurtme then
+	if Colliders.collide(plr, v) and not v.friendly and data.state ~= STATE.KILL and data.state ~= STATE.HURT and not Defines.cheat_donthurtme then
 		plr:harm()
 	end
 end
 function docCroc.onNPCHarm(eventObj, v, reason, culprit)
 	local data = v.data
+	local config = NPC.config[v.id]
 	if v.id ~= npcID then return end
 
-			if data.iFrames == false and data.state ~= STATE.KILL and data.state ~= STATE.KAMIKAZE then
+			if data.iFrames == false and data.state ~= STATE.KILL and data.state ~= STATE.HURT then
 				local fromFireball = (culprit and culprit.__type == "NPC" and culprit.id == 13 )
 				local hpd = 10
 				if fromFireball then
-					hpd = 1
+					hpd = config.hpDecWeak
 					SFX.play(9)
 				elseif reason == HARM_TYPE_LAVA then
 					v:kill(HARM_TYPE_LAVA)
 				else
-					hpd = 4
+					hpd = config.hpDecStrong
 					data.iFrames = true
 					if reason == HARM_TYPE_SWORD then
 						if v:mem(0x156, FIELD_WORD) <= 0 then
 							SFX.play(89)
-							hpd = 4
+							hpd = config.hpDecStrong
 							v:mem(0x156, FIELD_WORD,20)
 						end
 						if Colliders.downSlash(player,v) then
@@ -1156,12 +1004,11 @@ function docCroc.onNPCHarm(eventObj, v, reason, culprit)
 							SFX.play(2)
 						end
 						data.iFrames = true
-						hpd = 4
+						hpd = config.hpDecStrong
 					end
 					if data.iFrames then
 						data.hurting = true
-						data.iFramesStack = data.iFramesStack + 1
-						data.hurtCooldownTimer = 0
+						
 					end
 				end
 				
@@ -1190,7 +1037,7 @@ function docCroc.onNPCHarm(eventObj, v, reason, culprit)
 	eventObj.cancelled = true
 end
 local lowPriorityStates = table.map{1,3,4}
-function cryoBlaster.onDrawNPC(v)
+function docCroc.onDrawNPC(v)
 	local data = v.data
 	local settings = v.data._settings
 	local config = NPC.config[v.id]
@@ -1231,4 +1078,4 @@ function cryoBlaster.onDrawNPC(v)
 end
 
 --Gotta return the library table!
-return cryoBlaster
+return docCroc
