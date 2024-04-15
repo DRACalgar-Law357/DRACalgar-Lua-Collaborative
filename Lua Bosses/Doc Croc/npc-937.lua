@@ -121,18 +121,37 @@ local docCrocSettings = {
 	droneDelayUntilDisappear = 240,
 	energyBall1Sets = {
 		[0] = {
-			speed = 4,
-			initAngle = 18,
-			angleIncrement = 18,
+			[0] = {
+				speed = 4,
+				angle = 18,
+			},
+			[1] = {
+				speed = 4,
+				angle = 50,
+			},
+			[2] = {
+				speed = 4,
+				angle = 82,
+			},
 		},
 		[1] = {
-			speed = 4,
-			initAngle = -18,
-			angleIncrement = -18,
+			[0] = {
+				speed = 4,
+				angle = -18,
+			},
+			[1] = {
+				speed = 4,
+				angle = -50,
+			},
+			[2] = {
+				speed = 4,
+				angle = -82,
+			},
 		},
 	}
 	energyBall1DelayBefore = 16,
 	energyBall1DelayAfter = 8,
+	energyBall1DelayBetweenRound = 10,
 	energyBall2Speed = 4,
 	energyBall2InitAngle = 180,
 	energyBall2InitAngleDirOffset = 10,
@@ -141,6 +160,7 @@ local docCrocSettings = {
 	energyBall2Style = 0, --0 - Shoots 2 volleys on each increment and direction; 1 - Shoots 1 volley on a random init direction and increments on an angle.
 	energyBall2DelayBefore = 16,
 	energyBall2DelayAfter = 8,
+	energyBall2DelayBetweenRound = 10,
 	vialSet = {
 		--From left to right
 		[0] = {
@@ -175,6 +195,7 @@ local docCrocSettings = {
 	},
 	vialDelayBefore = 16,
 	vialDelayAfter = 8,
+	vialDelayBetweenRound = 12,
 	shockwaveDelayBefore = 16,
 	shockwaveDelayAfter = 8,
 	droneDelayBefore = 16,
@@ -185,7 +206,7 @@ local docCrocSettings = {
 	--SFX List
 	sfx_energyBall1 = 16,
 	sfx_energyBall2 = 16,
-	sfx_androidDeploy = 18,
+	sfx_droneDeploy = 18,
 	sfx_vialDrop = 18,
 	sfx_bombDeploy = 18,
 	sfx_dropNPC = 18,
@@ -345,6 +366,7 @@ function docCroc.onTickEndNPC(v)
 		data.pinch = false
 		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = docCrocSettings.frames, texture = Graphics.sprites.npc[v.id].img}
 		data.angle = 0
+		data.selectedAttackTable = 0
 		data.bgoTable = BGO.get(NPC.config[v.id].positionPointBGO)
 		if config.teleportToSpawnPoint then table.insert(data.bgoTable,vector.v2(v.spawnX + v.width/2, v.spawnY + v.height/2)) end
 	end
@@ -390,12 +412,71 @@ function docCroc.onTickEndNPC(v)
 	elseif data.state == STATE.DRONE then
 		pressButtonAnimate(v,data,config,true)
 		if data.timer == 1 then
-			if config.sfx_androidDeploy then SFX.play(config.sfx_androidDeploy) end
-			local n = NPC.spawn(config.mushroomID, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
-			n.speedX = 0
-			n.speedY = 1
+			if config.sfx_droneDeploy then SFX.play(config.sfx_droneDeploy) end
+			local n = NPC.spawn(config.droneID, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			n.ai1 = config.droneDelayUntilDisappear
 		end
 		if data.timer >= 64 then
+			data.timer = 0
+			data.state = STATE.TELEPORT
+		end
+	elseif data.state == STATE.VIAL then
+		pressButtonAnimate(v,data,config,true)
+		if data.timer == 1 then v.ai2 = 0 v.ai1 = RNG.randomInt(0,#config.vialSet-1) end
+		if data.timer == config.vialDelayBefore + config.vialDelayBetweenRound then
+			if config.sfx_vialDrop then SFX.play(config.sfx_vialDrop) end
+			local dir = -vector.right2:rotate(90 + config.vialSet[v.ai1][v.ai2].angle)
+			local n = NPC.spawn(config.vialID, v.x + v.width/2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			n.speedX = dir.x * config.vialSet[v.ai1][v.ai2].speed
+			n.speedY = dir.y * config.vialSet[v.ai1][v.ai2].speed
+			if v.ai2 < #config.vialSet[v.ai1] then
+				data.timer = config.vialDelayBefore
+				v.ai2 = v.ai2 + 1
+			else
+				v.ai2 = 0
+			end
+		end
+		if data.timer >= config.vialDelayBefore + config.vialDelayBetweenRound + config.vialDelayAfter then
+			data.timer = 0
+			data.state = STATE.TELEPORT
+		end
+	elseif data.state == STATE.ENERGY1 then
+		pressButtonAnimate(v,data,config,true)
+		if data.timer == 1 then v.ai2 = 0 v.ai1 = RNG.randomInt(0,#config.energyBall1Sets-1) end
+		if data.timer == config.energyBall1DelayBefore + config.energyBall1DelayBetweenRound then
+			if config.sfx_energyBall1 then SFX.play(config.sfx_energyBall1) end
+			local dir = -vector.right2:rotate(90 + config.energyBall1Set[v.ai1][v.ai2].angle)
+			local n = NPC.spawn(config.energyBall1ID, v.x + v.width/2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			n.speedX = dir.x * config.energyBall1Set[v.ai1][v.ai2].speed
+			n.speedY = dir.y * config.energyBall1Set[v.ai1][v.ai2].speed
+			if v.ai2 < #config.energyBall1Set[v.ai1] then
+				data.timer = config.energyBall1DelayBetweenRound
+				v.ai2 = v.ai2 + 1
+			else
+				v.ai2 = 0
+			end
+		end
+		if data.timer >= config.energyBall1DelayBefore + config.energyBall1DelayBetweenRound + config.energyBall1DelayAfter then
+			data.timer = 0
+			data.state = STATE.TELEPORT
+		end
+	elseif data.state == STATE.ENERGY2 then
+		pressButtonAnimate(v,data,config,true)
+		if data.timer == 1 then v.ai2 = 0 v.ai1 = RNG.randomInt(0,#config.energyBall2Sets-1) end
+		if data.timer == config.energyBall2DelayBefore + config.energyBall2DelayBetweenRound then
+			if config.sfx_energyBall2 then SFX.play(config.sfx_energyBall2) end
+			local dir = -vector.right2:rotate(90 + config.energyBall2Set[v.ai1][v.ai2].angle)
+			local n = NPC.spawn(config.energyBall2ID, v.x + v.width/2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			n.speedX = dir.x * config.energyBall2Set[v.ai1][v.ai2].speed
+			n.speedY = dir.y * config.energyBall2Set[v.ai1][v.ai2].speed
+			if v.ai2 < #config.energyBall2Set[v.ai1] then
+				data.timer = config.energyBall2DelayBetweenRound
+				v.ai2 = v.ai2 + 1
+			else
+				v.ai2 = 0
+			end
+		end
+		if data.timer >= config.energyBall2DelayBefore + config.energyBall2DelayBetweenRound + config.energyBall2DelayAfter then
 			data.timer = 0
 			data.state = STATE.TELEPORT
 		end
