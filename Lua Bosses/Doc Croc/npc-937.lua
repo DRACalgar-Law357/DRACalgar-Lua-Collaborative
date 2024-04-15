@@ -43,7 +43,7 @@ local docCrocSettings = {
 	npcblock = false,
 	npcblocktop = false, --Misnomer, affects whether thrown NPCs bounce off the NPC.
 	playerblock = false,
-	playerblocktop = false, --Also handles other NPCs walking atop this NPC.
+	playerblocktop re= false, --Also handles other NPCs walking atop this NPC.
 
 	nohurt=false,
 	nogravity = true,
@@ -208,7 +208,7 @@ local docCrocSettings = {
 	sfx_voiceDefeat2 = nil,
 	]]
 	mushroomFrequency = 1, --Uses this config in a pinch state to throw a mushroom vial. Can only be used once when used.
-
+	mushroomHP = 16, --As the hp goes over this config, Doc Croc will have a chance to drop a mushroom vial.
 	iFramesDelay = 60,
 	pinchHP = 16, --As the hp goes over this config, Doc Croc shifts into pinch mode; used in pinchSet 0
 	pinchSet = 0, --0 - initially becomes in a non-pinch state and then until Doc Croc's hp goes over a set of pinchHP, he'll become in a pinch state, becoming more aggressive (he can also drop a mushroom vial by chance); 1 - initially becomes in a non-pinch state, following a pattern table; 2 - initially becomes in a pinch state, will not volley a mushroom vial, will follow randomized attacks
@@ -255,6 +255,54 @@ function docCroc.onInitAPI()
 	registerEvent(docCroc, "onNPCHarm")
 end
 
+local function decideAttack(v,data,config,pinch)
+	local options = {}
+	local mushroomChance = {}
+	if data.health >= config.mushroomHP then
+		if config.mushroomFrequency > 0 then
+			for i=1,config.mushroomFrequency do
+				table.insert(mushroomChance,0) --0 indicates a rate for dropping a mushroom vial
+			end
+		end
+		if pinch then
+			if config.alloutTable and #config.alloutTable > 0 then
+				for i=1,#config.alloutTable do
+					table.insert(mushroomChance,1) --1 indicates a rate of choosing an attack
+				end
+			end
+		else
+			if config.patternTable and #config.patternTable > 0 then
+				for i=1,#config.patternTable do
+					table.insert(mushroomChance,1) --1 indicates a rate of choosing an attack
+				end
+			end
+		end
+		if RNG.irandomEntry(mushroomChance) == 0 then
+			table.insert(options,STATE.MUSHROOM)
+		end
+	end
+	if pinch then
+		if config.alloutTable and #config.alloutTable > 0 then
+			for i=1,#config.alloutTable do
+				table.insert(options,config.alloutTable[i-1])
+			end
+		end
+	else
+		if config.patternTable and #config.patternTable > 0 then
+			table.insert(options,config.patternTable[data.pattern])
+			if data.pattern >= #config.patternTable - 1 then
+				data.pattern = 0
+			else
+				data.pattern = data.pattern + 1
+			end
+		end
+	end
+	if #options > 0 then
+		data.state = RNG.irandomEntry(options)
+	end
+	data.timer = 0
+end
+
 function docCroc.onTickEndNPC(v)
 	--Don't act during time freeze
 	if Defines.levelFreeze then return end
@@ -280,7 +328,7 @@ function docCroc.onTickEndNPC(v)
 		data.health = config.hp
 		data.state = STATE.IDLE
 		data.iFramesDelay = config.iFramesDelay
-		data.statelimit = 0
+		data.pattern = 0
 		v.ai1 = 0
 		v.ai2 = 0
 		v.ai3 = 0
@@ -312,15 +360,7 @@ function docCroc.onTickEndNPC(v)
 		v.animationFrame = 0
 		if data.timer >= config.idleDelay then
 			data.timer = 0
-			if data.pinch then
-				local options = {}
-				if #options > 0 then
-					data.state = RNG.irandomEntry(options)
-				end
-			else
-
-			end
-
+			decideAttack(v,data,config,data.pinch)
 		end
 	elseif data.state == STATE.ICICLE then
 		v.animationFrame = 0
@@ -411,7 +451,7 @@ function docCroc.onTickEndNPC(v)
 	elseif data.state == STATE.FROST then
 		v.animationFrame = 0
 		if data.timer == 1 and v.ai1 == 0 then
-			SFX.play("CryoFrostStart.wav")
+			if sfx_teleportDisappear then SFX.play(sfx_teleportDisappear) end
 			v.friendly = true
 		end
 		if v.ai1 == 0 then
@@ -1185,7 +1225,7 @@ function cryoBlaster.onDrawNPC(v)
 		local p = -45
 
 		-- Drawing --
-		data.img:draw{frame = v.animationFrame, sceneCoords = true, priority = p, color = Color.white..opacity}
+		data.img:draw{frame = v.animationFrame + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
 		npcutils.hideNPC(v)
 	end
 end
