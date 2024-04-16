@@ -89,19 +89,20 @@ local docCrocSettings = {
 	energyBall2ID = 940,
 	--A vial that spawns a non-moving mushroom; used in STATE.MUSHROOM
 	mushroomID = 946,
-	--These are the NPCs that Doc Croc will drop after each attack generally used in dropTable and dropPinchTable
+	--These are the NPCs that Doc Croc will drop after each attack generally used in dropPatternTable and dropPinchTable
 	bombID = 136,
 	springID = 26,
 	--A config component in which is used in a non-pinch state, he goes over the procedures in certain attacks what to spawn after each
-	dropTable = {
+	dropPatternTable = {
 		[STATE.ENERGY1] = bombID,
 		[STATE.SHOCKWAVE] = springID,
 		[STATE.ENERGY2] = bombID,
 		[STATE.VIAL] = springID,
+		[STATE.DRONE] = 0,
 	},
 	--A config component in which is used in a pinch state, he goes over a randomized selection of what NPC to drop (may put 0 to have him not drop anything)
-	dropPinchTable = {
-		nil,
+	dropRandomTable = {
+		0,
 		bombID,
 		springID,
 	}
@@ -358,6 +359,7 @@ local function decideAttack(v,data,config,pinch)
 	end
 	if #options > 0 then
 		data.state = RNG.irandomEntry(options)
+		data.selectedAttack = data.state
 	end
 	data.timer = 0
 end
@@ -397,6 +399,8 @@ function docCroc.onTickEndNPC(v)
 		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = docCrocSettings.frames, texture = Graphics.sprites.npc[v.id].img}
 		data.angle = 0
 		data.selectedAttack = 0
+		data.springTimer = 0
+		data.droneTimer = 0
 		data.bgoTable = BGO.get(NPC.config[v.id].positionPointBGO)
 		if config.teleportToSpawnPoint then table.insert(data.bgoTable,vector.v2(v.spawnX + v.width/2, v.spawnY + v.height/2)) end
 	end
@@ -411,6 +415,31 @@ function docCroc.onTickEndNPC(v)
 		data.timer = 0
 	end
 	data.timer = data.timer + 1
+	if data.spring then
+		if data.spring.isValid then
+			data.springTimer = data.springTimer - 1
+			if data.springTimer <= 0 then
+				data.spring:kill(HARM_TYPE_NPC)
+				data.spring = nil
+			end
+		else
+			data.spring = nil
+		end
+	else
+		data.springTimer = 0
+	end
+	if data.drone then
+		if data.drone.isValid then
+			data.droneTimer = data.droneTimer - 1
+			if data.droneTimer <= 0 then
+				data.drone:kill(HARM_TYPE_NPC)
+				data.drone = nil
+			end
+		else
+			data.drone:kill(HARM_TYPE_NPC)
+			data.drone = nil
+		end
+	end
 	if not data.teleporting then
 		data.sprSizex = math.max(data.sprSizex - 0.05, 1)
 		data.sprSizey = math.max(data.sprSizey - 0.05, 1)
@@ -441,11 +470,11 @@ function docCroc.onTickEndNPC(v)
 		end
 	elseif data.state == STATE.DRONE then
 		pressButtonAnimate(v,data,config,true)
-		if data.timer == config.droneDelayBefore then
+		if data.timer == config.droneDelayBefore and not data.drone then
 			SFXPlay(config.sfx_droneDeploy)
 			SFXPlayTable(config.sfx_voiceAttackTable)
-			local n = NPC.spawn(config.droneID, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
-			n.ai1 = config.droneDelayUntilDisappear
+			data.drone = NPC.spawn(config.droneID, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			data.droneTimer = config.droneDelayUntilDisappear
 		end
 		if data.timer >= config.droneDelayAfter + config.droneDelayBefore then
 			data.timer = 0
@@ -455,14 +484,32 @@ function docCroc.onTickEndNPC(v)
 		pressButtonAnimate(v,data,config,true)
 		if data.timer == config.dropDelayBefore then
 			SFXPlay(config.sfx_dropNPC)
-			local npcChoice
-			if (data.pinch and config.dropNPCStylePinchRandomly) then
-				npcChoice = RNG.irandomEntry(config.dropPinchTable)
+			local npcChoice = 0
+			
+			if (data.pinch and config.dropNPCStylePinchRandomly) or (not data.pinch and config.dropNPCStyleNonPinchRandomly) then
+				npcChoice = RNG.irandomEntry(config.dropRandomTable)
+				if npcChoice == config.springID and data.spring then
+					local npcChoiceNoSpring = config.dropRandomTable
+					for i, k in ipairs(config.dropRandomTable) do
+						if k == springID then
+							table.remove(npcChoiceNoSpring, i)
+						end
+					end
+					npcChoice = RNG.irandomEntry(npcChoiceNoSpring)
+				end
 			else
-
+				npcChoice = config.dropPatternTable[data.selectedAttack]
+				if npcChoice == config.springID and data.spring then
+					npcChoice = 0
+				end
 			end
-			local n = NPC.spawn(config.droneID, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
-			n.ai1 = config.droneDelayUntilDisappear
+			
+			if npcChoice == config.springID and not data.spring then
+				data.spring = NPC.spawn(npcChoice, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+				data.springTimer = config.springDelayUntilDisappear
+			elseif npcChoice ~= 0 then
+				local n = NPC.spawn(npcChoice, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			end
 		end
 		if data.timer >= config.droneDelayAfter + config.droneDelayBefore then
 			data.timer = 0
@@ -591,498 +638,6 @@ function docCroc.onTickEndNPC(v)
 			v.friendly = false
 			data.timer = 0
 			data.state = STATE.IDLE
-		end
-	elseif data.state == STATE.LASER then
-		v.animationFrame = 0
-		if data.timer == 1 and v.ai1 == 0 then
-			SFX.play("Play_age_471_A4 [1].wav")
-			v.speedY = -6
-		end
-		if v.ai1 == 0 then
-			v.speedX = 0
-			v.speedY = math.clamp(v.speedY + 0.4, -6, 8)
-			if v.collidesBlockBottom then
-				v.ai1 = 1
-				data.timer = 0
-				data.spotLimit = v.y + v.height/2
-				data.spotY = v.y + v.height/2
-				v.speedY = 0
-				v.speedX = 0
-				Defines.earthquake = 5
-				SFX.play("Mech Stomp.wav")
-				for i=0,1 do
-					local a = Animation.spawn(10,v.x+v.width/2,v.y+v.height*7/8)
-					a.x=a.x-a.width/2
-					a.y=a.y-a.height/2
-					a.speedX = -2 + 4 * i
-				end
-			end
-		elseif v.ai1 == 1 then
-			if data.timer % 40 == 10 then
-				if config.pulsex then
-					data.sprSizex = 1.5
-				end
-		
-				if config.pulsey then
-					data.sprSizey = 1.5
-				end
-				npcutils.faceNearestPlayer(v)
-				SFX.play("OOZLaser.wav")
-				if v.direction == -1 then
-					local n = NPC.spawn(NPC.config[v.id].laserID, v.x + v.width/2 + config.cannonLeftX, v.y + v.height/2 + config.cannonLeftY, v.section, false, true)
-						
-					n.speedX = 4 * v.direction
-					Effect.spawn(10, v.x + v.width/2 + config.cannonLeftX, v.y + v.height/2 + config.cannonLeftY)
-				else
-					local n = NPC.spawn(NPC.config[v.id].laserID, v.x + v.width/2 + config.cannonRightX, v.y + v.height/2 + config.cannonRightY, v.section, false, true)
-						
-					n.speedX = 4 * v.direction
-					Effect.spawn(10, v.x + v.width/2 + config.cannonRightX, v.y + v.height/2 + config.cannonRightY)
-				end
-			end
-			if data.timer % 40 == 39 then
-				data.spotY = data.spotLimit - RNG.irandomEntry{0,10,20,30,40,50,60}
-			end
-			v.speedX = 0
-			if data.timer % 40 < 39 then
-				data.spotVectr = vector.v2(
-					(v.x+v.width/2) - (v.x+v.width/2),
-					(data.spotY) - (v.y+v.height/2)
-				):normalize() * 3
-				if math.abs(v.y + 0.5 * v.height) - data.spotY > 4 then
-					v.speedY = data.spotVectr.y
-				else
-					v.speedY = 0
-				end
-			end
-			if data.timer >= 240 then
-				data.timer = 0
-				v.ai1 = 2
-			end
-		elseif v.ai1 == 2 then
-			local stopX = false
-			local stopY = false
-			if math.abs(v.speedX) <= 0.1 then
-				v.speedX = 0
-				stopX = true
-			else
-				v.speedX = v.speedX * 0.97
-			end
-			if math.abs(v.speedY) <= 0.1 then
-				v.speedY = 0
-				stopY = true
-			else
-				v.speedY = v.speedY * 0.97
-			end
-			if stopX and stopY then
-				v.speedX = 0
-				v.speedY = 0
-				data.prop1rotation = 0
-				data.prop2rotation = 0
-				v.ai1 = 0
-				data.timer = 0
-				data.state = STATE.IDLE
-				v.speedY = -3
-				data.movementSet = 1
-				data.movementTimer = 0
-			end
-		end
-	elseif data.state == STATE.DASH then
-		v.animationFrame = 0
-		local prop1rotator = 0
-		local prop1rotatedirection = v.direction
-		local prop2rotator = 0
-		local prop2rotatedirection = -v.direction
-		if data.timer == 1 and v.ai1 == 0 then
-			SFX.play("PU-Glaceon-Ice-Shard-Activate.wav")
-		end
-		if v.ai1 == 0 then
-			v.speedX = 0
-			v.speedY = 0
-			prop1rotator = easing.inQuad(data.timer, prop1rotator, 12 - prop1rotator, 56)
-			prop2rotator = easing.inQuad(data.timer, prop2rotator, 12 - prop2rotator, 56)
-			if data.timer > 64 then
-				v.x = v.x + 45 * -data.w * math.sin(math.pi/4*data.timer)
-				v.y = v.y - 56 * -data.w * math.sin(math.pi/2*data.timer)
-			end
-			if data.timer == 120 then
-				SFX.play("powerup1.ogg")
-			end
-			if data.timer >= 128 then
-				v.ai1 = 1
-				data.timer = 0
-				v.speedY = -3
-				v.speedX = 0
-			end
-		elseif v.ai1 == 1 then
-			data.spinBox = Colliders.Box(v.x - (v.width * 1.2), v.y - (v.height * 1), config.spinHitboxWidth, config.spinHitboxHeight)
-			data.spinBox.x = v.x + v.width/2 - data.spinBox.width/2 + config.spinHitboxX
-			data.spinBox.y = v.y + v.height/2 - data.spinBox.height/2 + config.spinHitboxY
-			
-			if config.debug == true then
-				data.spinBox:Debug(true)
-			end
-			prop1rotator = 12
-			prop2rotator = 12
-			chasePlayers(v)
-			chasePlayersY(v)
-			local gfxw = NPC.config[v.id].gfxwidth
-			local gfxh = NPC.config[v.id].gfxheight
-			if gfxw == 0 then gfxw = v.width end
-			if gfxh == 0 then gfxh = v.height end
-			local frames = Graphics.sprites.npc[v.id].img.height / gfxh
-			local framestyle = NPC.config[v.id].framestyle
-			local frame = v.animationFrame
-			local framesPerSection = frames
-			if framestyle == 1 then
-				framesPerSection = framesPerSection * 0.5
-				if direction == 1 then
-					frame = frame + frames
-				end
-				frames = frames * 2
-			elseif framestyle == 2 then
-				framesPerSection = framesPerSection * 0.25
-				if direction == 1 then
-					frame = frame + frames
-				end
-				frame = frame + 2 * frames
-			end
-			local p = priority or -46
-			afterimages.addAfterImage{
-				x = v.x + 0.5 * v.width - 0.5 * gfxw + NPC.config[v.id].gfxoffsetx,
-				y = v.y + 0.5 * v.height - 0.5 * gfxh + NPC.config[v.id].gfxoffsety - v.height,
-				texture = Graphics.sprites.npc[v.id].img,
-				priority = p,
-				lifetime = lifetime or 65,
-				width = gfxw,
-				height = gfxh,
-				texOffsetX = 0,
-				texOffsetY = frame / frames,
-				animWhilePaused = animWhilePaused or false,
-				color = color or (Color.cyan .. 0)
-			}
-			if data.timer >= 360 then
-				data.timer = 0
-				v.ai1 = 2
-			end
-			if v.collidesBlockBottom or v.collidesBlockUp then
-				if v.collidesBlockBottom then v.speedY = -2 elseif v.collidesBlockUp then v.speedY = 2 end
-				SFX.play("s3k_shoot.ogg")
-				Defines.earthquake = 5
-			end
-			if v.collidesBlockLeft or v.collidesBlockRight then
-				if v.collidesBlockLeft then v.speedX = 2 elseif v.collidesBlockRight then v.speedX = -2 end
-				SFX.play("s3k_shoot.ogg")
-				Defines.earthquake = 5
-			end
-			v.speedX = math.clamp(v.speedX + 0.1 * v.data._basegame.direction, -5, 5)
-			v.speedY = math.clamp(v.speedY + 0.1 * v.data._basegame.verticalDirection, -5, 5)
-			if Colliders.collide(plr,data.spinBox) then
-				plr:harm()
-			end
-			for k, n in  ipairs(Colliders.getColliding{a = data.spinBox, b = NPC.HITTABLE, btype = Colliders.NPC, filter = npcFilter}) do
-				if n.id ~= v.id then
-					if n:mem(0x156,FIELD_WORD) <= 0 then
-						n:harm()
-						Animation.spawn(75,n.x,n.y)
-					end
-				end
-			end
-		elseif v.ai1 == 2 then
-			prop1rotator = easing.outQuad(data.timer, prop1rotator, 0 - prop1rotator, 56)
-			prop2rotator = easing.outQuad(data.timer, prop2rotator, 0 - prop2rotator, 56)
-			local stopX = false
-			local stopY = false
-			if math.abs(v.speedX) <= 0.1 then
-				v.speedX = 0
-				stopX = true
-			else
-				v.speedX = v.speedX * 0.97
-			end
-			if math.abs(v.speedY) <= 0.1 then
-				v.speedY = 0
-				stopY = true
-			else
-				v.speedY = v.speedY * 0.97
-			end
-			if stopX and stopY then
-				v.speedX = 0
-				v.speedY = 0
-				data.prop1rotation = 0
-				data.prop2rotation = 0
-				v.ai1 = 0
-				data.timer = 0
-				data.state = STATE.IDLE
-				v.speedY = -3
-				data.movementSet = 1
-				data.movementTimer = 0
-			end
-		end
-		data.prop1rotation = data.prop1rotation + prop1rotator * prop1rotatedirection
-		data.prop2rotation = data.prop2rotation + prop2rotator * prop2rotatedirection
-
-	elseif data.state == STATE.SHURIKEN then
-		v.animationFrame = 0
-		local prop1rotator = 0
-		local prop1rotatedirection = v.direction
-		local prop2rotator = 0
-		local prop2rotatedirection = -v.direction
-		if data.timer == 1 and data.shurikenDisplay then
-			SFX.play("PU-Glaceon-Ice-Shard-Activate.wav")
-		end
-		if data.shurikenDisplay then
-			prop1rotator = easing.inQuad(data.timer, prop1rotator, 3 - prop1rotator, 56)
-			prop2rotator = easing.inQuad(data.timer, prop2rotator, 3 - prop2rotator, 56)
-			data.prop1rotation = data.prop1rotation + prop1rotator * prop1rotatedirection
-			data.prop2rotation = data.prop2rotation + prop2rotator * prop2rotatedirection
-			if data.timer >= 120 then
-				data.shurikenDisplay = false
-				data.timer = 0
-				SFX.play("PU-AlolanNinetales-Blizzard-Activate.wav")
-				data.shuriken = NPC.spawn(NPC.config[v.id].shurikenID, v.x + v.width/2, v.y + v.height/2 - 64, v.section, false, true)
-				data.shuriken.speedY = -8
-				data.shuriken.speedX = RNG.random(-3,3)
-				data.shuriken.parent = v
-				npcutils.faceNearestPlayer(data.shuriken)
-			end
-		else
-			if data.timer >= 12 then
-				if data.shuriken then
-					if data.shuriken and data.shuriken.isValid then
-						if Colliders.collide(data.shuriken, v) and data.shuriken.data.state >= 3 then
-							data.shuriken:kill(9)
-							data.shuriken = nil
-							data.state = STATE.IDLE
-							data.timer = 0
-							data.shurikenDisplay = true
-							data.prop1rotation = 0
-							data.prop2rotation = 0
-						end
-					else
-						data.shuriken = nil
-						data.state = STATE.IDLE
-						data.timer = 0
-						data.shurikenDisplay = true
-						data.prop1rotation = 0
-						data.prop2rotation = 0
-					end
-				end
-			end
-		end
-	elseif data.state == STATE.BARRAGE then
-		v.animationFrame = 0
-		local prop1rotator = 0
-		local prop1rotatedirection = v.direction
-		local prop2rotator = 0
-		local prop2rotatedirection = -v.direction
-		if data.timer == 1 then v.ai1 = 0 v.ai2 = 0 SFX.play("Machine Noise.wav") end
-		prop1rotator = 5
-		prop2rotator = 5
-		data.prop1rotation = data.prop1rotation + prop1rotator * prop1rotatedirection
-		data.prop2rotation = data.prop2rotation + prop2rotator * prop2rotatedirection
-		if data.timer == 80 then
-			Routine.setFrameTimer(config.shardTimer, (function() 
-				if config.pulsex then
-					data.sprSizex = 1.5
-				end
-		
-				if config.pulsey then
-					data.sprSizey = 1.5
-				end
-				SFX.play("PU-Glaceon-Ice-Shard1.wav")
-				if v.ai1 == 0 then
-					v.ai2 = 0
-					for i=0,3 do
-						local dir = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10))
-						local dirl = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10))
-						local dirr = -vector.right2:rotate(90 * (v.ai2 + 1) - (v.ai1 * 10))
-						if i == 0 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY, v.section, false, true)
-						
-							n.speedX = dir.x * config.shardSpeed
-							n.speedY = dir.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY)
-						elseif i == 1 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonRightX, v.y + v.height/2 + config.cannonRightY, v.section, false, true)
-						
-							n.speedX = dir.x * config.shardSpeed
-							n.speedY = dir.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonRightX, v.y + v.height/2 + config.cannonRightY)
-						elseif i == 2 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
-						
-							n.speedX = dir.x * config.shardSpeed
-							n.speedY = dir.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY)
-						elseif i == 3 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonLeftX, v.y + v.height/2 + config.cannonLeftY, v.section, false, true)
-						
-							n.speedX = dir.x * config.shardSpeed
-							n.speedY = dir.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonLeftX, v.y + v.height/2 + config.cannonLeftY)
-						end
-						v.ai2 = v.ai2 + 1
-					end
-				else
-					v.ai2 = 0
-					for i=0,3 do
-						local dir = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10))
-						local dirl = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10))
-						local dirr = -vector.right2:rotate(90 * (v.ai2 + 1) - (v.ai1 * 10))
-						if i == 0 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY, v.section, false, true)
-						
-							n.speedX = dirl.x * config.shardSpeed
-							n.speedY = dirl.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY)
-						elseif i == 1 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonRightX, v.y + v.height/2 + config.cannonRightY, v.section, false, true)
-						
-							n.speedX = dirl.x * config.shardSpeed
-							n.speedY = dirl.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonRightX, v.y + v.height/2 + config.cannonRightY)
-						elseif i == 2 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
-						
-							n.speedX = dirl.x * config.shardSpeed
-							n.speedY = dirl.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY)
-						elseif i == 3 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonLeftX, v.y + v.height/2 + config.cannonLeftY, v.section, false, true)
-						
-							n.speedX = dirl.x * config.shardSpeed
-							n.speedY = dirl.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonLeftX, v.y + v.height/2 + config.cannonLeftY)
-						end
-						v.ai2 = v.ai2 + 1
-					end
-					for i=0,3 do
-						local dir = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10))
-						local dirl = -vector.right2:rotate(90 * (v.ai2 + 1) + (v.ai1 * 10))
-						local dirr = -vector.right2:rotate(90 * (v.ai2 + 1) - (v.ai1 * 10))
-						if i == 0 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY, v.section, false, true)
-						
-							n.speedX = dirr.x * config.shardSpeed
-							n.speedY = dirr.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY)
-						elseif i == 1 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonRightX, v.y + v.height/2 + config.cannonRightY, v.section, false, true)
-						
-							n.speedX = dirr.x * config.shardSpeed
-							n.speedY = dirr.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonRightX, v.y + v.height/2 + config.cannonRightY)
-						elseif i == 2 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY, v.section, false, true)
-						
-							n.speedX = dirr.x * config.shardSpeed
-							n.speedY = dirr.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonDownX, v.y + v.height/2 + config.cannonDownY)
-						elseif i == 3 then
-							local n = NPC.spawn(NPC.config[v.id].iceShardID, v.x + v.width/2 + config.cannonLeftX, v.y + v.height/2 + config.cannonLeftY, v.section, false, true)
-						
-							n.speedX = dirr.x * config.shardSpeed
-							n.speedY = dirr.y * config.shardSpeed
-							Effect.spawn(10, v.x + v.width/2 + config.cannonLeftX, v.y + v.height/2 + config.cannonLeftY)
-						end
-						v.ai2 = v.ai2 + 1
-					end
-				end
-				v.ai1 = v.ai1 + 1
-				end), config.shardIncrement, false)
-		end
-		if data.timer >= 96 + config.shardIncrement * config.shardTimer then
-			data.timer = 0
-			v.ai1 = 0
-			data.state = STATE.IDLE
-			data.prop1rotation = 0
-			data.prop2rotation = 0
-		end
-	elseif data.state == STATE.SNOWTRAP then
-		--[[				local n = NPC.spawn(npcID + 1, v.x + 8 * v.direction, v.y + 4, player.section, false)
-				n.speedX = settings.xangle * v.direction
-				n.speedY = -settings.yangle
-				n.data._settings.spread = settings.spread]]
-				v.animationFrame = 0
-		if data.timer == 1 then v.ai1 = 0 end
-		if data.timer == 8 then
-			if config.pulsex then
-				data.sprSizex = 1.5
-			end
-		
-			if config.pulsey then
-				data.sprSizey = 1.5
-			end
-			SFX.play(22)
-			v.ai1 = 0
-			for i=0,6 do
-				local dir = -vector.right2:rotate(6 + (v.ai1 * 28))
-
-				local n = NPC.spawn(NPC.config[v.id].snowBallID, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY, v.section, false, true)
-				
-				n.speedX = dir.x * config.snowSpeed
-				n.speedY = dir.y * config.snowSpeed
-				n.data._settings.spread = 3
-				Effect.spawn(10, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY)
-				v.ai1 = v.ai1 + 1
-			end
-			v.ai1 = 0
-		end
-		if data.timer >= 32 then
-			data.timer = data.rndTimer
-			data.state = STATE.IDLE
-			v.ai1 = 0
-		end
-	elseif data.state == STATE.ICE then
-		v.animationFrame = 0
-		if data.timer % 30 == 2 and data.timer <= 192 then
-			if config.pulsex then
-				data.sprSizex = 1.5
-			end
-	
-			if config.pulsey then
-				data.sprSizey = 1.5
-			end
-			local n = NPC.spawn(NPC.config[v.id].iceRockID, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY, v.section, false, true)
-			
-			if data.timer == 2 then SFX.play("smrpg_enemy_crystalcrusher.wav") end
-		
-			n.speedX = RNG.random(-4,4)
-				
-			n.speedY = -8
-			Effect.spawn(10, v.x + v.width/2 + config.cannonUpX, v.y + v.height/2 + config.cannonUpY)
-		end
-		
-		if data.timer >= 224 then
-			data.state = STATE.IDLE
-			data.timer = 0
-		end
-	elseif data.state == STATE.DIAMOND_SAW then
-		v.animationFrame = 0
-		if data.timer == 1 then
-			for i = 0,1 do
-				local n = NPC.spawn(NPC.config[v.id].diamondSawID, v.x + v.width/2, v.y + v.height/2 - 64, v.section, false, true)
-				n.direction = i
-				n.speedX = -2
-			end
-		end
-		if data.timer >= 128 then
-			data.state = STATE.IDLE
-			data.timer = 0
-		end
-	elseif data.state == STATE.TRAPPED_PLAYER then
-		v.animationFrame = 0
-		if data.timer <= 80 then
-			if data.timer % 16 == 2 then
-				if data.timer == 2 then SFX.play("smrpg_enemy_crystal.wav") end
-				local n = NPC.spawn(NPC.config[v.id].crystalProjectileID, plr.x + plr.width/2 - 128 + 32 * RNG.randomInt(0,6), plr.y - 128, player.section, false)
-				n.animationFrame = -50
-			end
-		else
-			if data.timer >= 160 then
-				data.state = STATE.IDLE
-				data.timer = 0
-			end
 		end
     else
 		v.speedX = 0
