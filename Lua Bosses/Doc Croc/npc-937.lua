@@ -1,7 +1,6 @@
 --NPCManager is required for setting basic NPC properties
 local npcManager = require("npcManager")
 local npcutils = require("npcs/npcutils")
-local easing = require("ext/easing")
 local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
 --Create the library table
@@ -75,7 +74,9 @@ local docCrocSettings = {
 	grabtop=false,
 	staticdirection = true,
 	hp = 24,
+	--This decreases the hp when hit by strong attacks
 	hpDecStrong = 4,
+	--This decreases the hp when hit by a fireball
 	hpDecWeak = 1,
 	--The drone chases the player and disappears after a set of frames; used in STATE.DRONE
 	droneID = 944,
@@ -90,7 +91,9 @@ local docCrocSettings = {
 	--A vial that spawns a non-moving mushroom; used in STATE.MUSHROOM
 	mushroomID = 946,
 	--These are the NPCs that Doc Croc will drop after each attack generally used in dropPatternTable and dropPinchTable
+	--This npcID can be spawned continuously on screen without a limit.
 	bombID = 136,
+	--This npcID can be spawned once and other cannot be spawned until this despawns. It'd disappear after the boss is hit or after some time.
 	springID = 26,
 	--A config component in which is used in a non-pinch state, he goes over the procedures in certain attacks what to spawn after each
 	dropPatternTable = {
@@ -123,15 +126,18 @@ local docCrocSettings = {
 	},
 	effectExplosion1ID = 10,
 	effectExplosion2ID = 937,
+	--Coordinate offset when spawning NPCs; starts at 0 on the physical center coordinate
 	spawnX = 0,
 	spawnY = 12,
 	pulsex = false, -- controls the scaling of the sprite when firing
 	pulsey = false,
-	teleportx = true,
+	teleportx = true, --controls the scaling of the sprite when teleporting
 	teleporty = true,
 	idleDelay = 72,
-	springDelayUntilDisappear = 330,
-	droneDelayUntilDisappear = 240,
+	--Each specific timers will run a cooldown until they disappear
+	springDelayUntilDisappear = 360,
+	droneDelayUntilDisappear = 270,
+	--Goes over sets with each primary sets going over how the projectiles' velocity is made
 	energyBall1Sets = {
 		[0] = {
 			[0] = {
@@ -165,6 +171,8 @@ local docCrocSettings = {
 	energyBall1DelayBefore = 16,
 	energyBall1DelayAfter = 72,
 	energyBall1DelayBetweenRound = 10,
+	energyBall1Consecutive = 3, --Increments over to use sets
+
 	energyBall2Speed = 4,
 	energyBall2InitAngle = 180,
 	energyBall2InitAngleDirOffset = 10,
@@ -315,10 +323,10 @@ local function pressButtonAnimate(v,data,config,chooseNewAnimation)
 	v.animationFrame = 1 + data.pressButtonAnimate
 end
 
-local function decideAttack(v,data,config,pinch)
+local function decideAttack(v,data,config,settings,pinch)
 	local options = {}
 	local mushroomChance = {}
-	if data.health >= config.mushroomHP then
+	if data.health >= config.mushroomHP and settings.mushroom then
 		if config.mushroomFrequency > 0 then
 			for i=1,config.mushroomFrequency do
 				table.insert(mushroomChance,0) --0 indicates a rate for dropping a mushroom vial
@@ -371,6 +379,7 @@ function docCroc.onTickEndNPC(v)
 	local data = v.data
 	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
 	local config = NPC.config[v.id]
+	local settings = v.data._settings
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
@@ -382,12 +391,20 @@ function docCroc.onTickEndNPC(v)
 	if not data.initialized then
 		--Initialize necessary data.
 		data.initialized = true
+		settings.intro = settings.intro or true
+		settings.mushroom = settings.mushroom or true
+
 		data.w = math.pi/65
 		data.timer = data.timer or 0
 		data.hurtTimer = data.hurtTimer or 0
 		data.iFrames = false
 		data.health = config.hp
-		data.state = STATE.IDLE
+		if not settings.intro then
+			data.state = STATE.IDLE
+		else
+			data.state = STATE.INTRO
+			v.y = camera.y + config.cameraOffsetY - v.height/2
+		end
 		data.iFramesDelay = config.iFramesDelay
 		data.pattern = 0
 		v.ai1 = 0
@@ -454,7 +471,7 @@ function docCroc.onTickEndNPC(v)
 		if data.timer >= config.idleDelay then
 			data.timer = 0
 			data.state = STATE.TELEPORT
-			--decideAttack(v,data,config,data.pinch)
+			--decideAttack(v,data,config,settings,data.pinch)
 		end
 	elseif data.state == STATE.MUSHROOM then
 		pressButtonAnimate(v,data,config,true)
@@ -478,7 +495,7 @@ function docCroc.onTickEndNPC(v)
 		end
 		if data.timer >= config.droneDelayAfter + config.droneDelayBefore then
 			data.timer = 0
-			data.state = STATE.TELEPORT
+			data.state = STATE.DROP
 		end
 	elseif data.state == STATE.DROP then
 		pressButtonAnimate(v,data,config,true)
@@ -525,7 +542,7 @@ function docCroc.onTickEndNPC(v)
 		end
 		if data.timer >= config.shockwaveDelayAfter + config.shockwaveDelayBefore then
 			data.timer = 0
-			data.state = STATE.TELEPORT
+			data.state = STATE.DROP
 		end
 	elseif data.state == STATE.VIAL then
 		pressButtonAnimate(v,data,config,true)
@@ -545,30 +562,35 @@ function docCroc.onTickEndNPC(v)
 		end
 		if data.timer >= config.vialDelayBefore + config.vialDelayBetweenRound + config.vialDelayAfter then
 			data.timer = 0
-			data.state = STATE.TELEPORT
+			data.state = STATE.DROP
 		end
 	elseif data.state == STATE.ENERGY1 then
 		pressButtonAnimate(v,data,config,true)
-		if data.timer == 1 then v.ai2 = 0 v.ai1 = RNG.randomInt(0,#config.energyBall1Sets-1) end
+		if data.timer == 1 then v.ai3 = 0 end
 		if data.timer == config.energyBall1DelayBefore + config.energyBall1DelayBetweenRound then
 			SFXPlay(config.sfx_energyBall1)
-			local dir = -vector.right2:rotate(90 + config.energyBall1Set[v.ai1][v.ai2].angle)
-			local n = NPC.spawn(config.energyBall1ID, v.x + v.width/2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
-			n.speedX = dir.x * config.energyBall1Set[v.ai1][v.ai2].speed
-			n.speedY = dir.y * config.energyBall1Set[v.ai1][v.ai2].speed
-			if (v.ai2 == 0 and config.energyBall1VoiceSet == 0) or config.energyBall1VoiceSet == 1 then
+			v.ai2 = 0
+			v.ai1 = RNG.randomInt(0,#config.energyBall1Sets-1)
+			for i=1,#config.energyBall1Sets[v.ai1] do
+				local dir = -vector.right2:rotate(90 + config.energyBall1Sets[v.ai1][v.ai2].angle)
+				local n = NPC.spawn(config.energyBall1ID, v.x + v.width/2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+				n.speedX = dir.x * config.energyBall1Sets[v.ai1][v.ai2].speed
+				n.speedY = dir.y * config.energyBall1Sets[v.ai1][v.ai2].speed
+				v.ai2 + 1
+			end
+			if v.ai3 == 0 then
 				SFXPlayTable(config.sfx_voiceAttackTable)
 			end
-			if v.ai2 < #config.energyBall1Set[v.ai1] then
+			if v.ai3 < config.energyBall1Consecutive then
 				data.timer = config.energyBall1DelayBetweenRound
-				v.ai2 = v.ai2 + 1
+				v.ai3 = v.ai3 + 1
 			else
-				v.ai2 = 0
+				v.ai3 = 0
 			end
 		end
 		if data.timer >= config.energyBall1DelayBefore + config.energyBall1DelayBetweenRound + config.energyBall1DelayAfter then
 			data.timer = 0
-			data.state = STATE.TELEPORT
+			data.state = STATE.DROP
 		end
 	elseif data.state == STATE.ENERGY2 then
 		pressButtonAnimate(v,data,config,true)
@@ -607,7 +629,7 @@ function docCroc.onTickEndNPC(v)
 		end
 		if data.timer >= config.energyBall2DelayBefore + config.energyBall2DelayBetweenRound + config.energyBall2DelayAfter then
 			data.timer = 0
-			data.state = STATE.TELEPORT
+			data.state = STATE.DROP
 		end
 	elseif data.state == STATE.TELEPORT then
 		if data.timer == 1 then
@@ -639,19 +661,59 @@ function docCroc.onTickEndNPC(v)
 			data.timer = 0
 			data.state = STATE.IDLE
 		end
+	elseif data.state == STATE.INTRO then
+		v.friendly = true
+		v.speedX = 0
+		v.speedY = 0
+		if v.ai1 == 0 then
+			v.animationFrame = 6
+			if v.y >= v.spawnY then
+				v.y = v.spawnY
+				data.timer = 0
+				v.ai1 = 1
+			else
+				v.y = v.y + 2
+				--v:mem(0x12C, FIELD_WORD) = 6
+			end
+			if data.timer == 1 then SFXPlay(config.sfx_introFlyIn)
+		else
+			if data.timer < 36 then
+				v.animationFrame = 6
+			elseif data.timer < 42 then
+				v.animationFrame = 7
+			else
+				v.animationFrame = 0
+			end
+			if data.timer == 32 then SFXPlay(config.sfx_introClick) end
+			if data.timer == 12 then SFXPlay(config.sfx_voiceIntro) end
+			if data.timer >= 56 then data.state = STATE.IDLE v.ai1 = 0 data.timer = 0 v.friendly = false end
+		end
+	elseif data.state == STATE.HURT then
+		v.speedX = 0
+		v.speedY = 0
+		v.friendly = true
+		v.animationFrame = math.floor(data.timer / 8) % 2 + 3
+		if data.timer >= config.hurtDelay then
+			data.timer = 0
+			data.state = STATE.TELEPORT
+			v.friendly = false
+			v.ai1 = 0
+			v.ai2 = 0
+			v.ai3 = 0
+		end
     else
 		v.speedX = 0
 		v.speedY = 0
 		v.friendly = true
-		v.animationFrame = 0
-		if data.timer == 1 then SFXPlay(config.sfx_voiceDefeat1)
-		if data.timer % 12 == 0 then
+		v.animationFrame = 5
+		if data.timer == 1 then SFXPlay(config.sfx_voiceDefeat1) end
+		if data.timer % 8 == 0 then
 			local a = Animation.spawn(config.effectExplosion1ID, math.random(v.x, v.x + v.width), math.random(v.y, v.y + v.height))
 			a.x=a.x-a.width/2
 			a.y=a.y-a.height/2
 			SFXPlay(config.sfx_smallExplosion)
 		end
-		if data.timer >= 250 then
+		if data.timer >= 240 then
 			v:kill(HARM_TYPE_NPC)
 			SFXPlay(config.sfx_bigExplosion)
 			SFXPlay(config.sfx_voiceDefeat2)
