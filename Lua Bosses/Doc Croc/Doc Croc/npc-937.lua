@@ -81,15 +81,15 @@ local docCrocSettings = {
 	--The drone chases the player and disappears after a set of frames; used in STATE.DRONE
 	droneID = 298,--944,
 	--The vials spout SMW Fireballs after a collision; used in STATE.VIAL
-	vialID = 363,--943,
+	vialID = 943,
 	--Spreads shockwaves and explodes after a collision; used in STATE.SHOCKWAVE
-	shockwaveBombID = 361,--941,
+	shockwaveBombID = 941,
 	--This Energy Ball is just a straight projectile; used in STATE.ENERGY1
 	energyBall1ID = 348,--938,
 	--This Energy Ball after a set amount of frames will target at the player's position and turn into a different Energy Ball; used in STATE.ENERGY2
 	energyBall2ID = 210,--940,
 	--A vial that spawns a non-moving mushroom; used in STATE.MUSHROOM
-	mushroomID = 250,--946,
+	mushroomID = 946,
 	--These are the NPCs that Doc Croc will drop after each attack generally used in dropPatternTable and dropPinchTable
 	--This npcID can be spawned continuously on screen without a limit.
 	bombID = 136,
