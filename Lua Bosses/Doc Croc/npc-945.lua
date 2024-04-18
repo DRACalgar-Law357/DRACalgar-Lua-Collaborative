@@ -147,15 +147,19 @@ function docCroc.onTickEndNPC(v)
 
 	-- Animation
 	if data.state == STATE_STANDING	then
-		v.animationFrame = math.floor(data.timer / config.idleFramespeed) % config.idleFrames
+		if data.timer >= 0 then
+			v.animationFrame = math.floor(data.timer / config.idleFramespeed) % config.idleFrames
+		else
+			v.animationFrame = config.idleFrames + 1
+		end
 	elseif data.state == STATE_THROWING then
 		local b = data.animationBall
 		if b and b.speedY >= 0 and b.yOffset >= -v.height then
-			v.animationFrame = frames - 1
+			v.animationFrame = config.idleFrames
 		elseif b and b.speedY < 0 then
-			v.animationFrame = frames - 2
+			v.animationFrame = config.idleFrames
 		else
-			v.animationFrame = frames - 3
+			v.animationFrame = config.idleFrames
 		end
 	end
 	if config.framestyle >= 1 and v.direction == DIR_RIGHT then
@@ -210,7 +214,7 @@ function docCroc.onTickEndNPC(v)
 			data.timer = data.timer + 1
 			if data.timer >= config.holdTime then
 				data.state = STATE_STANDING
-				data.timer = 0
+				data.timer = -32
 				local s = NPC.spawn(
 					data.throwID,
 					v.x + (v.width  / 2),
