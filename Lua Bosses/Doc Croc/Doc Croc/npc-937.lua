@@ -84,10 +84,10 @@ local docCrocSettings = {
 	vialID = 363,--943,
 	--Spreads shockwaves and explodes after a collision; used in STATE.SHOCKWAVE
 	shockwaveBombID = 361,--941,
-	--This Energy Ball after a set amount of frames will target at the player's position and turn into a different Energy Ball; used in STATE.ENERGY2
-	energyBall1ID = 210,--938,
 	--This Energy Ball is just a straight projectile; used in STATE.ENERGY1
-	energyBall2ID = 699,--940,
+	energyBall1ID = 348,--938,
+	--This Energy Ball after a set amount of frames will target at the player's position and turn into a different Energy Ball; used in STATE.ENERGY2
+	energyBall2ID = 210,--940,
 	--A vial that spawns a non-moving mushroom; used in STATE.MUSHROOM
 	mushroomID = 250,--946,
 	--These are the NPCs that Doc Croc will drop after each attack generally used in dropPatternTable and dropPinchTable
@@ -101,7 +101,7 @@ local docCrocSettings = {
 		[STATE.SHOCKWAVE] = 26,
 		[STATE.ENERGY2] = 136,
 		[STATE.VIAL] = 26,
-		[STATE.DRONE] = 0,
+		[STATE.DRONE] = 136,
 	},
 	--A config component in which is used in a pinch state, he goes over a randomized selection of what NPC to drop (may put 0 to have him not drop anything)
 	dropRandomTable = {
@@ -122,11 +122,11 @@ local docCrocSettings = {
 	},
 	--A config component in which Doc Croc will randomly choose. He'll still have a chance to choose to throw  mushroom vial.
 	alloutTable = {
-		[0] = STATE.ENERGY1,
-		[1] = STATE.SHOCKWAVE,
-		[2] = STATE.ENERGY2,
-		[3] = STATE.VIAL,
-		[4] = STATE.DRONE
+		STATE.ENERGY1,
+		STATE.SHOCKWAVE,
+		STATE.ENERGY2,
+		STATE.VIAL,
+		STATE.DRONE
 	},
 	effectExplosion1ID = 10,
 	effectExplosion2ID = 937,
@@ -142,8 +142,18 @@ local docCrocSettings = {
 	--Each specific timers will run a cooldown until they disappear
 	springDelayUntilDisappear = 480,
 	droneDelayUntilDisappear = 300,
+
+	energyBall1Speed = 3,
+	energyBall1InitAngle = 180,
+	energyBall1InitAngleDirOffset = 10,
+	energyBall1AngleIncrement = 20,
+	energyBall1Consecutive = 3,
+	energyBall1Style = 0, --0 - Shoots 2 volleys on each increment and direction; 1 - Shoots 1 volley on a random init direction and increments on an angle.
+	energyBall1DelayBefore = 16,
+	energyBall1DelayAfter = 72,
+	energyBall1DelayBetweenRound = 10,
 	--Goes over sets with each primary sets going over how the projectiles' velocity is made
-	energyBall1Sets = {
+	energyBall2Sets = {
 		[0] = {
 			[0] = {
 				speed = 2,
@@ -173,20 +183,11 @@ local docCrocSettings = {
 			},
 		},
 	},
-	energyBall1DelayBefore = 16,
-	energyBall1DelayAfter = 72,
-	energyBall1DelayBetweenRound = 10,
-	energyBall1Consecutive = 3, --Increments over to use sets
-
-	energyBall2Speed = 3,
-	energyBall2InitAngle = 180,
-	energyBall2InitAngleDirOffset = 10,
-	energyBall2AngleIncrement = 20,
-	energyBall2Consecutive = 3,
-	energyBall2Style = 0, --0 - Shoots 2 volleys on each increment and direction; 1 - Shoots 1 volley on a random init direction and increments on an angle.
 	energyBall2DelayBefore = 16,
 	energyBall2DelayAfter = 72,
 	energyBall2DelayBetweenRound = 10,
+	energyBall2Consecutive = 3, --Increments over to use sets
+
 	vialSet = {
 		--From left to right
 		[0] = {
@@ -262,7 +263,7 @@ local docCrocSettings = {
 	energyBall1VoiceSet = 0,
 	energyBall2VoiceSet = 0,
 
-	mushroomFrequency = 3, --Uses this config in a pinch state to throw a mushroom vial. Can only be used once when used.
+	mushroomFrequency = 4, --Uses this config in a pinch state to throw a mushroom vial. Can only be used once when used.
 	mushroomHP = 8, --As the hp goes over this config, Doc Croc will have a chance to drop a mushroom vial.
 	iFramesDelay = 60,
 	pinchHP = 8, --As the hp goes over this config, Doc Croc shifts into pinch mode; used in pinchSet 0
@@ -319,8 +320,8 @@ end
 local function SFXPlayTable(sfx)
 	if sfx then
 		local sfxChoice = RNG.irandomEntry(sfx)
-		if sfxChoice and sfxChoice.id then
-			SFX.play(sfxChoice.id, sfxChoice.volume)
+		if sfxChoice then
+			SFX.play(sfxChoice)
 		end
 	end
 end
@@ -330,7 +331,7 @@ local function pressButtonAnimate(v,data,config,chooseNewAnimation)
 	v.animationFrame = 1 + data.pressButtonAnimate
 end
 
-local function decideAttack(v,data,config,settings,pinch)
+local function decideAttack(v,data,config,settings)
 	local options = {}
 	local mushroomChance = {}
 	if data.health <= config.mushroomHP and settings.mushroom then
@@ -339,7 +340,7 @@ local function decideAttack(v,data,config,settings,pinch)
 				table.insert(mushroomChance,0) --0 indicates a rate for dropping a mushroom vial
 			end
 		end
-		if pinch then
+		if data.pinch then
 			if config.alloutTable and #config.alloutTable > 0 then
 				for i=1,#config.alloutTable do
 					table.insert(mushroomChance,1) --1 indicates a rate of choosing an attack
@@ -356,7 +357,7 @@ local function decideAttack(v,data,config,settings,pinch)
 			table.insert(options,STATE.MUSHROOM)
 		end
 	end
-	if pinch then
+	if data.pinch then
 		if config.alloutTable and #config.alloutTable > 0 then
 			for i=1,#config.alloutTable do
 				table.insert(options,config.alloutTable[i-1])
@@ -480,7 +481,7 @@ function docCroc.onTickEndNPC(v)
 		v.speedY = 0
 		if data.timer >= config.idleDelay then
 			data.timer = 0
-			decideAttack(v,data,config,settings,data.pinch)
+			decideAttack(v,data,config,settings)
 		end
 	elseif data.state == STATE.MUSHROOM then
 		pressButtonAnimate(v,data,config,true)
@@ -507,11 +508,8 @@ function docCroc.onTickEndNPC(v)
 			data.state = STATE.DROP
 		end
 	elseif data.state == STATE.DROP then
-		pressButtonAnimate(v,data,config,true)
-		if data.timer == config.dropDelayBefore then
-			SFXPlay(config.sfx_dropNPC)
-			local npcChoice = 0
-			
+		local npcChoice = npcChoice or 0
+		if data.timer == 1 then
 			if (data.pinch and config.dropNPCStylePinchRandomly) or (not data.pinch and config.dropNPCStyleNonPinchRandomly) then
 				npcChoice = RNG.irandomEntry(config.dropRandomTable)
 				if npcChoice == config.springID and data.spring then
@@ -523,11 +521,20 @@ function docCroc.onTickEndNPC(v)
 					npcChoice = 0
 				end
 			end
+		end
+		if npcChoice ~= 0 then
+			pressButtonAnimate(v,data,config,true)
+		else
+			v.animationFrame = 0
+		end
+		if data.timer == config.dropDelayBefore then
 			if npcChoice == config.springID and not data.spring then
 				data.spring = NPC.spawn(npcChoice, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
 				data.springTimer = config.springDelayUntilDisappear
+				SFXPlay(config.sfx_dropNPC)
 			elseif npcChoice ~= 0 then
 				local n = NPC.spawn(npcChoice, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+				SFXPlay(config.sfx_dropNPC)
 			end
 		end
 		if data.timer >= config.dropDelayAfter + config.dropDelayBefore then
@@ -568,47 +575,16 @@ function docCroc.onTickEndNPC(v)
 		end
 	elseif data.state == STATE.ENERGY1 then
 		pressButtonAnimate(v,data,config,true)
-		Text.print(v.ai1,110,110)
-		Text.print(v.ai2,110,126)
-		Text.print(v.ai3,110,142)
-		if data.timer == 1 then v.ai3 = 0 end
-		if data.timer == config.energyBall1DelayBefore + config.energyBall1DelayBetweenRound then
-			SFXPlay(config.sfx_energyBall1)
-			v.ai2 = 0
-			v.ai1 = RNG.randomInt(0,#config.energyBall1Sets)
-			for i=0,#config.energyBall1Sets[v.ai1] do
-				local dir = -vector.right2:rotate(90 + config.energyBall1Sets[v.ai1][v.ai2].angle)
-				local n = NPC.spawn(config.energyBall1ID, v.x + v.width/2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
-				n.speedX = dir.x * config.energyBall1Sets[v.ai1][v.ai2].speed
-				n.speedY = dir.y * config.energyBall1Sets[v.ai1][v.ai2].speed
-				v.ai2 = v.ai2 + 1
-			end
-			if v.ai3 == 0 then
-				SFXPlayTable(config.sfx_voiceAttackTable)
-			end
-			if v.ai3 < config.energyBall1Consecutive then
-				data.timer = config.energyBall1DelayBetweenRound
-				v.ai3 = v.ai3 + 1
-			else
-				v.ai3 = 0
-			end
-		end
-		if data.timer >= config.energyBall1DelayBefore + config.energyBall1DelayBetweenRound + config.energyBall1DelayAfter then
-			data.timer = 0
-			data.state = STATE.DROP
-		end
-	elseif data.state == STATE.ENERGY2 then
-		pressButtonAnimate(v,data,config,true)
 		if data.timer == 1 then
 			v.ai2 = 0
-			if config.energyBall2Style == 0 then
+			if config.energyBall1Style == 0 then
 				v.ai1 = 0
 			else
 				v.ai1 = RNG.randomInt(1,2)
 			end
 		end
-		if data.timer == config.energyBall2DelayBefore + config.energyBall2DelayBetweenRound then
-			SFXPlay(config.sfx_energyBall2)
+		if data.timer == config.energyBall1DelayBefore + config.energyBall1DelayBetweenRound then
+			SFXPlay(config.sfx_energyBall1)
 			local set = 0
 			if v.ai1 == 0 then
 				set = 1
@@ -617,19 +593,47 @@ function docCroc.onTickEndNPC(v)
 			if v.ai1 == 1 then angleDir = -1 end
 			for i=0,set do
 				if i == 1 then angleDir = -1 end
-				local dir = -vector.right2:rotate(90 + config.energyBall2InitAngle + (config.energyBall2InitAngleDirOffset + v.ai2 * config.energyBall2AngleIncrement) * angleDir)
-				local n = NPC.spawn(config.energyBall2ID, v.x + v.width/2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
-				n.speedX = dir.x * config.energyBall2Speed
-				n.speedY = dir.y * config.energyBall2Speed
+				local dir = -vector.right2:rotate(90 + config.energyBall1InitAngle + (config.energyBall1InitAngleDirOffset + v.ai2 * config.energyBall1AngleIncrement) * angleDir)
+				local n = NPC.spawn(config.energyBall1ID, v.x + v.width/2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+				n.speedX = dir.x * config.energyBall1Speed
+				n.speedY = dir.y * config.energyBall1Speed
 			end
-			if (v.ai2 == 0 and config.energyBall2VoiceSet == 0) or config.energyBall2VoiceSet == 1 then
+			if (v.ai2 == 0 and config.energyBall1VoiceSet == 0) or config.energyBall1VoiceSet == 1 then
 				SFXPlayTable(config.sfx_voiceAttackTable)
 			end
-			if v.ai2 < config.energyBall2Consecutive then
-				data.timer = config.energyBall2DelayBetweenRound
-				v.ai2 = v.ai2 + 1
+			v.ai2 = v.ai2 + 1
+			if v.ai2 < config.energyBall1Consecutive then
+				data.timer = config.energyBall1DelayBetweenRound
 			else
 				v.ai2 = 0
+			end
+		end
+		if data.timer >= config.energyBall1DelayBefore + config.energyBall1DelayBetweenRound + config.energyBall1DelayAfter then
+			data.timer = 0
+			data.state = STATE.DROP
+		end
+	elseif data.state == STATE.ENERGY2 then
+		pressButtonAnimate(v,data,config,true)
+		if data.timer == 1 then v.ai3 = 0 end
+		if data.timer == config.energyBall2DelayBefore + config.energyBall2DelayBetweenRound then
+			SFXPlay(config.sfx_energyBall2)
+			v.ai2 = 0
+			v.ai1 = RNG.randomInt(0,#config.energyBall2Sets)
+			for i=0,#config.energyBall2Sets[v.ai1] do
+				local dir = -vector.right2:rotate(90 + config.energyBall2Sets[v.ai1][v.ai2].angle)
+				local n = NPC.spawn(config.energyBall2ID, v.x + v.width/2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+				n.speedX = dir.x * config.energyBall2Sets[v.ai1][v.ai2].speed
+				n.speedY = dir.y * config.energyBall2Sets[v.ai1][v.ai2].speed
+				v.ai2 = v.ai2 + 1
+			end
+			if (v.ai3 == 0 and config.energyBall2Style == 0) or config.energyBall2Style == 1 then
+				SFXPlayTable(config.sfx_voiceAttackTable)
+			end
+			v.ai3 = v.ai3 + 1
+			if v.ai3 < config.energyBall2Consecutive then
+				data.timer = config.energyBall2DelayBetweenRound
+			else
+				v.ai3 = 0
 			end
 		end
 		if data.timer >= config.energyBall2DelayBefore + config.energyBall2DelayBetweenRound + config.energyBall2DelayAfter then
@@ -861,7 +865,7 @@ function docCroc.onDrawNPC(v)
 		data.img.transform.scale = vector(data.sprSizex, data.sprSizey)
 		data.img.rotation = data.angle
 
-		local p = -45
+		local p = -55
 
 		-- Drawing --
 		data.img:draw{frame = v.animationFrame + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
