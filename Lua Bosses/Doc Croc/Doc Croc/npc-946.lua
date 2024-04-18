@@ -1,6 +1,6 @@
 local npcManager = require("npcManager")
 local particles = require("particles")
-
+local npcutils = require("npcs/npcutils")
 local star = {}
 
 local npcID = NPC_ID
@@ -42,9 +42,10 @@ function star.onTickEndNPC(t)
 	local data = t.data
 	
 	if t.collidesBlockLeft or t.collidesBlockRight or t.collidesBlockUp or t.collidesBlockBottom then
-		SFX.play(7)
+		SFX.play(55)
 		t:kill(9)
 		local n = NPC.spawn(NPC.config[t.id].mushroomID,v.x+v.width/2,v.y+v.height-NPC.config[NPC.config[t.id].mushroomID].height,v.section,true,true)
+		npcutils.faceNearestPlayer(n)
 	end
 end
 

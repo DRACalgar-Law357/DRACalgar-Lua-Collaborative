@@ -3,6 +3,7 @@ local npcManager = require("npcManager")
 local npcutils = require("npcs/npcutils")
 local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
+local effectconfig = require("game/effectconfig")
 --Create the library table
 local docCroc = {}
 --NPC_ID is dynamic based on the name of the library file
@@ -378,6 +379,10 @@ local function decideAttack(v,data,config,settings)
 		data.selectedAttack = data.state
 	end
 	data.timer = 0
+end
+
+function effectconfig.onTick.TICK_DOCCROC(v) -- Logic for Doc Croc death effects
+    v.animationFrame = math.min(v.frames-1,math.floor((v.lifetime-v.timer)/v.framespeed))
 end
 
 function docCroc.onTickEndNPC(v)

@@ -6,7 +6,7 @@
 
 local npcManager = require("npcManager")
 local clearpipe = require("blocks/ai/clearpipe")
-
+local effectconfig = require("game/effectconfig")
 local docCroc = {}
 local npcID = NPC_ID
 
@@ -119,6 +119,10 @@ local function drawBall(data,id,x,y,frame,priority,rotation)
 	data.ballSprite:draw{frame = frame+1,priority = priority,sceneCoords = true}
 end
 docCroc.drawBall = drawBall
+
+function effectconfig.onTick.TICK_DOCCROC(v) -- Logic for Doc Croc death effects
+    v.animationFrame = math.min(v.frames-1,math.floor((v.lifetime-v.timer)/v.framespeed))
+end
 
 function docCroc.onTickEndNPC(v)
 	if Defines.levelFreeze then return end
