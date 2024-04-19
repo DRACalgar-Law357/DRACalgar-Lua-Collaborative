@@ -26,7 +26,7 @@ local config = {
 	noyoshi = true,
 	ignorethrownnpcs = true,
 	shockwaveID = npcID + 1,
-	shockwaveSpeed = 3.
+	shockwaveSpeed = 4,
 }
 
 npcManager.setNpcSettings(config)
@@ -43,10 +43,10 @@ function star.onTickEndNPC(t)
 	local data = t.data
 	
 	if t.collidesBlockBottom then
-		Misc.doBombExplosion(t.x + t.width/2, t.y + t.height/2, 1)
-		t:kill(9)
+		Explosion.spawn(t.x + t.width/2, t.y + t.height/2, 3)
+		t:kill()
 		for i=1,2 do
-			local f = NPC.spawn(NPC.config[t.id].shockwaveID, t.x + t.width/2, t.y + t.height - NPC.config[NPC.config[t.id].shockwaveID].height, t:mem(0x146, FIELD_WORD), false, true)
+			local f = NPC.spawn(NPC.config[t.id].shockwaveID, t.x + t.width/2, t.y + t.height - NPC.config[NPC.config[t.id].shockwaveID].height/2, t:mem(0x146, FIELD_WORD), false, true)
 			if i == 1 then
 				f.speedX = -NPC.config[t.id].shockwaveSpeed
 			else

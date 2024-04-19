@@ -9,11 +9,11 @@ npcManager.registerDefines(npcID, {NPC.UNHITTABLE})
 
 local config = {
 	id = npcID,
-	gfxheight = 32,
-    gfxwidth = 32,
-	width = 28,
-	height = 28,
-	gfxoffsety = 2,
+	gfxheight = 24,
+    gfxwidth = 24,
+	width = 24,
+	height = 24,
+	gfxoffsety = 0,
     frames = 4,
     framestyle = 1,
 	framespeed = 6, 
@@ -26,8 +26,9 @@ local config = {
 	spinjumpsafe = false,
 	noyoshi = true,
 	fireID = 527,
-	initAngle = 140,
-	angleInc = 40,
+	fireSpeed = 5,
+	initAngle = 65,
+	angleInc = 25,
 }
 
 npcManager.setNpcSettings(config)

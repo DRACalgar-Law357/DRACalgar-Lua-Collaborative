@@ -2,7 +2,7 @@
 import=AI_ARC
 frames=1
 framespeed=8
-framestyle=1
+framestyle=0
 xAlign=MID
 yAlign=MID
 rotation=16

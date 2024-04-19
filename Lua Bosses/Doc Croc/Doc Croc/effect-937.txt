@@ -2,9 +2,9 @@
 onTick=TICK_DOCCROC
 frames=2
 framestyle=0
-framespeed=60
+framespeed=28
 lifetime=500
 gravity=0.3
 maxSpeedY=12
 speedX=0
-speedY=-5
+speedY=-8

@@ -9,11 +9,11 @@ npcManager.registerDefines(npcID, {NPC.UNHITTABLE})
 
 local config = {
 	id = npcID,
-	gfxheight = 32,
-    gfxwidth = 32,
-	width = 28,
-	height = 28,
-	gfxoffsety = 2,
+	gfxheight = 24,
+    gfxwidth = 24,
+	width = 24,
+	height = 24,
+	gfxoffsety = 0,
     frames = 4,
     framestyle = 1,
 	framespeed = 6, 
@@ -25,7 +25,7 @@ local config = {
 	npcblock = false,
 	spinjumpsafe = false,
 	noyoshi = true,
-	mushroomID = 9,
+	mushroomID = 185,
 }
 
 npcManager.setNpcSettings(config)
@@ -44,7 +44,7 @@ function star.onTickEndNPC(t)
 	if t.collidesBlockLeft or t.collidesBlockRight or t.collidesBlockUp or t.collidesBlockBottom then
 		SFX.play(55)
 		t:kill(9)
-		local n = NPC.spawn(NPC.config[t.id].mushroomID,v.x+v.width/2,v.y+v.height-NPC.config[NPC.config[t.id].mushroomID].height,v.section,true,true)
+		local n = NPC.spawn(NPC.config[t.id].mushroomID,t.x+t.width/2,t.y+t.height-NPC.config[NPC.config[t.id].mushroomID].height/2,t.section,true,true)
 		npcutils.faceNearestPlayer(n)
 	end
 end

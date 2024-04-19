@@ -74,21 +74,21 @@ local docCrocSettings = {
 	grabside=false,
 	grabtop=false,
 	staticdirection = true,
-	hp = 24,
+	hp = 32,
 	--This decreases the hp when hit by strong attacks
 	hpDecStrong = 4,
 	--This decreases the hp when hit by a fireball
 	hpDecWeak = 1,
 	--The drone chases the player and disappears after a set of frames; used in STATE.DRONE
-	droneID = 298,--944,
+	droneID = 944,
 	--The vials spout SMW Fireballs after a collision; used in STATE.VIAL
 	vialID = 943,
 	--Spreads shockwaves and explodes after a collision; used in STATE.SHOCKWAVE
 	shockwaveBombID = 941,
 	--This Energy Ball is just a straight projectile; used in STATE.ENERGY1
-	energyBall1ID = 348,--938,
+	energyBall1ID = 940,
 	--This Energy Ball after a set amount of frames will target at the player's position and turn into a different Energy Ball; used in STATE.ENERGY2
-	energyBall2ID = 210,--940,
+	energyBall2ID = 938,
 	--A vial that spawns a non-moving mushroom; used in STATE.MUSHROOM
 	mushroomID = 946,
 	--These are the NPCs that Doc Croc will drop after each attack generally used in dropPatternTable and dropPinchTable
@@ -127,7 +127,8 @@ local docCrocSettings = {
 		STATE.SHOCKWAVE,
 		STATE.ENERGY2,
 		STATE.VIAL,
-		STATE.DRONE
+		STATE.DRONE,
+		STATE.DRONE,
 	},
 	effectExplosion1ID = 10,
 	effectExplosion2ID = 937,
@@ -142,13 +143,13 @@ local docCrocSettings = {
 	idleDelay = 72,
 	--Each specific timers will run a cooldown until they disappear
 	springDelayUntilDisappear = 480,
-	droneDelayUntilDisappear = 300,
+	droneDelayUntilDisappear = 480,
 
 	energyBall1Speed = 3,
 	energyBall1InitAngle = 180,
 	energyBall1InitAngleDirOffset = 10,
 	energyBall1AngleIncrement = 20,
-	energyBall1Consecutive = 3,
+	energyBall1Consecutive = 4,
 	energyBall1Style = 0, --0 - Shoots 2 volleys on each increment and direction; 1 - Shoots 1 volley on a random init direction and increments on an angle.
 	energyBall1DelayBefore = 16,
 	energyBall1DelayAfter = 72,
@@ -186,7 +187,7 @@ local docCrocSettings = {
 	},
 	energyBall2DelayBefore = 16,
 	energyBall2DelayAfter = 72,
-	energyBall2DelayBetweenRound = 10,
+	energyBall2DelayBetweenRound = 16,
 	energyBall2Consecutive = 3, --Increments over to use sets
 
 	vialSet = {
@@ -223,7 +224,7 @@ local docCrocSettings = {
 	},
 	vialDelayBefore = 16,
 	vialDelayAfter = 72,
-	vialDelayBetweenRound = 12,
+	vialDelayBetweenRound = 20,
 	shockwaveDelayBefore = 16,
 	shockwaveDelayAfter = 64,
 	droneDelayBefore = 16,
@@ -265,9 +266,9 @@ local docCrocSettings = {
 	energyBall2VoiceSet = 0,
 
 	mushroomFrequency = 4, --Uses this config in a pinch state to throw a mushroom vial. Can only be used once when used.
-	mushroomHP = 8, --As the hp goes over this config, Doc Croc will have a chance to drop a mushroom vial.
+	mushroomHP = 16, --As the hp goes over this config, Doc Croc will have a chance to drop a mushroom vial.
 	iFramesDelay = 60,
-	pinchHP = 8, --As the hp goes over this config, Doc Croc shifts into pinch mode; used in pinchSet 0
+	pinchHP = 16, --As the hp goes over this config, Doc Croc shifts into pinch mode; used in pinchSet 0
 	pinchSet = 0, --0 - initially becomes in a non-pinch state and then until Doc Croc's hp goes over a set of pinchHP, he'll become in a pinch state, becoming more aggressive (he can also drop a mushroom vial by chance); 1 - initially becomes in a non-pinch state, following a pattern table; 2 - initially becomes in a pinch state, will not volley a mushroom vial, will follow randomized attacks
 	--Configs to either drop a randomized choice or a specified choice in either of the pinch states (if true, uses an rng table to help decide what to drop or not; if false, uses a specified state from a table to help what to drop)
 	dropNPCStyleNonPinchRandomly = false,
@@ -294,7 +295,7 @@ npcManager.registerHarmTypes(npcID,
 	{
 		--[HARM_TYPE_JUMP]=10,
 		--[HARM_TYPE_FROMBELOW]=10,
-		--[HARM_TYPE_NPC]=docCrocSettings.effectExplosion2ID,
+		[HARM_TYPE_NPC]=docCrocSettings.effectExplosion2ID,
 		--[HARM_TYPE_PROJECTILE_USED]=10,
 		[HARM_TYPE_LAVA]={id=13, xoffset=0.5, xoffsetBack = 0, yoffset=1, yoffsetBack = 1.5},
 		--[HARM_TYPE_HELD]=10,
@@ -310,6 +311,7 @@ function docCroc.onInitAPI()
 	npcManager.registerEvent(npcID, docCroc, "onTickEndNPC")
 	npcManager.registerEvent(npcID, docCroc, "onDrawNPC")
 	registerEvent(docCroc, "onNPCHarm")
+	registerEvent(docCroc, "onNPCKill")
 end
 
 local function SFXPlay(sfx)
@@ -335,7 +337,8 @@ end
 local function decideAttack(v,data,config,settings)
 	local options = {}
 	local mushroomChance = {}
-	if data.health <= config.mushroomHP and settings.mushroom then
+	local mushroomChosen = false
+	if data.health <= config.mushroomHP and settings.mushroom and not data.mushroom then
 		if config.mushroomFrequency > 0 then
 			for i=1,config.mushroomFrequency do
 				table.insert(mushroomChance,0) --0 indicates a rate for dropping a mushroom vial
@@ -356,21 +359,25 @@ local function decideAttack(v,data,config,settings)
 		end
 		if RNG.irandomEntry(mushroomChance) == 0 then
 			table.insert(options,STATE.MUSHROOM)
+			mushroomChosen = true
+			data.mushroom = true
 		end
 	end
-	if data.pinch then
-		if config.alloutTable and #config.alloutTable > 0 then
-			for i=1,#config.alloutTable do
-				table.insert(options,config.alloutTable[i-1])
+	if mushroomChosen == false then
+		if data.pinch then
+			if config.alloutTable and #config.alloutTable > 0 then
+				for i in ipairs(config.alloutTable) do
+					table.insert(options,config.alloutTable[i])
+				end
 			end
-		end
-	else
-		if config.patternTable and #config.patternTable > 0 then
-			table.insert(options,config.patternTable[data.pattern])
-			if data.pattern > #config.patternTable - 1 then
-				data.pattern = 0
-			else
-				data.pattern = data.pattern + 1
+		else
+			if config.patternTable and #config.patternTable > 0 then
+				table.insert(options,config.patternTable[data.pattern])
+				if data.pattern > #config.patternTable - 1 then
+					data.pattern = 0
+				else
+					data.pattern = data.pattern + 1
+				end
 			end
 		end
 	end
@@ -423,9 +430,11 @@ function docCroc.onTickEndNPC(v)
 		v.ai1 = 0
 		v.ai2 = 0
 		v.ai3 = 0
+		v.ai4 = 0
 		data.sprSizex = 1
 		data.sprSizey = 1
 		data.pinch = false
+		data.mushroom = false
 		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = docCrocSettings.frames, texture = Graphics.sprites.npc[v.id].img}
 		data.angle = 0
 		data.selectedAttack = 0
@@ -513,32 +522,32 @@ function docCroc.onTickEndNPC(v)
 			data.state = STATE.DROP
 		end
 	elseif data.state == STATE.DROP then
-		local npcChoice = npcChoice or 0
 		if data.timer == 1 then
+			v.ai4 = 0
 			if (data.pinch and config.dropNPCStylePinchRandomly) or (not data.pinch and config.dropNPCStyleNonPinchRandomly) then
-				npcChoice = RNG.irandomEntry(config.dropRandomTable)
-				if npcChoice == config.springID and data.spring then
-					npcChoice = RNG.irandomEntry(config.dropRandomTableWithoutSpring)
+				v.ai4 = RNG.irandomEntry(config.dropRandomTable)
+				if v.ai4 == config.springID and data.spring then
+					v.ai4 = RNG.irandomEntry(config.dropRandomTableWithoutSpring)
 				end
 			else
-				npcChoice = config.dropPatternTable[data.selectedAttack]
-				if npcChoice == config.springID and data.spring then
-					npcChoice = 0
+				v.ai4 = config.dropPatternTable[data.selectedAttack]
+				if v.ai4 == config.springID and data.spring then
+					v.ai4 = 0
 				end
 			end
 		end
-		if npcChoice ~= 0 then
+		if v.ai4 ~= 0 then
 			pressButtonAnimate(v,data,config,true)
 		else
 			v.animationFrame = 0
 		end
 		if data.timer == config.dropDelayBefore then
-			if npcChoice == config.springID and not data.spring then
-				data.spring = NPC.spawn(npcChoice, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			if v.ai4 == config.springID and not data.spring then
+				data.spring = NPC.spawn(v.ai4, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
 				data.springTimer = config.springDelayUntilDisappear
 				SFXPlay(config.sfx_dropNPC)
-			elseif npcChoice ~= 0 then
-				local n = NPC.spawn(npcChoice, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
+			elseif v.ai4 ~= 0 then
+				local n = NPC.spawn(v.ai4, v.x + v.width / 2 + config.spawnX, v.y + v.height/2 + config.spawnY, v.section, true, true)
 				SFXPlay(config.sfx_dropNPC)
 			end
 		end
@@ -733,7 +742,6 @@ function docCroc.onTickEndNPC(v)
 			SFXPlay(config.sfx_voiceDefeat2)
 		end
 	end
-	Text.print(data.health,110,110)
 	--Give Doc Croc some i-frames to make the fight less cheesable
 	--iFrames System made by MegaDood & DRACalgar Law
 	if data.iFrames then
@@ -875,6 +883,36 @@ function docCroc.onDrawNPC(v)
 		-- Drawing --
 		data.img:draw{frame = v.animationFrame + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
 		npcutils.hideNPC(v)
+	end
+end
+docCroc.effectGlassVariants = {1,2,3,4}
+docCroc.effectBitVariants = {1,1,2,2}
+function docCroc.onNPCKill(eventObj,v,reason)
+	local data = v.data
+	if v.id ~= npcID then return end
+	if reason == HARM_TYPE_OFFSCREEN then return end
+	if v.legacyBoss and reason ~= HARM_TYPE_LAVA then
+	  local ball = NPC.spawn(16, v.x, v.y)
+		ball.x = ball.x + ((v.width - ball.width) / 2)
+		ball.y = ball.y + ((v.height - ball.height) / 2)
+		ball.speedY = -6
+		ball.despawnTimer = 100
+				
+		SFX.play(20)
+	end
+	if not docCroc.effectGlassVariants then
+		for _,variant in ipairs(mechakoopa.effectGlassVariants) do
+			local e = Effect.spawn(config.effectGlassID,v.x+(v.width/2),v.y+(v.height/2),variant,v.id,false)
+
+			e.direction = v.direction
+		end
+	end
+	if not docCroc.effectBitVariants then
+		for _,variant in ipairs(mechakoopa.effectBitVariants) do
+			local e = Effect.spawn(config.effectBitID,v.x+(v.width/2),v.y+(v.height/2),variant,v.id,false)
+
+			e.direction = v.direction
+		end
 	end
 end
 
