@@ -132,6 +132,8 @@ local docCrocSettings = {
 	},
 	effectExplosion1ID = 10,
 	effectExplosion2ID = 937,
+	effectGlassID = 938,
+	effectBitID = 939,
 	--Coordinate offset when spawning NPCs; starts at 0 on the physical center coordinate
 	spawnX = 0,
 	spawnY = 12,
@@ -143,7 +145,7 @@ local docCrocSettings = {
 	idleDelay = 72,
 	--Each specific timers will run a cooldown until they disappear
 	springDelayUntilDisappear = 480,
-	droneDelayUntilDisappear = 480,
+	droneDelayUntilDisappear = 500,
 
 	energyBall1Speed = 3,
 	energyBall1InitAngle = 180,
@@ -228,7 +230,7 @@ local docCrocSettings = {
 	shockwaveDelayBefore = 16,
 	shockwaveDelayAfter = 64,
 	droneDelayBefore = 16,
-	droneDelayAfter = 160,
+	droneDelayAfter = 300,
 	dropDelayBefore = 16,
 	dropDelayAfter = 32,
 	hurtDelay = 64,
@@ -457,11 +459,13 @@ function docCroc.onTickEndNPC(v)
 	if data.spring then
 		if data.spring.isValid then
 			data.springTimer = data.springTimer - 1
-			if data.springTimer <= 0 then
+			if data.springTimer <= 0 or ((data.state == STATE.KILL or data.state == STATE.HURT) and data.timer == 1) then
+				Animation.spawn(10,data.spring.x + data.spring.width/2 - 16, data.spring.y + data.spring.height/2 - 16)
 				data.spring:kill(HARM_TYPE_NPC)
 				data.spring = nil
 			end
 		else
+			Animation.spawn(10,data.spring.x + data.spring.width/2 - 16, data.spring.y + data.spring.height/2 - 16)
 			data.sprng:kill(HARM_TYPE_NPC)
 			data.spring = nil
 		end
@@ -471,11 +475,13 @@ function docCroc.onTickEndNPC(v)
 	if data.drone then
 		if data.drone.isValid then
 			data.droneTimer = data.droneTimer - 1
-			if data.droneTimer <= 0 then
+			if data.droneTimer <= 0  or ((data.state == STATE.KILL or data.state == STATE.HURT) and data.timer == 1) then
+				Animation.spawn(10,data.drone.x + data.drone.width/2 - 16, data.drone.y + data.drone.height/2 - 16)
 				data.drone:kill(HARM_TYPE_NPC)
 				data.drone = nil
 			end
 		else
+			Animation.spawn(10,data.drone.x + data.drone.width/2 - 16, data.drone.y + data.drone.height/2 - 16)
 			data.drone:kill(HARM_TYPE_NPC)
 			data.drone = nil
 		end
@@ -900,16 +906,16 @@ function docCroc.onNPCKill(eventObj,v,reason)
 				
 		SFX.play(20)
 	end
-	if not docCroc.effectGlassVariants then
-		for _,variant in ipairs(mechakoopa.effectGlassVariants) do
-			local e = Effect.spawn(config.effectGlassID,v.x+(v.width/2),v.y+(v.height/2),variant,v.id,false)
+	if docCroc.effectGlassVariants then
+		for _,variant in ipairs(docCroc.effectGlassVariants) do
+			local e = Effect.spawn(NPC.config[v.id].effectGlassID,v.x+(v.width/2),v.y+(v.height/2),variant,v.id,false)
 
 			e.direction = v.direction
 		end
 	end
-	if not docCroc.effectBitVariants then
-		for _,variant in ipairs(mechakoopa.effectBitVariants) do
-			local e = Effect.spawn(config.effectBitID,v.x+(v.width/2),v.y+(v.height/2),variant,v.id,false)
+	if docCroc.effectBitVariants then
+		for _,variant in ipairs(docCroc.effectBitVariants) do
+			local e = Effect.spawn(NPC.config[v.id].effectBitID,v.x+(v.width/2),v.y+(v.height/2),variant,v.id,false)
 
 			e.direction = v.direction
 		end

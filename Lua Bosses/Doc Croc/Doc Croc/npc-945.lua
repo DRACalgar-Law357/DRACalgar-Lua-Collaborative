@@ -137,7 +137,7 @@ function docCroc.onTickEndNPC(v)
 	end
 
 	local config = NPC.config[v.id]
-	local frames = (config.idleFrames + 3)
+	local frames = (config.idleFrames + 2)
 	if not data.state then
 		data.state = STATE_STANDING
 		data.timer = 0

@@ -1,6 +1,6 @@
 --NPCManager is required for setting basic NPC properties
 local npcManager = require("npcManager")
-
+local npcutils = require("npcs/npcutils")
 --Create the library table
 local drone = {}
 --NPC_ID is dynamic based on the name of the library file
@@ -19,7 +19,7 @@ local droneSettings = {
 	gfxoffsetx = 0,
 	gfxoffsety = 0,
 	--Frameloop-related
-	frames = 2,
+	frames = 4,
 	framestyle = 0,
 	framespeed = 8, --# frames between frame change
 	--Movement speed. Only affects speedX by default.
@@ -61,7 +61,7 @@ local droneSettings = {
 	--isshell = false,
 
 	--Emits light if the Darkness feature is active:
-	targetSpeed = 2.5,
+	targetSpeed = 2,
 }
 
 --Applies NPC settings
@@ -79,6 +79,11 @@ function drone.onTickEndNPC(v)
 		):normalize() * (NPC.config[v.id].targetSpeed)
 	v.speedX = data.dirVectr.x
 	v.speedY = data.dirVectr.y
+	if v.speedX <= 0 then
+		v.animationFrame = math.floor(lunatime.tick() / 6) % 2
+	else
+		v.animationFrame = math.floor(lunatime.tick() / 6) % 2 + 2
+	end
 end
 
 npcManager.registerEvent(npcID, drone, "onTickEndNPC")

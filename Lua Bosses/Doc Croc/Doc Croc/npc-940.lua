@@ -74,7 +74,18 @@ npcManager.setNpcSettings(cannonBallSettings)
 
 function cannonBall.onTickEndNPC(v)
 	if Defines.levelFreeze then return end
-
+	local data = v.data
+	--If despawned
+	if v.despawnTimer <= 0 then
+		--Reset our properties, if necessary
+		data.initalized = false
+		return
+	end
+	--Initialize
+	if not data.initialized then
+		--Initialize necessary data.
+		data.initialized = true
+	end
 	if v.despawnTimer > 0 and v:mem(0x12C, FIELD_WORD) == 0 and v:mem(0x138, FIELD_WORD) == 0 then
 		if v.speedX == 0 and v.speedY == 0 then
 			v.speedX = NPC.config[v.id].speed * v.direction

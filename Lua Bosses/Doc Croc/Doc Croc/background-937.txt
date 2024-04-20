@@ -1,5 +1,6 @@
 image = background-937e.png
 name = "Doc Croc Teleport Point"
+description = "A BGO that Doc Croc will use to teleport to them as specified teleport points."
 frames = 1
 framespeed = 8
 noshadows = false

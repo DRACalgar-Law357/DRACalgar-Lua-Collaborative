@@ -26,7 +26,7 @@ local config = {
 	noyoshi = true,
 	ignorethrownnpcs = true,
 	shockwaveID = npcID + 1,
-	shockwaveSpeed = 4,
+	shockwaveSpeed = 5,
 }
 
 npcManager.setNpcSettings(config)

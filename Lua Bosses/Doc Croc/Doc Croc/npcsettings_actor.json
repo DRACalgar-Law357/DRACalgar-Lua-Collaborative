@@ -1,0 +1,25 @@
+{
+	"style" : "groupbox",
+	"title" : "Actor Settings",
+	"layout": [
+		{
+			"control": "spinBox",
+			"type": "int",
+			"name": "animateState",
+			"title": "Animate a state by #",
+            "tooltip": "The main staple for an actor NPC. Initially behaves and animates in a set of a state. Here are the following states it can express: 0 idle forward, 1 hold, 2 point, 3 scratch head, 4 walk, 5 open arms forward, 6 idle front, 7 open arms front",
+			"value-default": 0,
+			"value-min": 0,
+			"value-max": 99,
+			"single-step": 1
+		},
+		{
+			"control": "checkbox",
+			"name": "talk",
+			"title": "Talk animate?",
+            "tooltip": "Draws an animation of an actor speaking. However the following states will not animate this: 2 point",
+			"text-visible": true,
+			"value-default": false
+		}
+	]
+}

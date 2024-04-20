@@ -76,17 +76,27 @@ local cannonBallSettings = {
 npcManager.setNpcSettings(cannonBallSettings)
 
 function cannonBall.onTickEndNPC(v)
-	if Defines.levelFreeze then return end
 	local data = v.data
 	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
+	if Defines.levelFreeze then return end
+		--If despawned
+		if v.despawnTimer <= 0 then
+			--Reset our properties, if necessary
+			data.initalized = false
+			return
+		end
+		--Initialize
+		if not data.initialized then
+			--Initialize necessary data.
+			data.initialized = true
+			v.ai1 = 0
+		end
 	if v.despawnTimer > 0 and v:mem(0x12C, FIELD_WORD) == 0 and v:mem(0x138, FIELD_WORD) == 0 then
 		if v.speedX == 0 and v.speedY == 0 then
 			v.speedX = NPC.config[v.id].speed * v.direction
 		end
 	end
-	if not v.ai1 then
-		v.ai1 = 0
-	else
+	if v.ai1 then
 		v.ai1 = v.ai1 + 1
 		if v.ai1 >= NPC.config[v.id].targetDelay then
 			data.dirVectr = vector.v2(
