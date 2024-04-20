@@ -1,0 +1,17 @@
+{
+	"style" : "groupbox",
+	"title" : "Dropper Settings",
+	"layout": [	
+		{
+			"control": "spinBox",
+			"type": "int",
+			"name": "delay",
+			"title": "Walk Time",
+			"tooltip": "Delay before the NPC turns around.",
+			"value-default": 320,
+			"value-min": 0,
+			"value-max": 1000,
+			"single-step": 1
+		}
+		]
+}
