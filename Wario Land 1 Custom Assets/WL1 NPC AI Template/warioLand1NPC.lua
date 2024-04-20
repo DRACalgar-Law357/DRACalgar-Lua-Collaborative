@@ -82,21 +82,23 @@ function warioNPC.onTickNPC(v)
 					v.speedX = 0
 				end
 			end
-			if data.stunTimer >= config.stunTime - 64 then
-				data.x = data.x or 0
-				if data.x == 0 then
-					v.x = v.x + 2
-					data.x = 1
-				else
-					v.x = v.x - 2
-					data.x = 0
+			if config.stunTime > -1 then
+				if data.stunTimer >= config.stunTime - 64 then
+					data.x = data.x or 0
+					if data.x == 0 then
+						v.x = v.x + 2
+						data.x = 1
+					else
+						v.x = v.x - 2
+						data.x = 0
+					end
+					if data.stunTimer >= config.stunTime then
+						v:transform(config.transformID)
+						data.stunTimer = 0
+					end
 				end
-				if data.stunTimer >= config.stunTime then
-					v:transform(config.transformID)
-					data.stunTimer = 0
-				end
+				if v.underwater then v:kill(HARM_TYPE_NPC) end
 			end
-			if v.underwater then v:kill(HARM_TYPE_NPC) end
 		end
 	else
 		data.stunTimer = 0
