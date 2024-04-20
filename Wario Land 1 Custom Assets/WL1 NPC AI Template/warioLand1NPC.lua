@@ -49,7 +49,7 @@ function warioNPC.onTickNPC(v)
 	if v.heldIndex == 0 and not v.isProjectile then
 		for _,p in ipairs(Player.get()) do
 			if Colliders.collide(p, v) then
-				if not config.stunned then
+				if not config.stunned and not config.cantPush then
 					if (p.character == 7 or p.character == 8) and not config.bigEnemy then
 						v:transform(config.transformID)
 						SFX.play(9)
