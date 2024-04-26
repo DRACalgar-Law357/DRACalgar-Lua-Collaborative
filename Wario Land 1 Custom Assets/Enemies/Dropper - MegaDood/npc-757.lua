@@ -112,6 +112,13 @@ function dropper.onTickNPC(v)
 		if v.dontMove then data.dontMove = true end
 	end
 	
+	for _,p in ipairs(Player.get()) do
+		if data.isBumped and Colliders.collide(v,p) and (p.character ~= 7 and p.character ~= 8) then
+			p:harm()
+			data.isBumped = nil
+		end
+	end
+	
 	data.blockDetect.x = v.x + offset[v.direction]
 	data.blockDetect.y = v.y - 24
 	

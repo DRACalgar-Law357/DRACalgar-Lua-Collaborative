@@ -3,20 +3,20 @@ local npcManager = require("npcManager")
 local wario = require("warioLand1NPC")
 
 --Create the library table
-local duck = {}
+local stabbyPete = {}
 --NPC_ID is dynamic based on the name of the library file
 local npcID = NPC_ID
 
 --Defines NPC config for our NPC. You can remove superfluous definitions.
-local duckSettings = {
+local stabbyPeteSettings = {
 	id = npcID,
-	gfxwidth = 76,
-	gfxheight = 50,
+	gfxwidth = 72,
+	gfxheight = 48,
 	--Hitbox size. Bottom-center-bound to sprite size.
 	width = 40,
 	height = 40,
 	--Frameloop-related
-	frames = 8,
+	frames = 9,
 	framestyle = 1,
 	framespeed = 6, -- number of ticks (in-game frames) between animation frame changes
 	
@@ -42,7 +42,7 @@ local duckSettings = {
 }
 
 --Applies NPC settings
-npcManager.setNpcSettings(duckSettings)
+npcManager.setNpcSettings(stabbyPeteSettings)
 
 --Register the vulnerable harm types for this NPC. The first table defines the harm types the NPC should be affected by, while the second maps an effect to each, if desired.
 npcManager.registerHarmTypes(npcID,
@@ -74,9 +74,9 @@ npcManager.registerHarmTypes(npcID,
 
 wario.register(npcID)
 
-function duck.onInitAPI()
-	npcManager.registerEvent(npcID, duck, "onTickNPC")
-	npcManager.registerEvent(npcID, duck, "onDrawNPC")
+function stabbyPete.onInitAPI()
+	npcManager.registerEvent(npcID, stabbyPete, "onTickNPC")
+	npcManager.registerEvent(npcID, stabbyPete, "onDrawNPC")
 end
 
 local STATE_WALK = 0
@@ -84,11 +84,11 @@ local STATE_PREPARE = 1
 local STATE_THROWN = 2
 
 local detectOffset = {
-[-1] = -duckSettings.width * 8,
+[-1] = -stabbyPeteSettings.width * 8,
 [1] = 0
 }
 
-function duck.onTickNPC(v)
+function stabbyPete.onTickNPC(v)
 	--Don't act during time freeze
 	if Defines.levelFreeze then return end
 	
@@ -103,8 +103,13 @@ function duck.onTickNPC(v)
 		data.initialized = true
 		data.timer = 0
 		data.state = 0
-		data.detectBox = Colliders.Box(v.x, v.y, v.width * 8, v.height)
+		data.detectBox = Colliders.Box(v.x, v.y, v.width * 8, v.height *3)
 	end
+	
+	data.detectBox.x = v.x + detectOffset[v.direction]
+	data.detectBox.y = v.y - v.height * 2
+	
+	data.timer = data.timer + 1
 	
 	for _,p in ipairs(Player.get()) do
 		if data.isBumped and Colliders.collide(v,p) and (p.character ~= 7 and p.character ~= 8) then
@@ -112,11 +117,6 @@ function duck.onTickNPC(v)
 			data.isBumped = nil
 		end
 	end
-	
-	data.detectBox.x = v.x + detectOffset[v.direction]
-	data.detectBox.y = v.y
-	
-	data.timer = data.timer + 1
 	
 	-- Main AI
 	if data.state == 0 then
@@ -139,7 +139,7 @@ function duck.onTickNPC(v)
 			return
 		end
 		
-		--Prepare the boomerang
+		--Prepare the knife
 		if data.timer >= 48 then
 			for _,p in ipairs(Player.get()) do
 				if Colliders.collide(p, data.detectBox) then
@@ -151,27 +151,29 @@ function duck.onTickNPC(v)
 		end
 	elseif data.state == 1 then
 		--Stand in place and play a sound
-		if data.timer % 32 == 0 and data.timer <= 96 then
-			SFX.play(77)
+		if data.timer % 2 == 0 then
+			SFX.play("Aim.wav")
 		end
-		if data.timer >= 128 then
+		if data.timer >= 64 then
 			data.state = 2
-			SFX.play(25)
-			local n = NPC.spawn(NPC.config[npcID].throwID, v.x, v.y)
-			n.direction = v.direction
 			data.timer = 0
 		end
 	else
 		--Wait for a bit to start walking again
-		if data.timer >= 128 then
+		if data.timer == 17 then
+			SFX.play(25)
+			local n = NPC.spawn(NPC.config[npcID].throwID, v.x, v.y + v.height / 4)
+			n.direction = v.direction
+			n.speedX = 6 * n.direction
+			n.friendly = v.friendly
+		elseif data.timer == 24 then
 			data.timer = 0
 			data.state = 0
 		end
 	end
-	
 end
 
-function duck.onDrawNPC(v)
+function stabbyPete.onDrawNPC(v)
 	if not v.data.initialized then return end
 	local data = v.data
 	--Animation stuff
@@ -181,12 +183,12 @@ function duck.onDrawNPC(v)
 		if data.state == 0 then
 			v.animationFrame = math.floor(data.timer / 6) % 4 + ((v.direction + 1) * NPC.config[npcID].frames / 2)
 		elseif data.state == 1 then
-			v.animationFrame = math.floor(data.timer / 12) % 3 + 4 + ((v.direction + 1) * NPC.config[npcID].frames / 2)
+			v.animationFrame = math.floor(data.timer / 6) % 2 + 4 + ((v.direction + 1) * NPC.config[npcID].frames / 2)
 		else
-			v.animationFrame = 7 + ((v.direction + 1) * NPC.config[npcID].frames / 2)
+			v.animationFrame = math.floor(data.timer / 8) % 3 + 6 + ((v.direction + 1) * NPC.config[npcID].frames / 2)
 		end
 	end
 end
 
 --Gotta return the library table!
-return duck
+return stabbyPete
