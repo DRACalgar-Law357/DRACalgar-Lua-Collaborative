@@ -1,0 +1,96 @@
+{
+	"style" : "groupbox",
+	"title" : "Draggadon (In The BG) Settings",
+	"layout": [
+		{
+			"control": "spinBox",
+			"name": "flyAroundHorizontalTime",
+			"title": "Fly Around Horizontal Time",
+			"type": "int",
+			"tooltip": "How many frames it takes the NPC to complete a full horizontal movement cycle.",
+			"value-default": 386,
+			"value-min": 1,
+			"value-max": 4096
+		},
+		{
+			"control": "spinBox",
+			"name": "flyAroundHorizontalDistance",
+			"title": "Fly Around Horizontal Distance",
+			"type": "int",
+			"tooltip": "How many pixels the NPC moves in each horizontal movement cycle.",
+			"value-default": 192,
+			"value-min": -4096,
+			"value-max": 4096
+		},
+		{
+			"control": "spinBox",
+			"name": "flyAroundVerticalTime",
+			"title": "Fly Around Vertical Time",
+			"type": "int",
+			"tooltip": "How many frames it takes the NPC to complete a full vertical movement cycle.",
+			"value-default": 48,
+			"value-min": 1,
+			"value-max": 4096
+		},
+		{
+			"control": "spinBox",
+			"name": "flyAroundVerticalDistance",
+			"title": "Fly Around Vertical Distance",
+			"type": "int",
+			"tooltip": "How many pixels the NPC moves in each vertical movement cycle.",
+			"value-default": 16,
+			"value-min": -4096,
+			"value-max": 4096
+		},
+		{
+			"control": "spinBox",
+			"name": "Cooldown",
+			"title": "Cooldown Between Rounds",
+			"type": "double",
+			"tooltip": "How much time the draggadon will wait to shoot either breathed fireballs or rain down fireballs after one round is finished, measured in seconds.",
+			"value-default": 2,
+			"value-min": 0,
+			"value-max": 120
+		},
+		{
+			"control": "spinBox",
+			"name": "DBFB",
+			"title": "Delay between breathed Projectiles",
+			"type": "double",
+			"tooltip": "The delay between breathed fireballs on a single round, measured in seconds.",
+			"value-default": 0.4,
+			"value-min": 0,
+			"value-max": 60
+		},
+		{
+			"control": "spinBox",
+			"name": "FPRB",
+			"title": "Breathe Fireballs per Round",
+			"type": "int",
+			"tooltip": "How many breathed Fireballs will be shot after the Cooldown between rounds finishes. Setting it to 0 will disable this attack.",
+			"value-default": 3,
+			"value-min": 0,
+			"value-max": 20
+		},
+		{
+			"control": "spinBox",
+			"name": "DBFR",
+			"title": "Delay between raining Projectiles",
+			"type": "double",
+			"tooltip": "The delay between breathed fireballs on a single round, measured in seconds.",
+			"value-default": 0.2,
+			"value-min": 0,
+			"value-max": 60
+		},
+		{
+			"control": "spinBox",
+			"name": "FPRR",
+			"title": "Raining Fireballs per Round",
+			"type": "int",
+			"tooltip": "How many breathed Fireballs will be shot after the Cooldown between rounds finishes. Setting it to 0 will disable this attack.",
+			"value-default": 8,
+			"value-min": 0,
+			"value-max": 20
+		}
+	]
+}

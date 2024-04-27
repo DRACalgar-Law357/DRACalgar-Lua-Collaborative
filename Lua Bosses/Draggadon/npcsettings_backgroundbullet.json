@@ -1,0 +1,16 @@
+{
+	"style" : "groupbox",
+	"title" : "Bullet Bill Settings",
+	"layout": [
+        {
+			"control": "spinBox",
+			"name": "depth",
+			"title": "Depth",
+			"type": "int",
+			"tooltip": "How far in the background the blaster is. Uses the same units as the 'depth' value for custom backgrounds.",
+			"value-default": 75,
+			"value-min": 0,
+			"value-max": 2000
+		}
+	]
+}

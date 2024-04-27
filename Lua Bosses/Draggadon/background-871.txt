@@ -1,0 +1,8 @@
+image = background-871e.png
+name = "Draggadon (BG) Fire Breath Filter 1x1"
+description = "A BGO that blocks Draggadon's Fire Breaths from the background."
+frames = 1
+framespeed = 8
+noshadows = false
+priority = -85
+grid = 32
