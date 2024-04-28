@@ -120,8 +120,7 @@ local draggadonBossSettings = {
 			availableHPMax = maxHP/3,
 		},
 	},
-	meteorID=861,
-	fireBreathID=860,
+	streamoffireID=861,
 	fireRainID=859,
 	headOffset = {
 		[-1] = {
@@ -182,11 +181,21 @@ local draggadonBossSettings = {
 	},
 	meteorSpawnDelay = 24,
 	meteorConsecutive = 12,
+	streamoffire = {
+		overallDelay = 540,
+		beginBreathingDelay = 300,
+		barrageDelay = 6,
+		barrageSpeed = 10,
+	},
 	position1BGO = 859, --To use a raining fireball attack
 	position2BGO = 861, --To use a dash attack
+	position3BGO = 860, --To charge a stream of fire attack
+
+	laserColor     = Color.orange, 
 
 	sfx_hurt = 39,
 	sfx_fireRain = 42,
+	sfx_streamoffireflare = Misc.resolveFile("Firebrand Fire Breath.wav"),
 	sfx_debrisfall = Misc.resolveFile("S3K_51.wav"),
 	sfx_summonRoar = Misc.resolveFile("sfx_draggadonroar1.wav"),
 	sfx_meteorRoar = Misc.resolveFile("sfx_draggadonroarmeteor.wav"),
@@ -261,13 +270,44 @@ local function SFXPlayTable(sfx)
 		end
 	end
 end
+
+local laserSpeed = 20
+local function doLaserLogic(v,dangerous)
+    local config = NPC.config[v.id]
+    local data = v.data
+
+    data.laserProgress = data.laserProgress or 0
+
+    local maxMoves = 48
+    if dangerous then
+        data.laserProgress = math.min(maxMoves,data.laserProgress + 1)
+        maxMoves = data.laserProgress
+    end
+
+    data.laserProgress = maxMoves
+
+    -- Hurt players
+    if dangerous then
+        local width,height = (data.laserProgress*laserSpeed),(v.height*0.75)
+        local x,y = v.x+(v.width/2)-(width/2)+((width/2)*v.direction),v.y+(v.height/2)-(v.height*0.375)
+
+        for _,w in ipairs(Player.getIntersecting(x,y,x+width,y+height)) do
+            w:harm()
+        end
+    end
+
+    return false
+end
+
 local bgoTable
 local position1Table
 local position2Table
+local position3Table
 function draggadonBoss.onStartNPC(v)
 	bgoTable = BGO.get(NPC.config[v.id].summonBGO)
 	position1Table = BGO.get(NPC.config[v.id].position1BGO)
 	position2Table = BGO.get(NPC.config[v.id].position2BGO)
+	position3Table = BGO.get(NPC.config[v.id].position3BGO)
 end
 function draggadonBoss.onTickEndNPC(v)
 	--Don't act during time freeze --
@@ -322,7 +362,7 @@ function draggadonBoss.onTickEndNPC(v)
 	data.frameTimer = data.frameTimer or 8
 	data.currentAnim = data.currentAnim or 1
 	data.selectedAttack = data.selectedAttack or nil
-	data.rainState = data.rainState or 0
+	data.psuedoState = data.psuedoState or 0
 	data.rainTimer = data.rainTimer or 0
 	data.headOffsetY = data.headOffsetY or 0
 	data.state = data.state or 0
@@ -337,6 +377,9 @@ function draggadonBoss.onTickEndNPC(v)
 	data.rotation = data.rotation or 0
 	data.rotationTick = data.rotationTick or 0
 	data.returnCooldown = data.returnCooldown or 0
+	data.laserProgress = data.laserProgress or nil -- Used by zappa mechakoopas
+	data.laserOpacity = data.laserOpacity or nil
+	data.laserHeight = data.laserHeight or nil
 	
 	-- Custom Animations: Handling --
 	data.frameTimer = data.frameTimer + 1
@@ -450,21 +493,75 @@ function draggadonBoss.onTickEndNPC(v)
 	else
 
 	end
-	Text.print(data.rainState,110,126)
+	Text.print(data.psuedoState,110,126)
 	if data.state == STATE.IDLE then
 		if data.timer >= 160 and not data.attacking then
 			data.attacking = true
-			data.state = RNG.irandomEntry{STATE.RAIN,STATE.SUMMON,STATE.METEOR}
+			data.state = RNG.irandomEntry{STATE.RAIN,STATE.SUMMON,STATE.METEOR,STATE.STREAMOFFIRE}
 			data.timer = 0
 			if data.state == STATE.RAIN then
 				data.positionLocation = RNG.irandomEntry(position1Table)
-				data.rainState = 0
+				data.psuedoState = 0
+			elseif data.state == STATE.STREAMOFFIRE then
+				data.positionLocation = RNG.irandomEntry(position3Table)
+				data.psuedoState = 0
+			elseif data.state == STATE.DASH then
+				data.positionLocation = RNG.irandomEntry(position2Table)
+				data.psuedoState = 0
 			end
+		end
+	elseif data.state == STATE.STREAMOFFIRE then
+		if data.psuedoState == 0 then
+			data.dirVectr = vector.v2(
+				(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
+				(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
+				):normalize() * cfg.flyAroundSpeed
+				v.speedX = data.dirVectr.x
+				v.speedY = data.dirVectr.y
+			if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= 8 and math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= 8 then
+				v.x = data.positionLocation.x + 16 - v.width/2
+				v.y = data.positionLocation.y + 16 - v.height/2
+				data.psuedoState = 1
+				npcutils.faceNearestPlayer(v)
+				v.data._basegame.direction = v.direction
+				data.headframeTimer = 0
+				data.headcurrentFrame = 3
+				data.headcurrentAnim = 3
+				v.speedX = 0
+				v.speedY = 0
+				data.timer = 0
+			end
+		elseif data.psuedoState == 1 then
+            if data.timer > config.streamoffire.overallDelay then
+                data.state = STATE.IDLE
+                data.timer = 0
+				data.psuedoState = 0
+				data.headframeTimer = 0
+				data.headcurrentFrame = 5
+				data.headcurrentAnim = 5
+                data.laserProgress = nil
+                data.laserOpacity = nil
+                data.laserHeight = nil
+				data.attacking = false
+            elseif data.timer == config.streamoffire.beginBreathingDelay then
+                data.laserProgress = 0
+            elseif data.timer > config.streamoffire.beginBreathingDelay then
+                if data.timer % config.streamoffire.barrageDelay == 0 then
+					local n = NPC.spawn(config.streamoffireID, data.mouthBox.x + 0.5 * data.mouthBox.width, data.mouthBox.y + 0.5 * data.mouthBox.height, v.section, false, true)
+					n.direction = v.direction
+					n.speedX = config.streamoffire.barrageSpeed * n.direction
+					SFXPlay(config.sfx_streamoffireflare)
+				end
+            else
+				doLaserLogic(v,false)
+                data.laserHeight = math.max(0,(data.laserHeight or (data.mouthBox.height*0.75))-((data.timer/data.mouthBox.height)*0.15))
+                data.laserOpacity = math.min(0.65,(data.laserOpacity or 0) + 0.1)
+            end
 		end
 	elseif data.state == STATE.RAIN then
 		data.shootTimer = data.shootTimer - 1
 		if data.shootTimer <= 0 and data.attacking then
-			if data.rainState == 0 then
+			if data.psuedoState == 0 then
 				data.dirVectr = vector.v2(
 					(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
 					(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
@@ -474,24 +571,23 @@ function draggadonBoss.onTickEndNPC(v)
 				if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= 8 and math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= 8 then
 					v.x = data.positionLocation.x + 16 - v.width/2
 					v.y = data.positionLocation.y + 16 - v.height/2
-					data.rainState = 1
+					data.psuedoState = 1
 					npcutils.faceNearestPlayer(v)
 					v.data._basegame.direction = v.direction
 				end
-				Text.print("positioning",110,80)
-			elseif data.rainState == 1 then
+			elseif data.psuedoState == 1 then
 				data.rotation = data.rotation + 2
 				data.rotationTick = data.rotationTick + 2
 				data.headOffsetY = data.headOffsetY + 4/5
 				if data.rotationTick >= 50 then
 					data.rotation = 50
-					data.rainState = 2
+					data.psuedoState = 2
 					data.shootTimer = 30
 					data.headOffsetY = 20
 				end
 				v.speedX = 0
 				v.speedY = 0
-			elseif data.rainState == 2 then
+			elseif data.psuedoState == 2 then
 				data.headcurrentAnim = 1
 				data.headcurrentFrame = 3
 				data.headframeTimer = 0
@@ -503,7 +599,7 @@ function draggadonBoss.onTickEndNPC(v)
 				SFXPlay(config.sfx_breath)
 				if data.shootsFired >= 6 - 1 then
 					data.shootsFired = 0
-					data.rainState = 3
+					data.psuedoState = 3
 				else
 					data.shootTimer = lunatime.toTicks(0.5)
 					data.shootsFired = data.shootsFired + 1
@@ -511,7 +607,7 @@ function draggadonBoss.onTickEndNPC(v)
 				end
 				v.speedX = 0
 				v.speedY = 0
-			elseif data.rainState == 3 then
+			elseif data.psuedoState == 3 then
 				data.rotation = data.rotation - 2
 				data.rotationTick = data.rotationTick - 2
 				data.headOffsetY = data.headOffsetY - 4/5
@@ -520,7 +616,7 @@ function draggadonBoss.onTickEndNPC(v)
 				if data.rotationTick <= 0 then
 					data.rotation = 0
 					data.rotationTick = 0
-					data.rainState = 0
+					data.psuedoState = 0
 					data.shootTimer = 0
 					data.shootsFired = 0
 					data.attacking = false
@@ -606,12 +702,15 @@ function draggadonBoss.onTickEndNPC(v)
 		end
 		data.rotation = 0
 		data.rotationTick = 0
-		data.rainState = 0
+		data.psuedoState = 0
 		data.shootTimer = 0
 		data.shootsFired = 0
 		data.attacking = false
 		data.headOffsetY = 0
 		data.attacking = false
+		data.laserProgress = nil
+		data.laserOpacity = nil
+		data.laserHeight = nil
 		v.speedX = 0
 		v.speedY = 0
 	end
@@ -739,6 +838,33 @@ function draggadonBoss.onDrawNPC(v)
 		data.bodyimg:draw{frame = data.currentFrame + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
 	end
 	npcutils.hideNPC(v)
+
+	if not data.laserProgress then return end -- If the laser isn't out yet
+	local laserSpeed = 16
+    -- Get priority for the laser
+    local priority = config.priority
+
+    local color = config.laserColor or Color.white
+    if type(color) == "number" then
+        color = Color.fromHexRGBA(color)
+    end
+
+    -- Laser beam
+    local laserWidth = (data.laserProgress*laserSpeed)
+
+	Graphics.drawBox{x = data.mouthBox.x+(data.mouthBox.width/2)-(laserWidth/2)+((laserWidth/2)*v.direction),y = (data.mouthBox.y+(data.mouthBox.height/2))-(data.laserHeight/2),width = laserWidth,height = data.laserHeight,color = color.. data.laserOpacity,priority = priority-0.01,sceneCoords = true}
+
+	-- Weird little specs and stuff
+	local rng = RNG.new(2)
+	for i=1,(laserWidth/6) do
+		local height = data.laserHeight/(v.height*0.15)
+		Graphics.drawBox{
+			--x = v.x+(v.width/2)+(((rng:random(0,laserWidth)*v.direction)+data.timer-1)%laserWidth),
+			x = data.mouthBox.x+(data.mouthBox.width/2)+(((rng:random(0,laserWidth)-data.timer)%laserWidth)*v.direction)-1,
+			y = data.mouthBox.y+(data.mouthBox.height/2)+(rng:random(-data.laserHeight/2,data.laserHeight/2))-(height/2),
+			width = 2,height = height,color = Color(color.r*1.25,color.g*1.25,color.b*1.25,data.laserOpacity),priority = priority-0.01,sceneCoords = true,
+		}
+	end
 end
 
 --Gotta return the library table!

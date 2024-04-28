@@ -1,0 +1,8 @@
+image = background-860e.png
+name = "Draggadon (Boss) Position Point To Charge A Powerful Fire"
+description = "A BGO that Draggadon will use to travel there to charge a very powerful fire attack."
+frames = 1
+framespeed = 8
+noshadows = false
+priority = -85
+grid = 32
