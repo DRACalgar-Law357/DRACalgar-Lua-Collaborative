@@ -135,11 +135,11 @@ local draggadonBossSettings = {
 	},
 	spawnOffset = {
 		[-1] = {
-			x = -112,
+			x = -58,
 			y = -48,
 		},
 		[1] = {
-			x = 112,
+			x = 58,
 			y = -48,
 		}
 	},
@@ -162,8 +162,48 @@ local draggadonBossSettings = {
 	priority = 15,
 	hpDecWeak= 0.25,
 	hpDecStrong= 1,
-	sfx_hurt = 39,
 	iFramesDelay = 80,
+	fireRainConfig = {
+		speedXMax = 18,
+		speedY = 7,
+		speedXMin = 2,
+	},
+	summonBGO = 858,
+	summonIndicatorID = 860,
+	summonSpawnDelay = 30,
+	summonEnemyConsecutive = 3,
+	roarSummonDelay = 90,
+	startSummoningDelay = 80,
+	meteorDelay = 150,
+	startMeteoringDelay = 120,
+	meteorTable = {
+		753,
+		754,
+	},
+	meteorSpawnDelay = 24,
+	meteorConsecutive = 12,
+	position1BGO = 859, --To use a raining fireball attack
+	position2BGO = 861, --To use a dash attack
+
+	sfx_hurt = 39,
+	sfx_fireRain = 42,
+	sfx_debrisfall = Misc.resolveFile("S3K_51.wav"),
+	sfx_summonRoar = Misc.resolveFile("sfx_draggadonroar1.wav"),
+	sfx_meteorRoar = Misc.resolveFile("sfx_draggadonroarmeteor.wav"),
+	sfx_breath = Misc.resolveFile("sfx_draggadonbreathing.wav"),
+	sfxTable_grunt = {
+		Misc.resolveFile("sfx_draggadongrunt1.wav"),
+		Misc.resolveFile("sfx_draggadongrunt2.wav"),
+		Misc.resolveFile("sfx_draggadongrunt3.wav"),
+	},
+	sfxTable_defeated = {
+		Misc.resolveFile("sfx_draggadondefeated1.wav"),
+		Misc.resolveFile("sfx_draggadondefeated2.wav"),
+	},
+	sfxTable_hurt = {
+		Misc.resolveFile("sfx_draggadonhurt1.wav"),
+		Misc.resolveFile("sfx_draggadonhurt2.wav"),
+	},
 }
 
 --Applies NPC settings
@@ -203,7 +243,7 @@ npcManager.registerHarmTypes(npcID,
 --Register events
 function draggadonBoss.onInitAPI()
 	npcManager.registerEvent(npcID, draggadonBoss, "onTickEndNPC")
-	--npcManager.registerEvent(npcID, draggadonBoss, "onTickEndNPC")
+	npcManager.registerEvent(npcID, draggadonBoss, "onStartNPC")
 	npcManager.registerEvent(npcID, draggadonBoss, "onDrawNPC")
 	registerEvent(draggadonBoss, "onNPCHarm")
 end
@@ -221,6 +261,14 @@ local function SFXPlayTable(sfx)
 		end
 	end
 end
+local bgoTable
+local position1Table
+local position2Table
+function draggadonBoss.onStartNPC(v)
+	bgoTable = BGO.get(NPC.config[v.id].summonBGO)
+	position1Table = BGO.get(NPC.config[v.id].position1BGO)
+	position2Table = BGO.get(NPC.config[v.id].position2BGO)
+end
 function draggadonBoss.onTickEndNPC(v)
 	--Don't act during time freeze --
 	if Defines.levelFreeze then return end
@@ -229,17 +277,17 @@ function draggadonBoss.onTickEndNPC(v)
 	local config = NPC.config[v.id]
 	local cfg = v.data._settings
 	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
-
+	v.data._basegame.direction = v.data._basegame.direction or v.direction
 	data.neckBox = Colliders.Box(v.x - (v.width * 2), v.y - (v.height * 1.5), config.neckHitbox.width, config.neckHitbox.height)
-	data.neckBox.x = v.x + v.width/2 + config.neckHitbox.x[v.direction]
+	data.neckBox.x = v.x + v.width/2 + config.neckHitbox.x[v.data._basegame.direction]
 	data.neckBox.y = v.y + v.height/2 + config.neckHitbox.y
 
 	data.headBox = Colliders.Box(v.x - (v.width * 2), v.y - (v.height * 1.5), config.headHitbox.width, config.headHitbox.height)
-	data.headBox.x = v.x + v.width/2 + config.headHitbox.x[v.direction]
+	data.headBox.x = v.x + v.width/2 + config.headHitbox.x[v.data._basegame.direction]
 	data.headBox.y = v.y + v.height/2 + config.headHitbox.y
 
 	data.mouthBox = Colliders.Box(v.x - (v.width * 2), v.y - (v.height * 1.5), config.mouthHitbox.width, config.mouthHitbox.height)
-	data.mouthBox.x = v.x + v.width/2 + config.mouthHitbox.x[v.direction]
+	data.mouthBox.x = v.x + v.width/2 + config.mouthHitbox.x[v.data._basegame.direction]
 	data.mouthBox.y = v.y + v.height/2 + config.mouthHitbox.y
 	--If despawned --
 	if v.despawnTimer <= 0 then
@@ -288,6 +336,7 @@ function draggadonBoss.onTickEndNPC(v)
 	data.shootsFired = data.shootsFired or 0
 	data.rotation = data.rotation or 0
 	data.rotationTick = data.rotationTick or 0
+	data.returnCooldown = data.returnCooldown or 0
 	
 	-- Custom Animations: Handling --
 	data.frameTimer = data.frameTimer + 1
@@ -333,59 +382,141 @@ function draggadonBoss.onTickEndNPC(v)
 			data.headcurrentFrame = 1
 			data.headcurrentAnim = 0
 		end
+	elseif data.headcurrentAnim == 3 then
+		if data.headframeTimer < 4 then
+			data.headcurrentFrame = 3
+		elseif data.headframeTimer < 8 then
+			data.headcurrentFrame = 4
+		elseif data.headframeTimer < 12 then
+			data.headcurrentFrame = 5
+		else
+			data.headframeTimer = 0
+			data.headcurrentFrame = 5
+			data.headcurrentAnim = 4
+		end
+	elseif data.headcurrentAnim == 4 then
+		data.headcurrentFrame = 5
+	elseif data.headcurrentAnim == 5 then
+		if data.headframeTimer < 4 then
+			data.headcurrentFrame = 5
+		elseif data.headframeTimer < 8 then
+			data.headcurrentFrame = 4
+		elseif data.headframeTimer < 12 then
+			data.headcurrentFrame = 3
+		else
+			data.headframeTimer = 0
+			data.headcurrentFrame = 3
+			data.headcurrentAnim = 0
+		end
 	end
 	-- Let's set custom settings --
 	--Shooting stuff --
 	data.rotation = data.rotation or 0
 	data.rotationTick = data.rotationTick or 0
-	data.timer = data.timer + 1
-	if data.state == STATE.IDLE or data.state == STATE.RAIN then
-		local horizontalDistance = cfg.flyAroundHorizontalDistance*0.5*v.spawnDirection
-		local verticalDistance = cfg.flyAroundVerticalDistance*0.5
-		local horizontalTime = cfg.flyAroundHorizontalTime / math.pi / 2
-		local verticalTime   = cfg.flyAroundVerticalTime   / math.pi / 2
-		v.speedX = math.cos(data.flyAroundTimer / horizontalTime)*horizontalDistance / horizontalTime
-		v.speedY = math.sin(data.flyAroundTimer / verticalTime  )*verticalDistance   / verticalTime
+	data.returnCooldown = data.returnCooldown - 1
+	if data.state == STATE.IDLE and data.returnCooldown <= 0 then
+		local horizontalDistanceL = cfg.flyAroundHorizontalDistanceL
+		local verticalDistanceU = cfg.flyAroundVerticalDistanceU
+		local horizontalDistanceR = cfg.flyAroundHorizontalDistanceR
+		local verticalDistanceD = cfg.flyAroundVerticalDistanceD
+		if (v.speedX == 0 and v.speedY == 0) or (v.x + v.width/2 <= v.spawnX + v.width/2 - horizontalDistanceL) or (v.x + v.width/2 >= v.spawnX + v.width/2 + horizontalDistanceR) or (v.y + v.height/2 <= v.spawnY + v.height/2 - verticalDistanceU) or (v.y + v.height/2 >= v.spawnY + v.height/2 + verticalDistanceD) then
+			local dir = -vector.right2:rotate(RNG.randomInt(1,360))
+			if v.x + v.width/2 <= v.spawnX + v.width/2 - horizontalDistanceL then
+				dir = -vector.right2:rotate(RNG.randomInt(90,270))
+			elseif v.x + v.width/2 >= v.spawnX + v.width/2 + horizontalDistanceR then
+				dir = -vector.right2:rotate(RNG.randomInt(-90,90))
+			elseif v.y + v.height/2 <= v.spawnY + v.height/2 - verticalDistanceU then
+				dir = -vector.right2:rotate(RNG.randomInt(0,-180))
+			elseif v.y + v.height/2 >= v.spawnY + v.height/2 + verticalDistanceD then
+				dir = -vector.right2:rotate(RNG.randomInt(0,180))
+			end
+			data.returnCooldown = 4
+			v.speedX = dir.x * cfg.flyAroundSpeed
+			v.speedY = dir.y * cfg.flyAroundSpeed
+		end
 		data.flyAroundTimer = data.flyAroundTimer + 1
-	else
-		v.speedX = 0
-		v.speedY = 0
+		if not data.attacking then
+			if v.speedX < 0 then
+				v.data._basegame.direction = -1
+			elseif v.speedX > 0 then
+				v.data._basegame.direction = 1
+			end
+		else
+	
+		end
 	end
+	if not data.attacking then
+
+	else
+
+	end
+	Text.print(data.rainState,110,126)
 	if data.state == STATE.IDLE then
-		if data.timer >= 64 and not data.attacking then
+		if data.timer >= 160 and not data.attacking then
 			data.attacking = true
-			data.state = STATE.RAIN
+			data.state = RNG.irandomEntry{STATE.RAIN,STATE.SUMMON,STATE.METEOR}
 			data.timer = 0
+			if data.state == STATE.RAIN then
+				data.positionLocation = RNG.irandomEntry(position1Table)
+				data.rainState = 0
+			end
 		end
 	elseif data.state == STATE.RAIN then
 		data.shootTimer = data.shootTimer - 1
 		if data.shootTimer <= 0 and data.attacking then
 			if data.rainState == 0 then
+				data.dirVectr = vector.v2(
+					(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
+					(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
+					):normalize() * cfg.flyAroundSpeed
+					v.speedX = data.dirVectr.x
+					v.speedY = data.dirVectr.y
+				if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= 8 and math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= 8 then
+					v.x = data.positionLocation.x + 16 - v.width/2
+					v.y = data.positionLocation.y + 16 - v.height/2
+					data.rainState = 1
+					npcutils.faceNearestPlayer(v)
+					v.data._basegame.direction = v.direction
+				end
+				Text.print("positioning",110,80)
+			elseif data.rainState == 1 then
 				data.rotation = data.rotation + 2
 				data.rotationTick = data.rotationTick + 2
 				data.headOffsetY = data.headOffsetY + 4/5
 				if data.rotationTick >= 50 then
 					data.rotation = 50
-					data.rainState = 1
+					data.rainState = 2
 					data.shootTimer = 30
 					data.headOffsetY = 20
 				end
-			elseif data.rainState == 1 then
+				v.speedX = 0
+				v.speedY = 0
+			elseif data.rainState == 2 then
 				data.headcurrentAnim = 1
 				data.headcurrentFrame = 3
 				data.headframeTimer = 0
+				local n = NPC.spawn(config.fireRainID, v.x + 0.5 * v.width + config.gfxoffsetx + config.headOffset[v.data._basegame.direction].x + config.spawnOffset[v.data._basegame.direction].x, v.y + 0.5 * v.height + config.headOffset[v.data._basegame.direction].y + config.spawnOffset[v.data._basegame.direction].y, v.section, false, true)
+				n.direction = v.data._basegame.direction
+				n.speedX = RNG.random(config.fireRainConfig.speedXMin,config.fireRainConfig.speedXMax) * n.direction
+				n.speedY = -config.fireRainConfig.speedY
+				SFXPlay(config.sfx_fireRain)
+				SFXPlay(config.sfx_breath)
 				if data.shootsFired >= 6 - 1 then
 					data.shootsFired = 0
-					data.rainState = 2
+					data.rainState = 3
 				else
 					data.shootTimer = lunatime.toTicks(0.5)
 					data.shootsFired = data.shootsFired + 1
 					data.attacking = true
 				end
-			elseif data.rainState == 2 then
+				v.speedX = 0
+				v.speedY = 0
+			elseif data.rainState == 3 then
 				data.rotation = data.rotation - 2
 				data.rotationTick = data.rotationTick - 2
 				data.headOffsetY = data.headOffsetY - 4/5
+				v.speedX = 0
+				v.speedY = 0
 				if data.rotationTick <= 0 then
 					data.rotation = 0
 					data.rotationTick = 0
@@ -396,14 +527,93 @@ function draggadonBoss.onTickEndNPC(v)
 					data.headOffsetY = 0
 					data.timer = 0
 					data.state = STATE.IDLE
+					data.dirVectr = vector.v2(
+						(v.spawnX + v.width/2) - (v.x + v.width * 0.5),
+						(v.spawnY + v.height/2) - (v.y + v.height * 0.5)
+						):normalize() * cfg.flyAroundSpeed
+						v.speedX = data.dirVectr.x
+						v.speedY = data.dirVectr.y
+					data.returnCooldown = config.returnCooldown
 				end
 			end
+		end
+	elseif data.state == STATE.SUMMON then
+		if data.timer == 1 then
+			data.headframeTimer = 0
+			data.headcurrentFrame = 3
+			data.headcurrentAnim = 3
+		end
+		v.speedX = 0
+		v.speedY = 0
+		if data.timer >= config.roarSummonDelay then
+			data.timer = 0
+			data.state = STATE.IDLE
+			data.headframeTimer = 0
+			data.headcurrentFrame = 5
+			data.headcurrentAnim = 5
+			data.attacking = false
+		end
+		if data.timer == config.startSummoningDelay then
+			Routine.setFrameTimer(config.summonSpawnDelay, (function() 
+				data.location = RNG.irandomEntry(bgoTable)
+				local n = NPC.spawn(NPC.config[v.id].summonIndicatorID, data.location.x, data.location.y, v.section, true, true)
+				n.x=n.x+16
+				n.y=n.y+16
+				n.ai1 = 60
+				n.ai2 = RNG.irandomEntry(config.summonEnemyTable)
+				n.ai3 = 0
+			end), config.summonEnemyConsecutive, false)
+		end
+		if data.timer == 12 then
+			SFXPlay(config.sfx_summonRoar)
+		end
+		if data.timer >= 12 and data.timer < config.startSummoningDelay then
+			Defines.earthquake = 7
+		end
+	elseif data.state == STATE.METEOR then
+		if data.timer == 1 then
+			data.headframeTimer = 0
+			data.headcurrentFrame = 3
+			data.headcurrentAnim = 3
+		end
+		v.speedX = 0
+		v.speedY = 0
+		if data.timer >= config.meteorDelay then
+			data.timer = 0
+			data.state = STATE.IDLE
+			data.headframeTimer = 0
+			data.headcurrentFrame = 5
+			data.headcurrentAnim = 5
+			data.attacking = false
+		end
+		if data.timer == config.startMeteoringDelay then
+			Routine.setFrameTimer(config.meteorSpawnDelay, (function() 
+				data.location = RNG.irandomEntry(bgoTable)
+				local n = NPC.spawn(RNG.irandomEntry(config.meteorTable), camera.x + 16 + RNG.randomInt(0,camera.width-32), camera.y - 32, v.section, true, true)
+				SFXPlay(config.sfx_debrisfall)
+			end), config.meteorConsecutive, false)
+		end
+		if data.timer == 12 then
+			SFXPlay(config.sfx_meteorRoar)
+		end
+		if data.timer >= 12 and data.timer < config.startMeteoringDelay then
+			Defines.earthquake = 10
 		end
 	elseif data.state == STATE.HURT then
 		if data.timer >= 80 then
 			data.timer = 0
 			data.state = STATE.IDLE
 		end
+		data.rotation = 0
+		data.rotationTick = 0
+		data.rainState = 0
+		data.shootTimer = 0
+		data.shootsFired = 0
+		data.attacking = false
+		data.headOffsetY = 0
+		data.attacking = false
+		v.speedX = 0
+		v.speedY = 0
 	end
 		--iFrames System made by MegaDood & DRACalgar Law
 		if data.iFrames then
@@ -412,6 +622,7 @@ function draggadonBoss.onTickEndNPC(v)
 			
 			if data.hurtTimer == 1 and data.health < maxHP then
 				SFXPlay(config.sfx_hurt)
+				SFXPlayTable(config.sfxTable_hurt)
 				data.state = STATE.HURT
 				data.timer = 0
 			end
@@ -424,6 +635,7 @@ function draggadonBoss.onTickEndNPC(v)
 	if (Colliders.collide(plr, v) or Colliders.collide(plr, data.neckBox) or Colliders.collide(plr, data.headBox) or (Colliders.collide(plr, data.mouthBox) and data.state == STATE.IDLE)) and not v.friendly and data.state ~= STATE.KILL and data.state ~= STATE.HURT and not Defines.cheat_donthurtme then
 		plr:harm()
 	end
+	Text.print(data.headcurrentAnim,110,200)
 end
 function draggadonBoss.onNPCHarm(eventObj, v, reason, culprit)
 	local data = v.data
@@ -503,9 +715,13 @@ function draggadonBoss.onDrawNPC(v)
 	end
 	if data.headimg then
 		-- Setting some properties --
-		data.headimg.x, data.headimg.y = v.x + 0.5 * v.width + draggadonConfig.gfxoffsetx + draggadonConfig.headOffset[v.direction].x, v.y + 0.5 * v.height + draggadonConfig.headOffset[v.direction].y - data.headOffsetY --[[+ draggadonConfig.gfxoffsety]]
-		data.headimg.transform.scale = vector(-v.direction, 1)
-		data.headimg.rotation = data.rotation * -v.direction
+		data.headimg.x, data.headimg.y = v.x + 0.5 * v.width + draggadonConfig.gfxoffsetx + draggadonConfig.headOffset[v.data._basegame.direction].x, v.y + 0.5 * v.height + draggadonConfig.headOffset[v.data._basegame.direction].y - data.headOffsetY --[[+ draggadonConfig.gfxoffsety]]
+		if config.headFrameStyle == 1 then
+			data.headimg.transform.scale = vector(-v.data._basegame.direction, 1)
+		else
+			data.headimg.transform.scale = vector(1, 1)
+		end
+		data.headimg.rotation = data.rotation * -v.data._basegame.direction
 
 		local p = -config.priority
 
@@ -515,7 +731,7 @@ function draggadonBoss.onDrawNPC(v)
 	if data.bodyimg then
 		-- Setting some properties --
 		data.bodyimg.x, data.bodyimg.y = v.x + 0.5 * v.width + draggadonConfig.gfxoffsetx, v.y + 0.5 * v.height --[[+ draggadonConfig.gfxoffsety]]
-		data.bodyimg.transform.scale = vector(-v.direction, 1)
+		data.bodyimg.transform.scale = vector(-v.data._basegame.direction, 1)
 
 		local p = -config.priority - 0.1
 

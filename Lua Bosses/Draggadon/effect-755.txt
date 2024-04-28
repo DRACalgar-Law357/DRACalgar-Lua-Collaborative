@@ -1,4 +1,8 @@
 [1]
-import=AI_SINGLE_DOUBLESPEED
-frames=6
-framespeed=3
+import=AI_SINGLE
+frames=4
+framespeed=6
+xAlign=MID
+yAlign=MID
+priority=-50
+speedY=-2:-1

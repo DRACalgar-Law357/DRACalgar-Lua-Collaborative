@@ -1,0 +1,8 @@
+image = background-858e.png
+name = "Draggadon (Boss) Enemy Spawn Point"
+description = "A BGO that Draggadon will use to spawn certain NPCs there."
+frames = 1
+framespeed = 8
+noshadows = false
+priority = -85
+grid = 32

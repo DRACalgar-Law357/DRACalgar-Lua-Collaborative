@@ -1,0 +1,8 @@
+image = background-861e.png
+name = "Draggadon (Boss) Position Point To Dash"
+description = "A BGO that Draggadon will use to travel there to use a dash attack."
+frames = 1
+framespeed = 8
+noshadows = false
+priority = -85
+grid = 32
