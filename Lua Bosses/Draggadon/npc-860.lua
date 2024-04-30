@@ -106,9 +106,9 @@ function sampleNPC.onTickNPC(v)
 	--Initialize
 	if not data.initialized then
 		--Initialize necessary data.
-		v.ai1 = 60
-		v.ai2 = 210
-		v.ai3 = 0
+		v.ai1 = v.ai1 or 60
+		v.ai2 = v.ai2 or 210
+		v.ai3 = v.ai3 or 0
 		data.timer = 0
 		data.initialized = true
 		SFX.play(sampleNPCSettings.startSFX)

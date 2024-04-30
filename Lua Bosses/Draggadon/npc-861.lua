@@ -52,13 +52,19 @@ function star.onTickNPC(v)
 	if not data.initialized then
 		--Initialize necessary data.
 		v.ai1 = 0
+		v.briefSpeedY = v.briefSpeedY or 0
 		data.amplitudeDelay = RNG.randomInt(4,12)
 		data.amplitude = RNG.randomInt(6,16)
 		data.amplitudeRate = RNG.randomInt(2,4)
 		data.initialized = true
 	end
 	v.ai1 = v.ai1 + 1
-	v.speedY = math.cos(-v.ai1/data.amplitudeDelay)*data.amplitude / data.amplitudeRate
+	if math.abs(v.briefSpeedY) > 0.1 then
+		v.briefSpeedY = v.briefSpeedY * 0.97
+	else
+		v.briefSpeedY = 0
+	end
+	v.speedY = math.cos(-v.ai1/data.amplitudeDelay)*data.amplitude / data.amplitudeRate + v.briefSpeedY
 	for i=1,2 do
 		local ptl = Animation.spawn(265, math.random(v.x, v.x + v.width), math.random(v.y, v.y + v.height))
 		ptl.x=ptl.x-ptl.width/2

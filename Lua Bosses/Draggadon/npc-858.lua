@@ -16,9 +16,10 @@ local STATE = {
 	METEOR = 3,
 	STREAMOFFIRE = 4,
 	DASH = 5,
-	HURT = 6,
-	CONSUME = 7,
-	KILL = 8,
+	GOBACK = 6,
+	HURT = 7,
+	CONSUME = 8,
+	KILL = 9,
 }
 
 local maxHP = 3
@@ -185,11 +186,25 @@ local draggadonBossSettings = {
 		overallDelay = 540,
 		beginBreathingDelay = 300,
 		barrageDelay = 6,
-		barrageSpeed = 10,
+		barrageSpeedX = 10,
+		barrageSpeedY = -3.5,
 	},
 	position1BGO = 859, --To use a raining fireball attack
 	position2BGO = 861, --To use a dash attack
 	position3BGO = 860, --To charge a stream of fire attack
+	positionRangeX = 12,
+	positionRangeY = 12,
+	dash = {
+		charge = {
+			waitDelay = 180,
+			initiateDelay = 30,
+		},
+		flight = {
+			speedX = 6,
+			speedY = 0,
+			stopDelay = 240,
+		},
+	}
 
 	laserColor     = Color.orange, 
 
@@ -200,6 +215,9 @@ local draggadonBossSettings = {
 	sfx_summonRoar = Misc.resolveFile("sfx_draggadonroar1.wav"),
 	sfx_meteorRoar = Misc.resolveFile("sfx_draggadonroarmeteor.wav"),
 	sfx_breath = Misc.resolveFile("sfx_draggadonbreathing.wav"),
+	sfx_flightflap = Misc.resolveFile("sfx_draggadonflightflap.wav"),
+	sfx_flightcharge = Misc.resolveFile("sfx_draggadonflightcharge.wav"),
+	sfx_flightdo = Misc.resolveFile("sfx_draggadonflightdo.wav"),
 	sfxTable_grunt = {
 		Misc.resolveFile("sfx_draggadongrunt1.wav"),
 		Misc.resolveFile("sfx_draggadongrunt2.wav"),
@@ -349,6 +367,7 @@ function draggadonBoss.onTickEndNPC(v)
 	or v:mem(0x136, FIELD_BOOL)        --Thrown
 	or v:mem(0x138, FIELD_WORD) > 0    --Contained within
 	then
+		v.spawnY = v.y
 		return
 	end
 
@@ -376,15 +395,18 @@ function draggadonBoss.onTickEndNPC(v)
 	data.shootsFired = data.shootsFired or 0
 	data.rotation = data.rotation or 0
 	data.rotationTick = data.rotationTick or 0
-	data.returnCooldown = data.returnCooldown or 0
 	data.laserProgress = data.laserProgress or nil -- Used by zappa mechakoopas
 	data.laserOpacity = data.laserOpacity or nil
 	data.laserHeight = data.laserHeight or nil
+	data.positionState = data.positionState or 0
 	
 	-- Custom Animations: Handling --
 	data.frameTimer = data.frameTimer + 1
-
-	data.currentFrame = math.floor(data.frameTimer / 6) % 8
+	if data.state ~= STATE.GOBACK or data.state ~= STATE.HURT or data.state ~= STATE.KILL or data.state ~= STATE.CONSUME then
+		data.currentFrame = math.floor(data.frameTimer / 6) % 8
+	else
+		data.currentFrame = math.floor(data.frameTimer / 4) % 8
+	end
 	
 	-- Custom Animations: Handling Head--
 	data.headframeTimer = data.headframeTimer + 1
@@ -456,29 +478,10 @@ function draggadonBoss.onTickEndNPC(v)
 	--Shooting stuff --
 	data.rotation = data.rotation or 0
 	data.rotationTick = data.rotationTick or 0
-	data.returnCooldown = data.returnCooldown - 1
-	if data.state == STATE.IDLE and data.returnCooldown <= 0 then
-		local horizontalDistanceL = cfg.flyAroundHorizontalDistanceL
-		local verticalDistanceU = cfg.flyAroundVerticalDistanceU
-		local horizontalDistanceR = cfg.flyAroundHorizontalDistanceR
-		local verticalDistanceD = cfg.flyAroundVerticalDistanceD
-		if (v.speedX == 0 and v.speedY == 0) or (v.x + v.width/2 <= v.spawnX + v.width/2 - horizontalDistanceL) or (v.x + v.width/2 >= v.spawnX + v.width/2 + horizontalDistanceR) or (v.y + v.height/2 <= v.spawnY + v.height/2 - verticalDistanceU) or (v.y + v.height/2 >= v.spawnY + v.height/2 + verticalDistanceD) then
-			local dir = -vector.right2:rotate(RNG.randomInt(1,360))
-			if v.x + v.width/2 <= v.spawnX + v.width/2 - horizontalDistanceL then
-				dir = -vector.right2:rotate(RNG.randomInt(90,270))
-			elseif v.x + v.width/2 >= v.spawnX + v.width/2 + horizontalDistanceR then
-				dir = -vector.right2:rotate(RNG.randomInt(-90,90))
-			elseif v.y + v.height/2 <= v.spawnY + v.height/2 - verticalDistanceU then
-				dir = -vector.right2:rotate(RNG.randomInt(0,-180))
-			elseif v.y + v.height/2 >= v.spawnY + v.height/2 + verticalDistanceD then
-				dir = -vector.right2:rotate(RNG.randomInt(0,180))
-			end
-			data.returnCooldown = 4
-			v.speedX = dir.x * cfg.flyAroundSpeed
-			v.speedY = dir.y * cfg.flyAroundSpeed
-		end
-		data.flyAroundTimer = data.flyAroundTimer + 1
-		if not data.attacking then
+	Text.print(data.psuedoState,110,126)
+	if data.state == STATE.IDLE then
+		v.speedY = math.cos(lunatime.tick() / 8) * 1.3
+		--[[if not data.attacking then
 			if v.speedX < 0 then
 				v.data._basegame.direction = -1
 			elseif v.speedX > 0 then
@@ -486,54 +489,136 @@ function draggadonBoss.onTickEndNPC(v)
 			end
 		else
 	
+		end]]
+	    if data.timer > 70 then
+			v.speedX = cfg.flyAroundSpeed * v.direction
 		end
-	end
-	if not data.attacking then
+		if data.timer == 70 then
+			npcutils.faceNearestPlayer(v)
+			v.data._basegame.direction = v.direction
+		end
 
-	else
-
-	end
-	Text.print(data.psuedoState,110,126)
-	if data.state == STATE.IDLE then
-		if data.timer >= 160 and not data.attacking then
+		if data.timer >= 250 then
 			data.attacking = true
 			data.state = RNG.irandomEntry{STATE.RAIN,STATE.SUMMON,STATE.METEOR,STATE.STREAMOFFIRE}
 			data.timer = 0
 			if data.state == STATE.RAIN then
 				data.positionLocation = RNG.irandomEntry(position1Table)
 				data.psuedoState = 0
+				data.positionState = 0
 			elseif data.state == STATE.STREAMOFFIRE then
 				data.positionLocation = RNG.irandomEntry(position3Table)
 				data.psuedoState = 0
+				data.positionState = 0
 			elseif data.state == STATE.DASH then
 				data.positionLocation = RNG.irandomEntry(position2Table)
 				data.psuedoState = 0
+				data.positionState = 0
 			end
+			v.speedY = 0
+			v.speedX = 0
+		end
+	elseif data.state == STATE.GOBACK then
+		if v.y > v.spawnY then
+			v.speedY = -2
+		elseif v.y < v.spawnY then
+			v.speedY = 2
+		end
+		v.speedX = 0
+
+		if math.abs(v.y - v.spawnY) < 2 then
+			data.state = STATE.IDLE
+			v.y = v.spawnY
+			v.speedY = 0
+			data.timer = 0
+		end
+	elseif data.state == STATE.DASH then
+		if data.psuedoState == 0 then
+			data.dirVectr = vector.v2(
+				(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
+				(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
+				):normalize() * cfg.positionSpeed
+			if data.positionState == 0 then
+				if data.timer < 120 then
+					v.speedX = data.dirVectr.x
+				else
+					v.speedX = data.dirVectr.x * 1.5 --Hurry Up!
+				end
+				v.speedY = math.cos(lunatime.tick() / 8) * 1.3
+				if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= config.positionRangeX then
+					v.x = data.positionLocation.x + 16 - v.width/2
+					data.positionState = 1
+					data.timer = 0
+				end
+			else
+				v.speedX = 0
+				if data.timer < 120 then
+					v.speedY = data.dirVectr.y
+				else
+					v.speedY = data.dirVectr.y * 1.5 --Hurry Up!
+				end
+				if math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= config.positionRangeY then
+					v.y = data.positionLocation.y + 16 - v.height/2
+					data.psuedoState = 1
+					npcutils.faceNearestPlayer(v)
+					v.data._basegame.direction = v.direction
+					data.headframeTimer = 0
+					data.headcurrentFrame = 3
+					data.headcurrentAnim = 3
+					v.speedX = 0
+					v.speedY = 0
+					data.timer = 0
+					data.positionState = 0
+				end
+			end
+		elseif data.psuedoState == 1 then
+			v.speedY = math.cos(lunatime.tick() / 8) * 1.3
+			v.speedX = 0
+		elseif data.psuedoState == 2 then
+
 		end
 	elseif data.state == STATE.STREAMOFFIRE then
 		if data.psuedoState == 0 then
 			data.dirVectr = vector.v2(
 				(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
 				(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
-				):normalize() * cfg.flyAroundSpeed
-				v.speedX = data.dirVectr.x
-				v.speedY = data.dirVectr.y
-			if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= 8 and math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= 8 then
-				v.x = data.positionLocation.x + 16 - v.width/2
-				v.y = data.positionLocation.y + 16 - v.height/2
-				data.psuedoState = 1
-				npcutils.faceNearestPlayer(v)
-				v.data._basegame.direction = v.direction
-				data.headframeTimer = 0
-				data.headcurrentFrame = 3
-				data.headcurrentAnim = 3
+				):normalize() * cfg.positionSpeed
+			if data.positionState == 0 then
+				if data.timer < 120 then
+					v.speedX = data.dirVectr.x
+				else
+					v.speedX = data.dirVectr.x * 1.5 --Hurry Up!
+				end
+				v.speedY = math.cos(lunatime.tick() / 8) * 1.3
+				if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= config.positionRangeX then
+					v.x = data.positionLocation.x + 16 - v.width/2
+					data.positionState = 1
+					data.timer = 0
+				end
+			else
 				v.speedX = 0
-				v.speedY = 0
-				data.timer = 0
+				if data.timer < 120 then
+					v.speedY = data.dirVectr.y
+				else
+					v.speedY = data.dirVectr.y * 1.5 --Hurry Up!
+				end
+				if math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= config.positionRangeY then
+					v.y = data.positionLocation.y + 16 - v.height/2
+					data.psuedoState = 1
+					npcutils.faceNearestPlayer(v)
+					v.data._basegame.direction = v.direction
+					data.headframeTimer = 0
+					data.headcurrentFrame = 3
+					data.headcurrentAnim = 3
+					v.speedX = 0
+					v.speedY = 0
+					data.timer = 0
+					data.positionState = 0
+				end
 			end
 		elseif data.psuedoState == 1 then
             if data.timer > config.streamoffire.overallDelay then
-                data.state = STATE.IDLE
+                data.state = STATE.GOBACK
                 data.timer = 0
 				data.psuedoState = 0
 				data.headframeTimer = 0
@@ -549,7 +634,8 @@ function draggadonBoss.onTickEndNPC(v)
                 if data.timer % config.streamoffire.barrageDelay == 0 then
 					local n = NPC.spawn(config.streamoffireID, data.mouthBox.x + 0.5 * data.mouthBox.width, data.mouthBox.y + 0.5 * data.mouthBox.height, v.section, false, true)
 					n.direction = v.direction
-					n.speedX = config.streamoffire.barrageSpeed * n.direction
+					n.speedX = config.streamoffire.barrageSpeedX * n.direction
+					n.briefSpeedY = config.streamoffire.barrageSpeedY
 					SFXPlay(config.sfx_streamoffireflare)
 				end
             else
@@ -565,15 +651,39 @@ function draggadonBoss.onTickEndNPC(v)
 				data.dirVectr = vector.v2(
 					(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
 					(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
-					):normalize() * cfg.flyAroundSpeed
-					v.speedX = data.dirVectr.x
-					v.speedY = data.dirVectr.y
-				if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= 8 and math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= 8 then
-					v.x = data.positionLocation.x + 16 - v.width/2
-					v.y = data.positionLocation.y + 16 - v.height/2
-					data.psuedoState = 1
-					npcutils.faceNearestPlayer(v)
-					v.data._basegame.direction = v.direction
+					):normalize() * cfg.positionSpeed
+				if data.positionState == 0 then
+					if data.timer < 120 then
+						v.speedX = data.dirVectr.x
+					else
+						v.speedX = data.dirVectr.x * 1.5 --Hurry Up!
+					end
+					v.speedY = math.cos(lunatime.tick() / 8) * 1.3
+					if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= config.positionRangeX then
+						v.x = data.positionLocation.x + 16 - v.width/2
+						data.positionState = 1
+						data.timer = 0
+					end
+				else
+					v.speedX = 0
+					if data.timer < 120 then
+						v.speedY = data.dirVectr.y
+					else
+						v.speedY = data.dirVectr.y * 1.5 --Hurry Up!
+					end
+					if math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= config.positionRangeY then
+						v.y = data.positionLocation.y + 16 - v.height/2
+						data.psuedoState = 1
+						npcutils.faceNearestPlayer(v)
+						v.data._basegame.direction = v.direction
+						data.headframeTimer = 0
+						data.headcurrentFrame = 3
+						data.headcurrentAnim = 3
+						v.speedX = 0
+						v.speedY = 0
+						data.timer = 0
+						data.positionState = 0
+					end
 				end
 			elseif data.psuedoState == 1 then
 				data.rotation = data.rotation + 2
@@ -622,14 +732,7 @@ function draggadonBoss.onTickEndNPC(v)
 					data.attacking = false
 					data.headOffsetY = 0
 					data.timer = 0
-					data.state = STATE.IDLE
-					data.dirVectr = vector.v2(
-						(v.spawnX + v.width/2) - (v.x + v.width * 0.5),
-						(v.spawnY + v.height/2) - (v.y + v.height * 0.5)
-						):normalize() * cfg.flyAroundSpeed
-						v.speedX = data.dirVectr.x
-						v.speedY = data.dirVectr.y
-					data.returnCooldown = config.returnCooldown
+					data.state = STATE.GOBACK
 				end
 			end
 		end
@@ -643,7 +746,7 @@ function draggadonBoss.onTickEndNPC(v)
 		v.speedY = 0
 		if data.timer >= config.roarSummonDelay then
 			data.timer = 0
-			data.state = STATE.IDLE
+			data.state = STATE.GOBACK
 			data.headframeTimer = 0
 			data.headcurrentFrame = 5
 			data.headcurrentAnim = 5
@@ -676,7 +779,7 @@ function draggadonBoss.onTickEndNPC(v)
 		v.speedY = 0
 		if data.timer >= config.meteorDelay then
 			data.timer = 0
-			data.state = STATE.IDLE
+			data.state = STATE.GOBACK
 			data.headframeTimer = 0
 			data.headcurrentFrame = 5
 			data.headcurrentAnim = 5

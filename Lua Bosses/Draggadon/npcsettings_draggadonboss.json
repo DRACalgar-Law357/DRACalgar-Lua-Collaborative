@@ -4,51 +4,21 @@
 	"layout": [
 		{
 			"control": "spinBox",
-			"name": "flyAroundHorizontalDistanceL",
-			"title": "Fly Around Horizontal Distance Left",
-			"type": "int",
-			"tooltip": "How many pixels the NPC can move around in that range.",
-			"value-default": 320,
-			"value-min": 0,
-			"value-max": 4096
-		},
-		{
-			"control": "spinBox",
-			"name": "flyAroundHorizontalDistanceR",
-			"title": "Fly Around Horizontal Distance Right",
-			"type": "int",
-			"tooltip": "How many pixels the NPC can move around in that range.",
-			"value-default": 320,
-			"value-min": 0,
-			"value-max": 4096
-		},
-		{
-			"control": "spinBox",
-			"name": "flyAroundVerticalDistanceU",
-			"title": "Fly Around Vertical Distance Up",
-			"type": "int",
-			"tooltip": "How many pixels the NPC can move around in that range.",
-			"value-default": 48,
-			"value-min": 0,
-			"value-max": 4096
-		},
-		{
-			"control": "spinBox",
-			"name": "flyAroundVerticalDistanceD",
-			"title": "Fly Around Vertical Distance Down",
-			"type": "int",
-			"tooltip": "How many pixels the NPC can move around in that range.",
-			"value-default": 48,
-			"value-min": 0,
-			"value-max": 4096
-		},
-		{
-			"control": "spinBox",
 			"name": "flyAroundSpeed",
 			"title": "Fly Around Speed",
 			"type": "double",
 			"tooltip": "How fast will the NPC travel around.",
-			"value-default": 3,
+			"value-default": 1.5,
+			"value-min": 0,
+			"value-max": 20
+		},
+		{
+			"control": "spinBox",
+			"name": "positionSpeed",
+			"title": "Position Speed",
+			"type": "double",
+			"tooltip": "How fast will the NPC travel to position to attack.",
+			"value-default": 3.5,
 			"value-min": 0,
 			"value-max": 20
 		}
