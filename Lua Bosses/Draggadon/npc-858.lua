@@ -123,6 +123,11 @@ local draggadonBossSettings = {
 	},
 	streamoffireID=861,
 	fireRainID=859,
+	waveX = {
+		[-1] = -96,
+		[1] = 96,
+	},
+	waveY = 0,
 	headOffset = {
 		[-1] = {
 			x = -192,
@@ -145,8 +150,13 @@ local draggadonBossSettings = {
 	},
 	bodyFrames = 8,
 	bodyFrameStyle = 1,
+	headImg = Graphics.loadImageResolved("npc-"..npcID.."-head.png"),
 	headFrames = 16,
 	headFrameStyle = 1,
+	waveImg = Graphics.loadImageResolved("draggadonflightdashwave.png"),
+	waveFrames = 4,
+	waveFrameStyle = 1,
+	
 	--Whenever Draggadon opens its mouth to charge a stream of fire attack, players can throw certain NPCs into its mouth and damage it.
 	consumeNPCTable = {
 		896,
@@ -198,13 +208,21 @@ local draggadonBossSettings = {
 		charge = {
 			waitDelay = 180,
 			initiateDelay = 30,
+			effect = {
+				id = 80,
+				x = {
+					[-1] = -29,
+					[1] = 29,
+				},
+				y = -64,
+			},
 		},
 		flight = {
 			speedX = 6,
 			speedY = 0,
-			stopDelay = 240,
+			stopDelay = 120,
 		},
-	}
+	},
 
 	laserColor     = Color.orange, 
 
@@ -359,7 +377,8 @@ function draggadonBoss.onTickEndNPC(v)
 		--Initialize necessary data. --
 		data.initialized = true
 		data.bodyimg = data.bodyimg or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = draggadonConfig.bodyFrames * (1 + draggadonConfig.bodyFrameStyle), texture = Graphics.sprites.npc[v.id].img}
-		data.headimg = data.headimg or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = draggadonConfig.headFrames * (1 + draggadonConfig.headFrameStyle), texture = Graphics.loadImageResolved("npc-"..npcID.."-head.png")}
+		data.headimg = data.headimg or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = draggadonConfig.headFrames * (1 + draggadonConfig.headFrameStyle), texture = config.headImg}
+		data.waveimg = data.waveimg or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = draggadonConfig.waveFrames * (1 + draggadonConfig.headFrameStyle), texture = config.waveImg}
 	end
 
 	--Depending on the NPC, these checks must be handled differently --
@@ -399,6 +418,7 @@ function draggadonBoss.onTickEndNPC(v)
 	data.laserOpacity = data.laserOpacity or nil
 	data.laserHeight = data.laserHeight or nil
 	data.positionState = data.positionState or 0
+	data.drawWave = data.drawWave or false
 	
 	-- Custom Animations: Handling --
 	data.frameTimer = data.frameTimer + 1
@@ -407,6 +427,7 @@ function draggadonBoss.onTickEndNPC(v)
 	else
 		data.currentFrame = math.floor(data.frameTimer / 4) % 8
 	end
+	data.waveFrames = math.floor(lunatime.tick() / 4) % 4
 	
 	-- Custom Animations: Handling Head--
 	data.headframeTimer = data.headframeTimer + 1
@@ -500,7 +521,7 @@ function draggadonBoss.onTickEndNPC(v)
 
 		if data.timer >= 250 then
 			data.attacking = true
-			data.state = RNG.irandomEntry{STATE.RAIN,STATE.SUMMON,STATE.METEOR,STATE.STREAMOFFIRE}
+			data.state = RNG.irandomEntry{STATE.DASH}
 			data.timer = 0
 			if data.state == STATE.RAIN then
 				data.positionLocation = RNG.irandomEntry(position1Table)
@@ -525,7 +546,8 @@ function draggadonBoss.onTickEndNPC(v)
 			v.speedY = 2
 		end
 		v.speedX = 0
-
+		data.drawWave = false
+		data.positionState = 0
 		if math.abs(v.y - v.spawnY) < 2 then
 			data.state = STATE.IDLE
 			v.y = v.spawnY
@@ -562,9 +584,6 @@ function draggadonBoss.onTickEndNPC(v)
 					data.psuedoState = 1
 					npcutils.faceNearestPlayer(v)
 					v.data._basegame.direction = v.direction
-					data.headframeTimer = 0
-					data.headcurrentFrame = 3
-					data.headcurrentAnim = 3
 					v.speedX = 0
 					v.speedY = 0
 					data.timer = 0
@@ -573,9 +592,49 @@ function draggadonBoss.onTickEndNPC(v)
 			end
 		elseif data.psuedoState == 1 then
 			v.speedY = math.cos(lunatime.tick() / 8) * 1.3
-			v.speedX = 0
+			if data.timer < config.dash.charge.waitDelay then
+				v.speedX = 0
+				if data.timer % 25 == 0 then
+					SFXPlay(config.sfx_flightflap)
+				end
+			else
+				v.speedX = 1.5 * -v.data._basegame.direction
+			end
+			if data.timer == config.dash.charge.waitDelay then
+				SFXPlay(config.sfx_flightdo)
+				if config.dash.charge.effect.id > 0 then
+					local a = Animation.spawn(config.dash.charge.effect.id, v.x + 0.5 * v.width + config.gfxoffsetx + config.headOffset[v.data._basegame.direction].x + config.spawnOffset[v.data._basegame.direction].x, v.y + 0.5 * v.height + config.headOffset[v.data._basegame.direction].y + config.dash.charge.effect.x[v.data._basegame.direction])
+					a.x=a.x-a.width/2
+					a.y=a.y-a.height/2
+				end
+			end
+			if data.timer >= config.dash.charge.initiateDelay + config.dash.charge.waitDelay then
+				data.timer = 0
+				data.psuedoState = 2
+				v.speedX = 0
+				v.speedY = 0
+				SFXPlay(config.sfx_flightcharge)
+			end
 		elseif data.psuedoState == 2 then
-
+			if data.timer <= config.dash.flight.stopDelay then
+				v.speedX = config.dash.flight.speedX * v.data._basegame.direction
+				v.speedY = config.dash.flight.speedY
+				data.drawWave = true
+			else
+				data.drawWave = false
+				v.speedX = v.speedX * 0.97
+				v.speedY = v.speedY * 0.97
+				if data.timer % 8 == 0 then
+					SFX.play(10)
+				end
+				if math.abs(v.speedX) + math.abs(v.speedY) < 1.5 then
+					v.speedX = 0
+					v.speedY = 0
+					data.timer = 0
+					data.psuedoState = 0
+					data.state = STATE.GOBACK
+				end
+			end
 		end
 	elseif data.state == STATE.STREAMOFFIRE then
 		if data.psuedoState == 0 then
@@ -814,6 +873,8 @@ function draggadonBoss.onTickEndNPC(v)
 		data.laserProgress = nil
 		data.laserOpacity = nil
 		data.laserHeight = nil
+		data.drawWave = false
+		data.positionState = 0
 		v.speedX = 0
 		v.speedY = 0
 	end
@@ -915,6 +976,20 @@ function draggadonBoss.onDrawNPC(v)
 	if data.iFrames then
 		opacity = math.sin(lunatime.tick()*math.pi*0.25)*0.75 + 0.9
 	end
+	if data.waveimg and data.drawWave then
+		-- Setting some properties --
+		data.waveimg.x, data.waveimg.y = v.x + 0.5 * v.width + draggadonConfig.gfxoffsetx + draggadonConfig.waveX[v.data._basegame.direction], v.y + 0.5 * v.height + draggadonConfig.waveY --[[+ draggadonConfig.gfxoffsety]]
+		if config.waveFrameStyle == 1 then
+			data.waveimg.transform.scale = vector(-v.data._basegame.direction, 1)
+		else
+			data.waveimg.transform.scale = vector(1, 1)
+		end
+
+		local p = -config.priority + 0.1
+
+		-- Drawing --
+		data.waveimg:draw{frame = data.waveFrames + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
+	end
 	if data.headimg then
 		-- Setting some properties --
 		data.headimg.x, data.headimg.y = v.x + 0.5 * v.width + draggadonConfig.gfxoffsetx + draggadonConfig.headOffset[v.data._basegame.direction].x, v.y + 0.5 * v.height + draggadonConfig.headOffset[v.data._basegame.direction].y - data.headOffsetY --[[+ draggadonConfig.gfxoffsety]]
@@ -933,7 +1008,11 @@ function draggadonBoss.onDrawNPC(v)
 	if data.bodyimg then
 		-- Setting some properties --
 		data.bodyimg.x, data.bodyimg.y = v.x + 0.5 * v.width + draggadonConfig.gfxoffsetx, v.y + 0.5 * v.height --[[+ draggadonConfig.gfxoffsety]]
-		data.bodyimg.transform.scale = vector(-v.data._basegame.direction, 1)
+		if config.bodyFrameStyle == 1 then
+			data.bodyimg.transform.scale = vector(-v.data._basegame.direction, 1)
+		else
+			data.bodyimg.transform.scale = vector(1, 1)
+		end
 
 		local p = -config.priority - 0.1
 
