@@ -60,7 +60,7 @@ function warioNPC.onTickNPC(v)
 						data.isBumped = true
 					end
 				else
-					if v.collidesBlockBottom then
+					if v.collidesBlockBottom and not config.cantPush then
 						SFX.play(9)
 						v.speedX = -5 * math.sign(p.x + p.width/2 - v.x - v.width/2)
 						v.speedY = -2
