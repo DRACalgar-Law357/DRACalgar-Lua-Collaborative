@@ -588,16 +588,12 @@ function draggadonBoss.onTickEndNPC(v)
 		end
 	elseif data.state == STATE.DASH then
 		if data.psuedoState == 0 then
-			data.dirVectr = vector.v2(
-				(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
-				(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
-				):normalize() * cfg.positionSpeed
 			if data.positionState == 0 then
-				if data.timer < 120 then
-					v.speedX = data.dirVectr.x
-				else
-					v.speedX = data.dirVectr.x * 1.5 --Hurry Up!
-				end
+				data.dirVectr = vector.v2(
+					(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
+					0
+					):normalize() * cfg.positionSpeed
+				v.speedX = data.dirVectr.x
 				v.speedY = math.cos(lunatime.tick() / 8) * 1.3
 				if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= config.positionRangeX then
 					v.x = data.positionLocation.x + 16 - v.width/2
@@ -605,12 +601,12 @@ function draggadonBoss.onTickEndNPC(v)
 					data.timer = 0
 				end
 			else
+				data.dirVectr = vector.v2(
+					0,
+					(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
+					):normalize() * cfg.positionSpeed
 				v.speedX = 0
-				if data.timer < 120 then
-					v.speedY = data.dirVectr.y
-				else
-					v.speedY = data.dirVectr.y * 1.5 --Hurry Up!
-				end
+				v.speedY = data.dirVectr.y
 				if math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= config.positionRangeY then
 					v.y = data.positionLocation.y + 16 - v.height/2
 					data.psuedoState = 1
@@ -670,16 +666,13 @@ function draggadonBoss.onTickEndNPC(v)
 		end
 	elseif data.state == STATE.STREAMOFFIRE then
 		if data.psuedoState == 0 then
-			data.dirVectr = vector.v2(
-				(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
-				(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
-				):normalize() * cfg.positionSpeed
+
 			if data.positionState == 0 then
-				if data.timer < 120 then
-					v.speedX = data.dirVectr.x
-				else
-					v.speedX = data.dirVectr.x * 1.5 --Hurry Up!
-				end
+				data.dirVectr = vector.v2(
+					(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
+					0
+					):normalize() * cfg.positionSpeed
+				v.speedX = data.dirVectr.x
 				v.speedY = math.cos(lunatime.tick() / 8) * 1.3
 				if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= config.positionRangeX then
 					v.x = data.positionLocation.x + 16 - v.width/2
@@ -687,12 +680,12 @@ function draggadonBoss.onTickEndNPC(v)
 					data.timer = 0
 				end
 			else
+				data.dirVectr = vector.v2(
+					0,
+					(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
+					):normalize() * cfg.positionSpeed
 				v.speedX = 0
-				if data.timer < 120 then
-					v.speedY = data.dirVectr.y
-				else
-					v.speedY = data.dirVectr.y * 1.5 --Hurry Up!
-				end
+				v.speedY = data.dirVectr.y
 				if math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= config.positionRangeY then
 					v.y = data.positionLocation.y + 16 - v.height/2
 					data.psuedoState = 1
@@ -739,16 +732,12 @@ function draggadonBoss.onTickEndNPC(v)
 		data.shootTimer = data.shootTimer - 1
 		if data.shootTimer <= 0 and data.attacking then
 			if data.psuedoState == 0 then
-				data.dirVectr = vector.v2(
-					(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
-					(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
-					):normalize() * cfg.positionSpeed
 				if data.positionState == 0 then
-					if data.timer < 120 then
-						v.speedX = data.dirVectr.x
-					else
-						v.speedX = data.dirVectr.x * 1.5 --Hurry Up!
-					end
+					data.dirVectr = vector.v2(
+						(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
+						0
+						):normalize() * cfg.positionSpeed
+					v.speedX = data.dirVectr.x
 					v.speedY = math.cos(lunatime.tick() / 8) * 1.3
 					if math.abs((data.positionLocation.x + 16) - (v.x + v.width * 0.5)) <= config.positionRangeX then
 						v.x = data.positionLocation.x + 16 - v.width/2
@@ -756,12 +745,12 @@ function draggadonBoss.onTickEndNPC(v)
 						data.timer = 0
 					end
 				else
+					data.dirVectr = vector.v2(
+						0,
+						(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
+						):normalize() * cfg.positionSpeed
 					v.speedX = 0
-					if data.timer < 120 then
-						v.speedY = data.dirVectr.y
-					else
-						v.speedY = data.dirVectr.y * 1.5 --Hurry Up!
-					end
+					v.speedY = data.dirVectr.y
 					if math.abs((data.positionLocation.y + 16) - (v.y + v.height * 0.5)) <= config.positionRangeY then
 						v.y = data.positionLocation.y + 16 - v.height/2
 						data.psuedoState = 1
