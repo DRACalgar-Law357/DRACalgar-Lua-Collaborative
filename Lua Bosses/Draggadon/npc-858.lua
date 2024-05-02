@@ -297,6 +297,23 @@ function draggadonBoss.onInitAPI()
 	npcManager.registerEvent(npcID, draggadonBoss, "onDrawNPC")
 	registerEvent(draggadonBoss, "onNPCHarm")
 end
+
+local function decideAttack(v,data,config,settings)
+	local options = {}
+	if config.alloutTable and #config.attackTable > 0 then
+		for i in ipairs(config.attackTable) do
+			if data.health >= config.attackTable[i].availableHPMin and data.health < config.attackTable[i].availableHPMax then
+				table.insert(options,config.attackTable[i])
+			end
+		end
+	end
+	if #options > 0 then
+		data.state = RNG.irandomEntry(options)
+	end
+	data.timer = 0
+end
+
+
 local function SFXPlay(sfx)
 	if sfx then
 		SFX.play(sfx)
@@ -535,7 +552,7 @@ function draggadonBoss.onTickEndNPC(v)
 
 		if data.timer >= 250 then
 			data.attacking = true
-			data.state = RNG.irandomEntry{STATE.DASH}
+			decideAttack(v,data,config,settings)
 			data.timer = 0
 			if data.state == STATE.RAIN then
 				data.positionLocation = RNG.irandomEntry(position1Table)
