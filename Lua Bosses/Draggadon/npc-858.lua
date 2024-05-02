@@ -223,12 +223,15 @@ local draggadonBossSettings = {
 			stopDelay = 120,
 		},
 	},
+	deathFallDelay = 480,
+	
 
 	laserColor     = Color.orange, 
 
 	sfx_hurt = 39,
 	sfx_fireRain = 42,
-	sfx_streamoffireflare = Misc.resolveFile("Firebrand Fire Breath.wav"),
+	sfx_lavadrop = Misc.resolveFile("sfx_draggadonlavadrop.ogg")
+	sfx_streamoffireflare = Misc.resolveFile("sfx_draggadonfirebreath.wav"),
 	sfx_debrisfall = Misc.resolveFile("S3K_51.wav"),
 	sfx_summonRoar = Misc.resolveFile("sfx_draggadonroar1.wav"),
 	sfx_meteorRoar = Misc.resolveFile("sfx_draggadonroarmeteor.wav"),
@@ -236,6 +239,8 @@ local draggadonBossSettings = {
 	sfx_flightflap = Misc.resolveFile("sfx_draggadonflightflap.wav"),
 	sfx_flightcharge = Misc.resolveFile("sfx_draggadonflightcharge.wav"),
 	sfx_flightdo = Misc.resolveFile("sfx_draggadonflightdo.wav"),
+	sfx_gobble = nil, --Misc.resolveFile("")
+	sfx_gulpbackfire = nil, --Misc.resolveFile("")
 	sfxTable_grunt = {
 		Misc.resolveFile("sfx_draggadongrunt1.wav"),
 		Misc.resolveFile("sfx_draggadongrunt2.wav"),
@@ -494,6 +499,14 @@ function draggadonBoss.onTickEndNPC(v)
 			data.headcurrentFrame = 3
 			data.headcurrentAnim = 0
 		end
+	elseif data.headcurrentAnim == 6 then
+		if data.headframeTimer < 10 then
+			data.headcurrentFrame = 1
+		else
+			data.headcurrentFrame = math.floor((data.headframeTimer - 10) / 8) % 2 + 6
+		end
+	elseif data.headcurrentAnim == 7 then
+		data.headcurrentFrame = math.floor((data.headframeTimer - 10) / 8) % 2 + 14
 	end
 	-- Let's set custom settings --
 	--Shooting stuff --
@@ -517,6 +530,7 @@ function draggadonBoss.onTickEndNPC(v)
 		if data.timer == 70 then
 			npcutils.faceNearestPlayer(v)
 			v.data._basegame.direction = v.direction
+			SFXPlayTable(config.sfxTable_grunt)
 		end
 
 		if data.timer >= 250 then
@@ -548,6 +562,7 @@ function draggadonBoss.onTickEndNPC(v)
 		v.speedX = 0
 		data.drawWave = false
 		data.positionState = 0
+		SFXPlayTable(config.sfxTable_grunt)
 		if math.abs(v.y - v.spawnY) < 2 then
 			data.state = STATE.IDLE
 			v.y = v.spawnY
@@ -857,6 +872,16 @@ function draggadonBoss.onTickEndNPC(v)
 		if data.timer >= 12 and data.timer < config.startMeteoringDelay then
 			Defines.earthquake = 10
 		end
+	elseif data.state == STATE.CONSUME then
+		if data.timer == 1 then
+			SFXPlay(config.sfx_gobble)
+		elseif data.timer >= config.consumeDelay then
+			data.timer = 0
+			data.state = STATE.HURT
+			data.iFrames = true
+			data.health = data.health + 1
+			SFXPlay(config.sfx_gulpbackfire)
+		end
 	elseif data.state == STATE.HURT then
 		if data.timer >= 80 then
 			data.timer = 0
@@ -877,6 +902,31 @@ function draggadonBoss.onTickEndNPC(v)
 		data.positionState = 0
 		v.speedX = 0
 		v.speedY = 0
+	elseif data.state == STATE.KILL then
+		data.lavaMult = data.lavaMult or 1.5
+		if data.timer == 1 then
+			data.headcurrentAnim = 6
+			data.headcurrentFrame = 1
+			data.headframeTimer = 0
+		elseif data.timer == 100 then
+			data.headcurrentAnim = 6
+			data.headcurrentFrame = 1
+			data.headframeTimer = 0
+			SFX.play(38)
+		end
+		if data.timer == 190 then SFXPlayTable(config.sfxTable_defeated) end
+		if data.timer >= 190 then
+			v.y = v.y + 1*data.lavaMult
+		end
+		if data.deathTimer >= 190 + config.deathFallDelay then v:kill(HARM_TYPE_VANISH) end
+		for _,blck in Block.iterateIntersecting(v.x, v.y, v.x + v.width, v.y + v.height) do
+			if Block.LAVA_MAP[blck.id] then
+				if data.lavaMult == 1.5 then --since this can only happen once when bowsy is dead i thought might as well spawn the sound here
+					SFXPlay(config.sfx_draggadonlavadrop)
+				end
+				data.lavaMult = 0.75
+			end
+		end
 	end
 		--iFrames System made by MegaDood & DRACalgar Law
 		if data.iFrames then
@@ -966,6 +1016,8 @@ function draggadonBoss.onNPCHarm(eventObj, v, reason, culprit)
 				data.timer = 0
 			else
 				v:mem(0x156,FIELD_WORD,60)
+				data.timer = 0
+				data.state = STATE.KILL
 			end
 	eventObj.cancelled = true
 end
