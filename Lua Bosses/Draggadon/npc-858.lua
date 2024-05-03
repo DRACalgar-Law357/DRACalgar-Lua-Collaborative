@@ -552,7 +552,7 @@ function draggadonBoss.onTickEndNPC(v)
 
 		if data.timer >= 250 then
 			data.attacking = true
-			decideAttack(v,data,config,settings)
+			decideAttack(v,data,config,settings) --decide attack function
 			data.timer = 0
 			if data.state == STATE.RAIN then
 				data.positionLocation = RNG.irandomEntry(position1Table)
