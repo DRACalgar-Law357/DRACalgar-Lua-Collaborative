@@ -100,25 +100,32 @@ local draggadonBossSettings = {
 	},
 	totalHP = maxHP,
 	attackTable = {
-		[STATE.RAIN] = {
+		[0] = STATE.RAIN,
+		[1] = STATE.SUMMON,
+		[2] = STATE.STREAMOFFIRE,
+		[3] = STATE.METEOR,
+		[4] = STATE.DASH,
+	},
+	attackIndex = {
+		[0] = {
 			availableHPMin = 0,
 			availableHPMax = maxHP,
 		},
-		[STATE.SUMMON] = {
+		[1] = {
 			availableHPMin = 0,
 			availableHPMax = maxHP,
 		},
-		[STATE.STREAMOFFIRE] = {
+		[2] = {
 			availableHPMin = 0,
 			availableHPMax = maxHP,
 		},
-		[STATE.METEOR] = {
+		[3] = {
 			availableHPMin = maxHP/3,
 			availableHPMax = maxHP*2/3,
 		},
-		[STATE.DASH] = {
-			availableHPMin = 0,
-			availableHPMax = maxHP/3,
+		[4] = {
+			availableHPMin = maxHP*2/3,
+			availableHPMax = maxHP,
 		},
 	},
 	streamoffireID=861,
@@ -224,13 +231,14 @@ local draggadonBossSettings = {
 		},
 	},
 	deathFallDelay = 480,
+	consumeDelay = 150,
 	
 
 	laserColor     = Color.orange, 
 
 	sfx_hurt = 39,
 	sfx_fireRain = 42,
-	sfx_lavadrop = Misc.resolveFile("sfx_draggadonlavadrop.ogg")
+	sfx_lavadrop = Misc.resolveFile("sfx_draggadonlavadrop.ogg"),
 	sfx_streamoffireflare = Misc.resolveFile("sfx_draggadonfirebreath.wav"),
 	sfx_debrisfall = Misc.resolveFile("S3K_51.wav"),
 	sfx_summonRoar = Misc.resolveFile("sfx_draggadonroar1.wav"),
@@ -239,12 +247,17 @@ local draggadonBossSettings = {
 	sfx_flightflap = Misc.resolveFile("sfx_draggadonflightflap.wav"),
 	sfx_flightcharge = Misc.resolveFile("sfx_draggadonflightcharge.wav"),
 	sfx_flightdo = Misc.resolveFile("sfx_draggadonflightdo.wav"),
-	sfx_gobble = nil, --Misc.resolveFile("")
-	sfx_gulpbackfire = nil, --Misc.resolveFile("")
+	sfx_gobble = Misc.resolveFile("sfx_draggadongobble.wav"),
+	sfx_gulpbackfire = Misc.resolveFile("sfx_draggadongulpbackfire.wav"),
+	sfx_gulpreact = Misc.resolveFile("sfx_draggadongulpreact.wav"),
+	sfx_flighthrm = Misc.resolveFile("sfx_draggadonflightchargehrm.wav"),
 	sfxTable_grunt = {
 		Misc.resolveFile("sfx_draggadongrunt1.wav"),
 		Misc.resolveFile("sfx_draggadongrunt2.wav"),
 		Misc.resolveFile("sfx_draggadongrunt3.wav"),
+		Misc.resolveFile("sfx_draggadonlaugh1.wav"),
+		Misc.resolveFile("sfx_draggadonlaugh2.wav"),
+		Misc.resolveFile("sfx_draggadonlaugh3.wav"),
 	},
 	sfxTable_defeated = {
 		Misc.resolveFile("sfx_draggadondefeated1.wav"),
@@ -300,9 +313,9 @@ end
 
 local function decideAttack(v,data,config,settings)
 	local options = {}
-	if config.alloutTable and #config.attackTable > 0 then
+	if config.attackTable and #config.attackTable > 0 and config.attackIndex then
 		for i in ipairs(config.attackTable) do
-			if data.health >= config.attackTable[i].availableHPMin and data.health < config.attackTable[i].availableHPMax then
+			if data.health >= config.attackIndex[i].availableHPMin and data.health < config.attackIndex[i].availableHPMax then
 				table.insert(options,config.attackTable[i])
 			end
 		end
@@ -524,12 +537,14 @@ function draggadonBoss.onTickEndNPC(v)
 		end
 	elseif data.headcurrentAnim == 7 then
 		data.headcurrentFrame = math.floor((data.headframeTimer - 10) / 8) % 2 + 14
+	elseif data.headcurrentAnim == 8 then
+		data.headcurrentFrame = 1
 	end
 	-- Let's set custom settings --
 	--Shooting stuff --
 	data.rotation = data.rotation or 0
 	data.rotationTick = data.rotationTick or 0
-	Text.print(data.psuedoState,110,126)
+	Text.print(data.state,110,126)
 	if data.state == STATE.IDLE then
 		v.speedY = math.cos(lunatime.tick() / 8) * 1.3
 		--[[if not data.attacking then
@@ -579,19 +594,21 @@ function draggadonBoss.onTickEndNPC(v)
 		v.speedX = 0
 		data.drawWave = false
 		data.positionState = 0
-		SFXPlayTable(config.sfxTable_grunt)
 		if math.abs(v.y - v.spawnY) < 2 then
 			data.state = STATE.IDLE
 			v.y = v.spawnY
 			v.speedY = 0
 			data.timer = 0
+			data.headframeTimer = 0
+			data.headcurrentFrame = 3
+			data.headcurrentAnim = 0
 		end
 	elseif data.state == STATE.DASH then
 		if data.psuedoState == 0 then
 			if data.positionState == 0 then
 				data.dirVectr = vector.v2(
 					(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
-					0
+					(v.y + v.height * 0.5) - (v.y + v.height * 0.5)
 					):normalize() * cfg.positionSpeed
 				v.speedX = data.dirVectr.x
 				v.speedY = math.cos(lunatime.tick() / 8) * 1.3
@@ -602,7 +619,7 @@ function draggadonBoss.onTickEndNPC(v)
 				end
 			else
 				data.dirVectr = vector.v2(
-					0,
+					(v.x + v.width * 0.5) - (v.x + v.width * 0.5),
 					(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
 					):normalize() * cfg.positionSpeed
 				v.speedX = 0
@@ -641,6 +658,7 @@ function draggadonBoss.onTickEndNPC(v)
 				data.psuedoState = 2
 				v.speedX = 0
 				v.speedY = 0
+				SFXPlay(config.sfx_flighthrm)
 				SFXPlay(config.sfx_flightcharge)
 			end
 		elseif data.psuedoState == 2 then
@@ -670,7 +688,7 @@ function draggadonBoss.onTickEndNPC(v)
 			if data.positionState == 0 then
 				data.dirVectr = vector.v2(
 					(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
-					0
+					(v.y + v.height * 0.5) - (v.y + v.height * 0.5)
 					):normalize() * cfg.positionSpeed
 				v.speedX = data.dirVectr.x
 				v.speedY = math.cos(lunatime.tick() / 8) * 1.3
@@ -681,7 +699,7 @@ function draggadonBoss.onTickEndNPC(v)
 				end
 			else
 				data.dirVectr = vector.v2(
-					0,
+					(v.x + v.width * 0.5) - (v.x + v.width * 0.5),
 					(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
 					):normalize() * cfg.positionSpeed
 				v.speedX = 0
@@ -727,7 +745,26 @@ function draggadonBoss.onTickEndNPC(v)
                 data.laserHeight = math.max(0,(data.laserHeight or (data.mouthBox.height*0.75))-((data.timer/data.mouthBox.height)*0.15))
                 data.laserOpacity = math.min(0.65,(data.laserOpacity or 0) + 0.1)
             end
+			for k, n in  ipairs(Colliders.getColliding{a = data.mouthBox, b = NPC.HITTABLE, btype = Colliders.NPC, filter = npcFilter}) do
+				if n.id ~= v.id then
+					for i in ipairs(config.consumeNPCTable) do
+						if n.id == config.consumeNPCTable[i] then
+							n:kill(9)
+							data.laserProgress = nil
+							data.laserOpacity = nil
+							data.laserHeight = nil
+							data.attacking = false
+							data.timer = 0
+							data.state = STATE.CONSUME
+							SFX.play(55)
+							v.speedX = 0
+							v.speedY = 0
+						end
+					end
+				end
+			end
 		end
+
 	elseif data.state == STATE.RAIN then
 		data.shootTimer = data.shootTimer - 1
 		if data.shootTimer <= 0 and data.attacking then
@@ -735,7 +772,7 @@ function draggadonBoss.onTickEndNPC(v)
 				if data.positionState == 0 then
 					data.dirVectr = vector.v2(
 						(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
-						0
+						(v.y + v.height * 0.5) - (v.y + v.height * 0.5)
 						):normalize() * cfg.positionSpeed
 					v.speedX = data.dirVectr.x
 					v.speedY = math.cos(lunatime.tick() / 8) * 1.3
@@ -746,7 +783,7 @@ function draggadonBoss.onTickEndNPC(v)
 					end
 				else
 					data.dirVectr = vector.v2(
-						0,
+						(v.x + v.width * 0.5) - (v.x + v.width * 0.5),
 						(data.positionLocation.y + 16) - (v.y + v.height * 0.5)
 						):normalize() * cfg.positionSpeed
 					v.speedX = 0
@@ -881,17 +918,27 @@ function draggadonBoss.onTickEndNPC(v)
 	elseif data.state == STATE.CONSUME then
 		if data.timer == 1 then
 			SFXPlay(config.sfx_gobble)
+			data.headframeTimer = 0
+			data.headcurrentFrame = 1
+			data.headcurrentAnim = 8
 		elseif data.timer >= config.consumeDelay then
 			data.timer = 0
 			data.state = STATE.HURT
 			data.iFrames = true
+			data.headcurrentAnim = 2
+			data.headcurrentFrame = 1
+			data.headframeTimer = 0
 			data.health = data.health + 1
 			SFXPlay(config.sfx_gulpbackfire)
+			SFXPlay(config.sfx_gulpreact)
 		end
 	elseif data.state == STATE.HURT then
 		if data.timer >= 80 then
 			data.timer = 0
-			data.state = STATE.IDLE
+			data.state = STATE.GOBACK
+			data.headframeTimer = 0
+			data.headcurrentFrame = 3
+			data.headcurrentAnim = 0
 		end
 		data.rotation = 0
 		data.rotationTick = 0
@@ -909,13 +956,15 @@ function draggadonBoss.onTickEndNPC(v)
 		v.speedX = 0
 		v.speedY = 0
 	elseif data.state == STATE.KILL then
+		v.speedX = 0
+		v.speedY = 0
 		data.lavaMult = data.lavaMult or 1.5
 		if data.timer == 1 then
 			data.headcurrentAnim = 6
 			data.headcurrentFrame = 1
 			data.headframeTimer = 0
 		elseif data.timer == 100 then
-			data.headcurrentAnim = 6
+			data.headcurrentAnim = 7
 			data.headcurrentFrame = 1
 			data.headframeTimer = 0
 			SFX.play(38)
@@ -924,8 +973,8 @@ function draggadonBoss.onTickEndNPC(v)
 		if data.timer >= 190 then
 			v.y = v.y + 1*data.lavaMult
 		end
-		if data.deathTimer >= 190 + config.deathFallDelay then v:kill(HARM_TYPE_VANISH) end
-		for _,blck in Block.iterateIntersecting(v.x, v.y, v.x + v.width, v.y + v.height) do
+		if data.timer >= 190 + config.deathFallDelay then v:kill(HARM_TYPE_VANISH) end
+		for _,blck in Block.iterateIntersecting(v.x, v.y, v.x + v.width, v.y + v.height/2) do
 			if Block.LAVA_MAP[blck.id] then
 				if data.lavaMult == 1.5 then --since this can only happen once when bowsy is dead i thought might as well spawn the sound here
 					SFXPlay(config.sfx_draggadonlavadrop)
@@ -954,7 +1003,6 @@ function draggadonBoss.onTickEndNPC(v)
 	if (Colliders.collide(plr, v) or Colliders.collide(plr, data.neckBox) or Colliders.collide(plr, data.headBox) or (Colliders.collide(plr, data.mouthBox) and data.state == STATE.IDLE)) and not v.friendly and data.state ~= STATE.KILL and data.state ~= STATE.HURT and not Defines.cheat_donthurtme then
 		plr:harm()
 	end
-	Text.print(data.headcurrentAnim,110,200)
 end
 function draggadonBoss.onNPCHarm(eventObj, v, reason, culprit)
 	local data = v.data
