@@ -100,30 +100,28 @@ local draggadonBossSettings = {
 	},
 	totalHP = maxHP,
 	attackTable = {
-		[0] = STATE.RAIN,
-		[1] = STATE.SUMMON,
-		[2] = STATE.STREAMOFFIRE,
-		[3] = STATE.METEOR,
-		[4] = STATE.DASH,
-	},
-	attackIndex = {
 		[0] = {
+			state = STATE.RAIN,
 			availableHPMin = 0,
 			availableHPMax = maxHP,
 		},
 		[1] = {
+			state = STATE.SUMMON,
 			availableHPMin = 0,
 			availableHPMax = maxHP,
 		},
 		[2] = {
+			state = STATE.STREAMOFFIRE,
 			availableHPMin = 0,
 			availableHPMax = maxHP,
 		},
 		[3] = {
+			state = STATE.METEOR,
 			availableHPMin = maxHP/3,
 			availableHPMax = maxHP*2/3,
 		},
 		[4] = {
+			state = STATE.DASH,
 			availableHPMin = maxHP*2/3,
 			availableHPMax = maxHP,
 		},
@@ -131,10 +129,10 @@ local draggadonBossSettings = {
 	streamoffireID=861,
 	fireRainID=859,
 	waveX = {
-		[-1] = -96,
-		[1] = 96,
+		[-1] = -192,
+		[1] = 192,
 	},
-	waveY = 0,
+	waveY = -32,
 	headOffset = {
 		[-1] = {
 			x = -192,
@@ -313,10 +311,10 @@ end
 
 local function decideAttack(v,data,config,settings)
 	local options = {}
-	if config.attackTable and #config.attackTable > 0 and config.attackIndex then
+	if config.attackTable and #config.attackTable > 0 then
 		for i in ipairs(config.attackTable) do
-			if data.health >= config.attackIndex[i].availableHPMin and data.health < config.attackIndex[i].availableHPMax then
-				table.insert(options,config.attackTable[i])
+			if data.health >= config.attackTable[i].availableHPMin and data.health < config.attackTable[i].availableHPMax then
+				table.insert(options,config.attackTable[i].state)
 			end
 		end
 	end
