@@ -230,6 +230,20 @@ local draggadonBossSettings = {
 	},
 	deathFallDelay = 480,
 	consumeDelay = 150,
+	smokeEffectID = 787,
+	smokeOffsetX = {
+		[-1] = {
+			[0] = -48,
+			[1] = 48,
+		},
+		[1] = {
+			[0] = -48,
+			[1] = 48,
+		},
+	},
+	smokeOffsetY = -16,
+	smokeSpeedX = 2,
+	smokeSpeedY = 0.5,
 	
 
 	laserColor     = Color.orange, 
@@ -929,6 +943,15 @@ function draggadonBoss.onTickEndNPC(v)
 			data.health = data.health + 1
 			SFXPlay(config.sfx_gulpbackfire)
 			SFXPlay(config.sfx_gulpreact)
+			if config.smokeEffectID then
+				for i=0,1 do
+					local a = Animation.spawn(config.smokeEffectID,data.headBox.x + data.headBox.width/2 + config.smokeOffsetX[v.data._basegame.direction][i]., data.headBox.y + data.headBox.height/2 + config.smokeOffsetY)
+					a.x=a.x-a.width/2
+					a.y=a.y-a.height/2
+					a.speedX = -config.smokeSpeedX + i * 2 * config.smokeSpeedX
+					a.speedY = config.smokeSpeedY
+				end
+			end
 		end
 	elseif data.state == STATE.HURT then
 		if data.timer >= 80 then
