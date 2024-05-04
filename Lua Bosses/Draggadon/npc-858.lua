@@ -202,7 +202,7 @@ local draggadonBossSettings = {
 		beginBreathingDelay = 300,
 		barrageDelay = 6,
 		barrageSpeedX = 10,
-		barrageSpeedY = -3.5,
+		barrageSpeedY = 0,
 	},
 	position1BGO = 859, --To use a raining fireball attack
 	position2BGO = 861, --To use a dash attack
