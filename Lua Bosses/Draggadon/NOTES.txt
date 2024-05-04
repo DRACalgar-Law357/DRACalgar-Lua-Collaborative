@@ -1,0 +1,4 @@
+This boss contains the following NPCs from other packs, some that are modified.
+-Draglet from Deltom
+-Volcano Debris (modified by me) from S_Koopa0
+-Fly Guy from MegaDood

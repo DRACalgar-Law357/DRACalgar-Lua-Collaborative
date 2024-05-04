@@ -1,6 +1,6 @@
 {
 	"style" : "groupbox",
-	"title" : "Draggadon (In The BG) Settings",
+	"title" : "Draggadon (Boss) Settings",
 	"layout": [
 		{
 			"control": "spinBox",
@@ -21,6 +21,27 @@
 			"value-default": 3.5,
 			"value-min": 0,
 			"value-max": 20
-		}
+		},
+		{
+			"control": "lineEdit",
+			"name": "death",
+			"title": "Trigger event upon death animation?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        },
+		{
+			"control": "lineEdit",
+			"name": "preDash",
+			"title": "Trigger event before preparing a dash attack?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        },
+		{
+			"control": "lineEdit",
+			"name": "postDash",
+			"title": "Trigger event after using a dash attack?",
+			"tooltip": "Type in one of your events here.",
+			"value-default": ""
+        }
 	]
 }

@@ -68,8 +68,8 @@ local draggadonBossSettings = {
 
 	--Define custom properties below
 	summonEnemyTable = {
-		210,
-		23,
+		800,
+		773,
 	},
 	neckHitbox = {
 		width = 96,
@@ -100,30 +100,30 @@ local draggadonBossSettings = {
 	},
 	totalHP = maxHP,
 	attackTable = {
-		[0] = {
+		[1] = {
 			state = STATE.RAIN,
 			availableHPMin = 0,
-			availableHPMax = maxHP,
-		},
-		[1] = {
-			state = STATE.SUMMON,
-			availableHPMin = 0,
-			availableHPMax = maxHP,
+			availableHPMax = 3,
 		},
 		[2] = {
-			state = STATE.STREAMOFFIRE,
+			state = STATE.SUMMON,
 			availableHPMin = 0,
-			availableHPMax = maxHP,
+			availableHPMax = 3,
 		},
 		[3] = {
-			state = STATE.METEOR,
-			availableHPMin = maxHP/3,
-			availableHPMax = maxHP*2/3,
+			state = STATE.STREAMOFFIRE,
+			availableHPMin = 0,
+			availableHPMax = 3,
 		},
 		[4] = {
+			state = STATE.METEOR,
+			availableHPMin = 1,
+			availableHPMax = 1,
+		},
+		[5] = {
 			state = STATE.DASH,
-			availableHPMin = maxHP*2/3,
-			availableHPMax = maxHP,
+			availableHPMin = 2,
+			availableHPMax = 2,
 		},
 	},
 	streamoffireID=861,
@@ -185,7 +185,7 @@ local draggadonBossSettings = {
 	},
 	summonBGO = 858,
 	summonIndicatorID = 860,
-	summonSpawnDelay = 30,
+	summonSpawnDelay = 80,
 	summonEnemyConsecutive = 3,
 	roarSummonDelay = 90,
 	startSummoningDelay = 80,
@@ -234,14 +234,14 @@ local draggadonBossSettings = {
 	smokeOffsetX = {
 		[-1] = {
 			[0] = -48,
-			[1] = 48,
+			[1] = -32,
 		},
 		[1] = {
-			[0] = -48,
-			[1] = 48,
+			[0] = 48,
+			[1] = 32,
 		},
 	},
-	smokeOffsetY = -16,
+	smokeOffsetY = 8,
 	smokeSpeedX = 2,
 	smokeSpeedY = 0.5,
 	
@@ -279,11 +279,19 @@ local draggadonBossSettings = {
 		Misc.resolveFile("sfx_draggadonhurt1.wav"),
 		Misc.resolveFile("sfx_draggadonhurt2.wav"),
 	},
+
+	TRAMPLEIMMUNE = true,
+	onlyAttackMouth = true,
+	streamoffirelimit = {
+		min = 2,
+		max = 4,
+		dolimit = true,
+	},
 }
 
 --Applies NPC settings
-local draggadonConfig = npcManager.setNpcSettings(draggadonBossSettings)
 
+local draggadonConfig = npcManager.setNpcSettings(draggadonBossSettings)
 --Register the vulnerable harm types for this NPC. The first table defines the harm types the NPC should be affected by, while the second maps an effect to each, if desired.
 npcManager.registerHarmTypes(npcID,
 	{
@@ -321,21 +329,6 @@ function draggadonBoss.onInitAPI()
 	npcManager.registerEvent(npcID, draggadonBoss, "onStartNPC")
 	npcManager.registerEvent(npcID, draggadonBoss, "onDrawNPC")
 	registerEvent(draggadonBoss, "onNPCHarm")
-end
-
-local function decideAttack(v,data,config,settings)
-	local options = {}
-	if config.attackTable and #config.attackTable > 0 then
-		for i in ipairs(config.attackTable) do
-			if data.health >= config.attackTable[i].availableHPMin and data.health < config.attackTable[i].availableHPMax then
-				table.insert(options,config.attackTable[i].state)
-			end
-		end
-	end
-	if #options > 0 then
-		data.state = RNG.irandomEntry(options)
-	end
-	data.timer = 0
 end
 
 
@@ -391,6 +384,70 @@ function draggadonBoss.onStartNPC(v)
 	position1Table = BGO.get(NPC.config[v.id].position1BGO)
 	position2Table = BGO.get(NPC.config[v.id].position2BGO)
 	position3Table = BGO.get(NPC.config[v.id].position3BGO)
+end
+local function decideAttack(v,data,config,settings)
+	local options = {}
+	if config.streamoffirelimit.dolimit == false then
+		if config.attackTable and #config.attackTable > 0 then
+			for i in ipairs(config.attackTable) do
+				if data.health >= config.attackTable[i].availableHPMin and data.health <= config.attackTable[i].availableHPMax then
+					table.insert(options,config.attackTable[i].state)
+				end
+			end
+		end
+		if #options > 0 then
+			data.state = RNG.irandomEntry(options)
+			if data.state == STATE.RAIN then
+				data.positionLocation = RNG.irandomEntry(position1Table)
+				data.psuedoState = 0
+				data.positionState = 0
+			elseif data.state == STATE.STREAMOFFIRE then
+				data.positionLocation = RNG.irandomEntry(position3Table)
+				data.psuedoState = 0
+				data.positionState = 0
+			elseif data.state == STATE.DASH then
+				data.positionLocation = RNG.irandomEntry(position2Table)
+				data.psuedoState = 0
+				data.positionState = 0
+			end
+		end
+	else
+		if data.streamoffirelimit > 0 then
+			if config.attackTable and #config.attackTable > 0 then
+				for i in ipairs(config.attackTable) do
+					if data.health >= config.attackTable[i].availableHPMin and data.health <= config.attackTable[i].availableHPMax then
+						if config.attackTable[i].state ~= STATE.STREAMOFFIRE then
+							table.insert(options,config.attackTable[i].state)
+						end
+					end
+				end
+			end
+			if #options > 0 then
+				data.state = RNG.irandomEntry(options)
+				if data.state == STATE.RAIN then
+					data.positionLocation = RNG.irandomEntry(position1Table)
+					data.psuedoState = 0
+					data.positionState = 0
+				elseif data.state == STATE.STREAMOFFIRE then
+					data.positionLocation = RNG.irandomEntry(position3Table)
+					data.psuedoState = 0
+					data.positionState = 0
+				elseif data.state == STATE.DASH then
+					data.positionLocation = RNG.irandomEntry(position2Table)
+					data.psuedoState = 0
+					data.positionState = 0
+				end
+			end
+			data.streamoffirelimit = data.streamoffirelimit - 1
+		else
+			data.state = STATE.STREAMOFFIRE
+			data.positionLocation = RNG.irandomEntry(position3Table)
+			data.psuedoState = 0
+			data.positionState = 0
+			data.streamoffirelimit = RNG.randomInt(config.streamoffirelimit.min,config.streamoffirelimit.max)
+		end
+	end
+	data.timer = 0
 end
 function draggadonBoss.onTickEndNPC(v)
 	--Don't act during time freeze --
@@ -466,6 +523,7 @@ function draggadonBoss.onTickEndNPC(v)
 	data.laserHeight = data.laserHeight or nil
 	data.positionState = data.positionState or 0
 	data.drawWave = data.drawWave or false
+	data.streamoffirelimit = data.streamoffirelimit or RNG.randomInt(config.streamoffirelimit.min,config.streamoffirelimit.max)
 	
 	-- Custom Animations: Handling --
 	data.frameTimer = data.frameTimer + 1
@@ -556,7 +614,6 @@ function draggadonBoss.onTickEndNPC(v)
 	--Shooting stuff --
 	data.rotation = data.rotation or 0
 	data.rotationTick = data.rotationTick or 0
-	Text.print(data.state,110,126)
 	if data.state == STATE.IDLE then
 		v.speedY = math.cos(lunatime.tick() / 8) * 1.3
 		--[[if not data.attacking then
@@ -581,19 +638,6 @@ function draggadonBoss.onTickEndNPC(v)
 			data.attacking = true
 			decideAttack(v,data,config,settings) --decide attack function
 			data.timer = 0
-			if data.state == STATE.RAIN then
-				data.positionLocation = RNG.irandomEntry(position1Table)
-				data.psuedoState = 0
-				data.positionState = 0
-			elseif data.state == STATE.STREAMOFFIRE then
-				data.positionLocation = RNG.irandomEntry(position3Table)
-				data.psuedoState = 0
-				data.positionState = 0
-			elseif data.state == STATE.DASH then
-				data.positionLocation = RNG.irandomEntry(position2Table)
-				data.psuedoState = 0
-				data.positionState = 0
-			end
 			v.speedY = 0
 			v.speedX = 0
 		end
@@ -618,6 +662,9 @@ function draggadonBoss.onTickEndNPC(v)
 	elseif data.state == STATE.DASH then
 		if data.psuedoState == 0 then
 			if data.positionState == 0 then
+				if cfg.preDash ~= "" and data.timer == 1 then
+					triggerEvent(cfg.preDash)
+				end
 				data.dirVectr = vector.v2(
 					(data.positionLocation.x + 16) - (v.x + v.width * 0.5),
 					(v.y + v.height * 0.5) - (v.y + v.height * 0.5)
@@ -691,6 +738,9 @@ function draggadonBoss.onTickEndNPC(v)
 					data.timer = 0
 					data.psuedoState = 0
 					data.state = STATE.GOBACK
+					if cfg.postDash ~= "" then
+						triggerEvent(cfg.postDash)
+					end
 				end
 			end
 		end
@@ -757,7 +807,7 @@ function draggadonBoss.onTickEndNPC(v)
                 data.laserHeight = math.max(0,(data.laserHeight or (data.mouthBox.height*0.75))-((data.timer/data.mouthBox.height)*0.15))
                 data.laserOpacity = math.min(0.65,(data.laserOpacity or 0) + 0.1)
             end
-			for k, n in  ipairs(Colliders.getColliding{a = data.mouthBox, b = NPC.HITTABLE, btype = Colliders.NPC, filter = npcFilter}) do
+			for k, n in  ipairs(Colliders.getColliding{a = data.mouthBox, b = NPC.HITTABLE and NPC.POWERUP and NPC.UNHITTABLE and NPC.SHELL and NPC.VEGETABLE and NPC.INTERACTABLE, btype = Colliders.NPC, filter = npcFilter}) do
 				if n.id ~= v.id then
 					for i in ipairs(config.consumeNPCTable) do
 						if n.id == config.consumeNPCTable[i] then
@@ -935,7 +985,14 @@ function draggadonBoss.onTickEndNPC(v)
 			data.headcurrentAnim = 8
 		elseif data.timer >= config.consumeDelay then
 			data.timer = 0
-			data.state = STATE.HURT
+			if data.health >= maxHP then
+				data.state = STATE.KILL
+				data.timer = 0
+			else
+				v:mem(0x156,FIELD_WORD,60)
+				data.timer = 0
+				data.state = STATE.KILL
+			end
 			data.iFrames = true
 			data.headcurrentAnim = 2
 			data.headcurrentFrame = 1
@@ -945,7 +1002,7 @@ function draggadonBoss.onTickEndNPC(v)
 			SFXPlay(config.sfx_gulpreact)
 			if config.smokeEffectID then
 				for i=0,1 do
-					local a = Animation.spawn(config.smokeEffectID,data.headBox.x + data.headBox.width/2 + config.smokeOffsetX[v.data._basegame.direction][i]., data.headBox.y + data.headBox.height/2 + config.smokeOffsetY)
+					local a = Animation.spawn(config.smokeEffectID,data.headBox.x + data.headBox.width/2 + config.smokeOffsetX[v.data._basegame.direction][i], data.headBox.y + data.headBox.height/2 + config.smokeOffsetY)
 					a.x=a.x-a.width/2
 					a.y=a.y-a.height/2
 					a.speedX = -config.smokeSpeedX + i * 2 * config.smokeSpeedX
@@ -984,6 +1041,22 @@ function draggadonBoss.onTickEndNPC(v)
 			data.headcurrentAnim = 6
 			data.headcurrentFrame = 1
 			data.headframeTimer = 0
+			data.rotation = 0
+			data.rotationTick = 0
+			data.psuedoState = 0
+			data.shootTimer = 0
+			data.shootsFired = 0
+			data.attacking = false
+			data.headOffsetY = 0
+			data.attacking = false
+			data.laserProgress = nil
+			data.laserOpacity = nil
+			data.laserHeight = nil
+			data.drawWave = false
+			data.positionState = 0
+			if cfg.death ~= "" then
+				triggerEvent(cfg.death)
+			end
 		elseif data.timer == 100 then
 			data.headcurrentAnim = 7
 			data.headcurrentFrame = 1
@@ -995,10 +1068,10 @@ function draggadonBoss.onTickEndNPC(v)
 			v.y = v.y + 1*data.lavaMult
 		end
 		if data.timer >= 190 + config.deathFallDelay then v:kill(HARM_TYPE_VANISH) end
-		for _,blck in Block.iterateIntersecting(v.x, v.y, v.x + v.width, v.y + v.height/2) do
+		for _,blck in Block.iterateIntersecting(v.x, v.y, v.x + v.width, v.y + v.height*3/4) do
 			if Block.LAVA_MAP[blck.id] then
 				if data.lavaMult == 1.5 then --since this can only happen once when bowsy is dead i thought might as well spawn the sound here
-					SFXPlay(config.sfx_draggadonlavadrop)
+					SFXPlay(config.sfx_lavadrop)
 				end
 				data.lavaMult = 0.75
 			end
@@ -1030,7 +1103,7 @@ function draggadonBoss.onNPCHarm(eventObj, v, reason, culprit)
 	local config = NPC.config[v.id]
 	if v.id ~= npcID then return end
 
-			if data.iFrames == false and data.state ~= STATE.KILL and data.state ~= STATE.HURT then
+			if data.iFrames == false and data.state ~= STATE.KILL and data.state ~= STATE.HURT and data.state ~= STATE.CONSUME and not config.onlyAttackMouth then
 				local fromFireball = (culprit and culprit.__type == "NPC" and culprit.id == 13 )
 				local hpd = config.hpDecStrong
 				if fromFireball then
@@ -1086,13 +1159,15 @@ function draggadonBoss.onNPCHarm(eventObj, v, reason, culprit)
 					culprit:kill(HARM_TYPE_NPC)
 				end
 			end
-			if data.health >= maxHP then
-				data.state = STATE.KILL
-				data.timer = 0
-			else
-				v:mem(0x156,FIELD_WORD,60)
-				data.timer = 0
-				data.state = STATE.KILL
+			if not config.onlyAttackMouth then
+				if data.health >= maxHP then
+					data.state = STATE.KILL
+					data.timer = 0
+				else
+					v:mem(0x156,FIELD_WORD,60)
+					data.timer = 0
+					data.state = STATE.KILL
+				end
 			end
 	eventObj.cancelled = true
 end

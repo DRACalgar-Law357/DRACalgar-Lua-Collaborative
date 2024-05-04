@@ -126,6 +126,10 @@ function sampleNPC.onTickNPC(v)
 	if data.timer >= v.ai1 then
 		local spawn = NPC.spawn(v.ai2, v.x + v.width/2, v.y + v.height/2, v:mem(0x146, FIELD_WORD), false, true)
 		spawn.ai1 = v.ai3
+		if v.ai2 >= 773 and v.ai2 <= 779 then
+			spawn.data._settings.list = 1
+			spawn.ai1 = RNG.irandomEntry{0,0,185}
+		end
 		if sampleNPCSettings.spawnedSFX then
 			SFX.play(sampleNPCSettings.spawnedSFX)
 		end
