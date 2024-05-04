@@ -1,0 +1,24 @@
+{
+	"style" : "groupbox",
+	"title" : "Fly Guy Settings",
+	"layout": [	
+{
+			"control": "combobox",
+			"name": "list",
+			"title": "Fly Guy Behaviour",
+			"elements": ["Hover", "Swoop and Leave", "Redirector"],
+			"value-default": 0
+		},
+		{
+			"control": "spinBox",
+			"type": "double",
+			"name": "moveSpeed",
+			"title": "Speed",
+			"tooltip": "Alters the Fly Guy's speed, but only when set to <b>Redirector</b> behaviour.",
+			"value-default": 1.5,
+			"value-min": 0,
+			"value-max": 20,
+			"single-step": 0.5
+		}
+		]
+}
