@@ -129,6 +129,14 @@ function sampleNPC.onTickNPC(v)
 		if v.ai2 >= 773 and v.ai2 <= 779 then
 			spawn.data._settings.list = 1
 			spawn.ai1 = RNG.irandomEntry{0,0,185}
+			spawn.spawnX = spawn.x
+			spawn.spawnY = spawn.y
+			if spawn.direction == DIR_RIGHT then
+				spawn.x = spawn.spawnX + Section(spawn:mem(0x146, FIELD_WORD)).boundary.top - 64 - spawn.spawnY
+				spawn.data.left = false
+			else
+				spawn.x = spawn.spawnX + 128 - Section(spawn:mem(0x146, FIELD_WORD)).boundary.top - 64 + spawn.spawnY
+			end
 		end
 		if sampleNPCSettings.spawnedSFX then
 			SFX.play(sampleNPCSettings.spawnedSFX)

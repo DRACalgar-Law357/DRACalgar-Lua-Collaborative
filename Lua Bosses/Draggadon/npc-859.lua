@@ -114,7 +114,9 @@ function sampleNPC.onTickEndNPC(v)
 		data.initialized = true
 		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = 2, texture = Graphics.loadImageResolved("rainingfireballindicator.png")}
 		if v.ai1 == 1 then
-			v.ai2 = 90
+			v.ai2 = 130
+			v.ai3 = 50
+			v.ai4 = 0
 		end
 	end
 
@@ -127,7 +129,14 @@ function sampleNPC.onTickEndNPC(v)
 		-- If that applies to your NPC, simply return here.
 		-- return
 	end
-	if v.ai1 == 1 then v.ai2 = v.ai2 - 1 end
+	if v.ai1 == 1 then v.ai2 = v.ai2 - 1 v.ai3 = v.ai3 - 1 end
+	if v.ai3 > 0 and v.ai1 == 1 and v.ai4 == 0 then
+		v.speedY = -Defines.npc_grav
+	end
+	if v.ai3 <= 0 and v.ai1 == 1 and v.ai4 == 0 then
+		v.speedY = 3
+		v.ai4 = 1
+	end
 	if math.abs(v.speedX) <= 0.1 then
 		v.speedX = 0
 	else

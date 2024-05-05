@@ -459,10 +459,9 @@ backgroundBills.bgolistNPC({79,301,302,303,75,76,77,78,89,90,91,47,139,140,146,3
             if v.y + v.height <= camera.y - v.height then
                 v:kill(9)
                 local n = NPC.spawn(859,RNG.randomInt(camera.x,camera.x+camera.width),camera.y-192,v.section,false,true)
-                n.despawnTimer = 60
+                n.despawnTimer = 300
                 n.ai1 = 1
                 SFX.play(16)
-                n.speedY = 3
             end
             local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
             local currentSection = v:mem(0x146, FIELD_WORD)

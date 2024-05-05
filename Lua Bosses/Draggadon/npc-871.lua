@@ -89,12 +89,22 @@ local draggadonBGSettings = {
 	},
 	spawnOffset = {
 		[-1] = {
-			x = -56,
-			y = -24,
+			x = -72,
+			y = -40,
 		},
 		[1] = {
-			x = 56,
-			y = -24,
+			x = 72,
+			y = -40,
+		}
+	},
+	breathOffset = {
+		[-1] = {
+			x = -70,
+			y = -14,
+		},
+		[1] = {
+			x = 70,
+			y = -14,
 		}
 	},
 	headFrames = 16,
@@ -169,7 +179,7 @@ local function tryFire(v,data,config,settings)
 	
 
 	-- Shoot!
-	local npc = NPC.spawn(config.fireBreathID, v.x + 0.5 * v.width + config.gfxoffsetx + config.headOffset[v.direction].x + config.spawnOffset[v.direction].x, v.y + 0.5 * v.height + config.headOffset[v.direction].y + config.spawnOffset[v.direction].y, v.section, false, true)
+	local npc = NPC.spawn(config.fireBreathID, v.x + 0.5 * v.width + config.gfxoffsetx + config.headOffset[v.direction].x + config.breathOffset[v.direction].x, v.y + 0.5 * v.height + config.headOffset[v.direction].y + config.breathOffset[v.direction].y, v.section, false, true)
 	local bombxspeed = vector.v2(Player.getNearest(npc.x + npc.width/2, npc.y + npc.height).x + 0.5 * Player.getNearest(npc.x + npc.width/2, npc.y + npc.height).width - (npc.x + 0.5 * npc.width))
 	local bombyspeed = vector.v2(Player.getNearest(npc.x + npc.width, npc.y + npc.height/2).y + 0.5 * Player.getNearest(npc.x + npc.width, npc.y + npc.height/2).height - (npc.y + 0.5 * npc.height))
 	npc.speedX = bombxspeed.x / 39.5
