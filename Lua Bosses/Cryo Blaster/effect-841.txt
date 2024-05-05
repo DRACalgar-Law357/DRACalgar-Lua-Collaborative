@@ -1,0 +1,6 @@
+[first]
+import=AI_SINGLE
+framespeed=2
+frames=12
+lifetime=24
+speedY = 1
