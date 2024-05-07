@@ -183,12 +183,14 @@ local draggadonBossSettings = {
 		speedY = 7,
 		speedXMin = 2,
 	},
+	--Summoning enemies configs
 	summonBGO = 858,
 	summonIndicatorID = 860,
 	summonSpawnDelay = 80,
 	summonEnemyConsecutive = 3,
 	roarSummonDelay = 90,
 	startSummoningDelay = 80,
+	--Spawning meteor configs
 	meteorDelay = 150,
 	startMeteoringDelay = 120,
 	meteorTable = {
@@ -197,22 +199,33 @@ local draggadonBossSettings = {
 	},
 	meteorSpawnDelay = 24,
 	meteorConsecutive = 12,
+	--configs for streamoffire
 	streamoffire = {
+		--An entirety delay of the STREAMOFFIRE state
 		overallDelay = 540,
+		--Starts breathing fire after this delay; doesn't add up with overallDelay
 		beginBreathingDelay = 300,
+		--barrage configs for STREAMOFFIRE state
 		barrageDelay = 6,
 		barrageSpeedX = 10,
 		barrageSpeedY = 0,
 	},
+	--Position configs
 	position1BGO = 859, --To use a raining fireball attack
 	position2BGO = 861, --To use a dash attack
 	position3BGO = 860, --To charge a stream of fire attack
+	--Position ranges to stop positioning
 	positionRangeX = 12,
 	positionRangeY = 12,
+	--Dash configs
 	dash = {
+		--Before he dashes:
 		charge = {
+			--stays in place from this delay
 			waitDelay = 180,
+			--backs up before charging
 			initiateDelay = 30,
+			--An effect before charging
 			effect = {
 				id = 80,
 				x = {
@@ -228,8 +241,11 @@ local draggadonBossSettings = {
 			stopDelay = 120,
 		},
 	},
+	--A delay that kills the draggadon when in a death animation
 	deathFallDelay = 480,
+	--Consume delay
 	consumeDelay = 150,
+	--Smoke stuff after it backfires his consumption
 	smokeEffectID = 787,
 	smokeOffsetX = {
 		[-1] = {
@@ -245,9 +261,10 @@ local draggadonBossSettings = {
 	smokeSpeedX = 2,
 	smokeSpeedY = 0.5,
 	
-
+	--laser drawing configs
 	laserColor     = Color.orange, 
-
+	laserCloseInRate = 0.25,
+	--SFX stuff
 	sfx_hurt = 39,
 	sfx_fireRain = 42,
 	sfx_lavadrop = Misc.resolveFile("sfx_draggadonlavadrop.ogg"),
@@ -280,8 +297,10 @@ local draggadonBossSettings = {
 		Misc.resolveFile("sfx_draggadonhurt2.wav"),
 	},
 
-	TRAMPLEIMMUNE = true,
-	onlyAttackMouth = true,
+	TRAMPLEIMMUNE = true, --Makes it immune to MegaDood's Koopa Clown Tank (tramples hittable NPCs and kills them)
+	onlyAttackMouth = true, --when true, the NPC's main hitbox doesn't account for any attacks.
+	--While Draggadon can be damaged from his body, Draggadon can also be damaged by throwing certain NPCs into his mouth while he's charging a stream of fire attack
+	--streamoffirelimit.dolimit changes how draggadon decides by adding a counter that when it reaches a specified value decided by eng from streamoffire.min and stramoffire.max, it guarantees a choice to use a streamoffire attack
 	streamoffirelimit = {
 		min = 2,
 		max = 4,
@@ -331,7 +350,7 @@ function draggadonBoss.onInitAPI()
 	registerEvent(draggadonBoss, "onNPCHarm")
 end
 
-
+--Checks if there are any content in the specified entries and then plays their sound effects if there are
 local function SFXPlay(sfx)
 	if sfx then
 		SFX.play(sfx)
@@ -347,6 +366,7 @@ local function SFXPlayTable(sfx)
 	end
 end
 
+--Modified Code from MDA's Mechakoopas
 local laserSpeed = 20
 local function doLaserLogic(v,dangerous)
     local config = NPC.config[v.id]
@@ -380,6 +400,7 @@ local position1Table
 local position2Table
 local position3Table
 function draggadonBoss.onStartNPC(v)
+	--Interperet all specified BGOs for Draggadon's attacks
 	bgoTable = BGO.get(NPC.config[v.id].summonBGO)
 	position1Table = BGO.get(NPC.config[v.id].position1BGO)
 	position2Table = BGO.get(NPC.config[v.id].position2BGO)
@@ -391,7 +412,17 @@ local function decideAttack(v,data,config,settings)
 		if config.attackTable and #config.attackTable > 0 then
 			for i in ipairs(config.attackTable) do
 				if data.health >= config.attackTable[i].availableHPMin and data.health <= config.attackTable[i].availableHPMax then
-					table.insert(options,config.attackTable[i].state)
+					if config.attackTable[i].state == STATE.RAIN or config.attackTable[i].state == STATE.STREAMOFFIRE or config.attackTable[i].state == STATE.DASH or config.attackTable[i].state == STATE.SUMMON then
+						--Check if there are specified BGOs around for RAIN, STREAMOFFIRE, SUMMON, and DASH
+						--If not, don't insert these outcomes
+						local check = false						
+						if (config.attackTable[i].state == STATE.RAIN and #position1Table > 0) or (config.attackTable[i].state == STATE.DASH and #position2Table > 0) or (config.attackTable[i].state == STATE.STREAMOFFIRE and #position3Table > 0) or (config.attackTable[i].state == STATE.SUMMON and #bgoTable > 0) then
+							check = true
+						end
+						if check == true then table.insert(options,config.attackTable[i].state) end
+					else
+						table.insert(options,config.attackTable[i].state)
+					end
 				end
 			end
 		end
@@ -417,7 +448,20 @@ local function decideAttack(v,data,config,settings)
 				for i in ipairs(config.attackTable) do
 					if data.health >= config.attackTable[i].availableHPMin and data.health <= config.attackTable[i].availableHPMax then
 						if config.attackTable[i].state ~= STATE.STREAMOFFIRE then
-							table.insert(options,config.attackTable[i].state)
+							--Exclude STREAMOFFIRE since you're limiting STREAMOFFIRE based on counters this takes in
+							--The counter adds up to a specific value made by rng
+							--Until it hits that, it guarantees a choice to use a STREAMOFFIRE attack
+							if config.attackTable[i].state == STATE.RAIN or config.attackTable[i].state == STATE.DASH or config.attackTable[i].state == STATE.SUMMON then
+								--Check if there are specified BGOs around for RAIN, SUMMON, and DASH
+								--If not, don't insert these outcomes
+								local check = false						
+								if (config.attackTable[i].state == STATE.RAIN and #position1Table > 0) or (config.attackTable[i].state == STATE.DASH and #position2Table > 0) or (config.attackTable[i].state == STATE.SUMMON and #bgoTable > 0) then
+									check = true
+								end
+								if check == true then table.insert(options,config.attackTable[i].state) end
+							else
+								table.insert(options,config.attackTable[i].state)
+							end
 						end
 					end
 				end
@@ -440,10 +484,13 @@ local function decideAttack(v,data,config,settings)
 			end
 			data.streamoffirelimit = data.streamoffirelimit - 1
 		else
-			data.state = STATE.STREAMOFFIRE
-			data.positionLocation = RNG.irandomEntry(position3Table)
-			data.psuedoState = 0
-			data.positionState = 0
+			--Check if there are any specified BGOs for this attack
+			if #position3Table > 0 then
+				data.state = STATE.STREAMOFFIRE
+				data.positionLocation = RNG.irandomEntry(position3Table)
+				data.psuedoState = 0
+				data.positionState = 0
+			end
 			data.streamoffirelimit = RNG.randomInt(config.streamoffirelimit.min,config.streamoffirelimit.max)
 		end
 	end

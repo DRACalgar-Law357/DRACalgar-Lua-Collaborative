@@ -1,0 +1,1 @@
+Becomes super saiyan

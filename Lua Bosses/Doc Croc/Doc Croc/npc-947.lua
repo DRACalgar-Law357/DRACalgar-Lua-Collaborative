@@ -229,15 +229,25 @@ function actor.onTickEndNPC(v)
 	data.frameTimer = data.frameTimer - data.currentFrameTimer
 
 	v.animationFrame = data.currentFrame
-	
-	if data.frameTimer <= 0 then
-		data.frameTimer = 60
-		if data.frameCounter < #config.frameStates[data.state].frames then
-			data.frameCounter = data.frameCounter + 1
-		else
-			data.currentFrameTimer = 0
-			data.frameTimer = 0
-			data.frameCounter = 1
+	if config.frameStates[data.state].loopFrames == true then
+		if data.frameTimer <= 0 then
+			data.frameTimer = 60
+			if data.frameCounter < #config.frameStates[data.state].frames then
+				data.frameCounter = data.frameCounter + 1
+			else
+				data.currentFrameTimer = 0
+				data.frameTimer = 0
+				data.frameCounter = 1
+			end
+		end
+	else
+		if data.frameTimer <= 0 then
+			data.frameTimer = 60
+			if data.frameCounter < #config.frameStates[data.state].frames then
+				data.frameCounter = data.frameCounter + 1
+			else
+
+			end
 		end
 	end
 	if v.animationFrame >= 0 then

@@ -1,30 +1,72 @@
---[[
-
-	Code by MrDoubleA and modified by DRACalgar Law
-
-]]
-
 local npcManager = require("npcManager")
-local clearpipe = require("blocks/ai/clearpipe")
 local effectconfig = require("game/effectconfig")
-local docCroc = {}
+local kuroku = {}
 local npcID = NPC_ID
 
-local deathEffectID = (937)
+local STATE = {
+	IDLE = 0,
+	RUN = 1,
+	THROW = 2,
+	FURIOUS1 = 3,
+	FURIOUS2 = 4,
+	HURT = 5,
+	KILL = 6,
+}
 
-local throwID = (136)
+local deathEffectID = (npcID)
+--[[
+	throwTable is a config where Kuroku throws specified NPCs and uses sets of ways to throw them
+	-throwSet: 0 thrown at a set speed, 1 thrown velocity is determined by user's position and modifies horizontal speed for this while using a set speedY, 2 thrown velocity is determined by user's position and uses vertical speed for this while using the set speedX, 3 uses an rng range for speedX and speedY
+	-throwSpeedX and throwSpeedY: pretty self explanatory except throwSpeedY goes upper if positive value is inputed
+	-id: throws that NPC with the id
+	-throwSFX and pickupSFX: plays a sfx if thrown and plays a sfx when displaying an animation before throwing
+	-availableHP: uses these values to compare with his HP to use it or not at these moments
+	-throwSpeedRestrictRate: restricts the vector speed; intended to be optimal; used for throwSet 1 and 2
+	-throwSpeedXMin, throwSpeedXMax, throwSpeedYMin, throwSpeedYMax: used for throwSet 3 that uses RNG.random to determine their velocity
+]]
+local throwTable = {
+	[1] = {
+		id = 1,
+		throwSet = 0
+		throwSpeedX = 4,
+		throwSpeedY = 4
+		throwSFX = 25,
+		pickupSFX= 18,
+		availableHPMin = 0,
+		availableHPMax = 3,
+	},
+	[2] = {
+		id = 2,
+		throwSet = 1,
+		throwSpeedY = 7
+		throwSpeedRestrictRate = 7.5,
+		availableHPMin = 0,
+		availableHPMax = 3,
+	},
+	[3] = {
+		id = 3,
+		throwSet = 2,
 
-local docCrocSettings = {
+		availableHPMin = 0,
+		availableHPMax = 3,
+	},
+},
+
+local attackTable = {
+
+}
+
+local kurokuSettings = {
 	id = npcID,
 	
-	gfxwidth = 52,
+	gfxwidth = 64,
 	gfxheight = 64,
 	gfxoffsetx = 0,
-	gfxoffsety = 2,
-	width = 32,
-	height = 64,
+	gfxoffsety = 0,
+	width = 48,
+	height = 48,
 	
-	frames = 3,
+	frames = 8,
 	idleFrames = 1,
 	idleFramespeed = 8,
 	framestyle = 1,
@@ -51,14 +93,10 @@ local docCrocSettings = {
 	idleTime = 96, -- How long the NPC is idle before spawning a ball.
 	holdTime = 32, -- How long the ball NPC is held before throwing it.
 
-	throwID = throwID, -- The ID of the thrown ball NPC.
-	throwXSpeed = 4,
-	throwYSpeed = 4,
-
-	throwSFX = 25, -- Sound effect to be played after throwing the ball NPC.
+	throwSFX = 25, -- Sound effect to be played after throwing the thrown NPC.
 }
 
-npcManager.setNpcSettings(docCrocSettings)
+npcManager.setNpcSettings(kurokuSettings)
 npcManager.registerDefines(npcID, {NPC.HITTABLE})
 npcManager.registerHarmTypes(npcID,
 	{
@@ -87,9 +125,9 @@ npcManager.registerHarmTypes(npcID,
 
 local STATE_STANDING = 0
 local STATE_THROWING = 1
-function docCroc.onInitAPI()
-	npcManager.registerEvent(npcID,docCroc,"onTickEndNPC")
-	npcManager.registerEvent(npcID,docCroc,"onDrawNPC")
+function kuroku.onInitAPI()
+	npcManager.registerEvent(npcID,kuroku,"onTickEndNPC")
+	npcManager.registerEvent(npcID,kuroku,"onDrawNPC")
 end
 
 -- This function is just to fix   r e d i g i t   issues lol
@@ -118,13 +156,13 @@ local function drawBall(data,id,x,y,frame,priority,rotation)
 
 	data.ballSprite:draw{frame = frame+1,priority = priority,sceneCoords = true}
 end
-docCroc.drawBall = drawBall
+kuroku.drawBall = drawBall
 
-function effectconfig.onTick.TICK_DOCCROC(v) -- Logic for Doc Croc death effects
+function effectconfig.onTick.TICK_KUROKU(v) -- Logic for Kuroku death effects
     v.animationFrame = math.min(v.frames-1,math.floor((v.lifetime-v.timer)/v.framespeed))
 end
 
-function docCroc.onTickEndNPC(v)
+function kuroku.onTickEndNPC(v)
 	if Defines.levelFreeze then return end
 	
 	local data = v.data
@@ -245,7 +283,7 @@ function docCroc.onTickEndNPC(v)
 	end
 end
 
-function docCroc.onDrawNPC(v)
+function kuroku.onDrawNPC(v)
 	if v:mem(0x12A, FIELD_WORD) <= 0 then return end
 
 	local data = v.data
@@ -279,4 +317,4 @@ function docCroc.onDrawNPC(v)
 	)
 end
 
-return docCroc
+return kuroku
