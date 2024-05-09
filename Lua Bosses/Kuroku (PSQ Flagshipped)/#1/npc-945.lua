@@ -38,7 +38,7 @@ local throwTable = {
 	[2] = {
 		id = 2,
 		throwSet = 1,
-		throwSpeedY = 7
+		throwSpeedY = 7,
 		throwSpeedRestrictRate = 7.5,
 		availableHPMin = 0,
 		availableHPMax = 3,
@@ -46,14 +46,21 @@ local throwTable = {
 	[3] = {
 		id = 3,
 		throwSet = 2,
-
+		throwSpeedX = 3,
+		throwSpeedRestrictRate = 7.5,
 		availableHPMin = 0,
 		availableHPMax = 3,
 	},
-},
-
-local attackTable = {
-
+	[4] = {
+		id = 4,
+		throwSet = 3,
+		throwSpeedXMin = 3,
+		throwSpeedXMax = 5,
+		throwSpeedYMin = 4,
+		throwSpeedYMax = 6,
+		availableHPMin = 0,
+		availableHPMax = 3,
+	},
 }
 
 local kurokuSettings = {
