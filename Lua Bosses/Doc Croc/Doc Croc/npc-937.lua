@@ -58,7 +58,7 @@ local docCrocSettings = {
 	playerblock = false,
 	playerblocktop = false, --Also handles other NPCs walking atop this NPC.
 
-	nohurt=false,
+	nohurt=true,
 	nogravity = true,
 	noblockcollision = true,
 	nofireball = true,
@@ -136,7 +136,7 @@ local docCrocSettings = {
 	effectBitID = 939,
 	--Coordinate offset when spawning NPCs; starts at 0 on the physical center coordinate
 	spawnX = 0,
-	spawnY = 12,
+	spawnY = 28,
 	pulsex = false, -- controls the scaling of the sprite when firing
 	pulsey = false,
 	teleportx = true, --controls the scaling of the sprite when teleporting
@@ -405,7 +405,7 @@ function docCroc.onTickEndNPC(v)
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
-		data.initalized = false
+		data.initialized = false
 		data.timer = 0
 		return
 	end
@@ -663,7 +663,6 @@ function docCroc.onTickEndNPC(v)
 	elseif data.state == STATE.TELEPORT then
 		if data.timer == 1 then
 			SFXPlay(config.sfx_teleportDisappear)
-			v.friendly = true
 		end
 		pressButtonAnimate(v,data,config,true)
 		v.speedX = 0
@@ -684,6 +683,7 @@ function docCroc.onTickEndNPC(v)
 				v.y = data.location.y + BGO.config[config.teleportBGOID].height/2 - v.height/2
 			end
 		end
+		v.friendly = true
 		if data.timer >= 128 then
 			data.teleporting = false
 			v.friendly = false
@@ -781,7 +781,7 @@ function docCroc.onTickEndNPC(v)
 	if v:mem(0x120, FIELD_BOOL) then
 		v:mem(0x120, FIELD_BOOL, false)
 	end
-	if Colliders.collide(plr, v) and not v.friendly and data.state ~= STATE.KILL and data.state ~= STATE.HURT and not Defines.cheat_donthurtme then
+	if Colliders.collide(plr, v) and not v.friendly and data.state ~= STATE.TELEPORT and data.state ~= STATE.KILL and data.state ~= STATE.HURT and not Defines.cheat_donthurtme then
 		plr:harm()
 	end
 end

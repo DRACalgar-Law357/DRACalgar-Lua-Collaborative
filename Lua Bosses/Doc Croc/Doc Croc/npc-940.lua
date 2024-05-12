@@ -78,7 +78,8 @@ function cannonBall.onTickEndNPC(v)
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
-		data.initalized = false
+		data.initialized = false
+		v:kill(9)
 		return
 	end
 	--Initialize

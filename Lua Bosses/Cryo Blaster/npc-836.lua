@@ -41,8 +41,8 @@ local cryoBlasterSettings = {
 	noyoshi= true,
 	nowaterphysics = true,
 	--Various interactions
-	jumphurt = false, --If true, spiny-like
-	spinjumpsafe = false, --If true, prevents player hurt when spinjumping
+	jumphurt = true, --If true, spiny-like
+	spinjumpsafe = true, --If true, prevents player hurt when spinjumping
 	harmlessgrab = false, --Held NPC hurts other NPCs if false
 	harmlessthrown = false, --Thrown NPC hurts other NPCs if false
 	ignorethrownnpcs = true,
@@ -101,6 +101,7 @@ function cryoBlaster.onTickEndNPC(v)
 		data.initalized = false
 		data.timer = 0
 		data.hurtTimer = 0
+		data.shurikenDisplay = false
 		return
 	end
 
@@ -132,10 +133,15 @@ function cryoBlaster.onTickEndNPC(v)
 	end
 	data.timer = data.timer + 1
 	if v.parent then
-		data.dirVectr = vector.v2(
-			(v.parent.x + v.parent.width/2) - (v.x + v.width * 0.5),
-			(v.parent.y + v.parent.height/2) - (v.y + v.height * 0.5)
-			):normalize() * 5
+		if v.parent.isValid then
+			data.dirVectr = vector.v2(
+				(v.parent.x + v.parent.width/2) - (v.x + v.width * 0.5),
+				(v.parent.y + v.parent.height/2) - (v.y + v.height * 0.5)
+				):normalize() * 5
+		else
+			v.parent = nil
+			v:kill(9)
+		end
 	else
 		v:kill(9)
 	end

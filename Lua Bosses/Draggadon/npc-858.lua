@@ -71,6 +71,7 @@ local draggadonBossSettings = {
 		800,
 		773,
 	},
+	--Hitbox stuff
 	neckHitbox = {
 		width = 96,
 		height = 80,
@@ -89,6 +90,7 @@ local draggadonBossSettings = {
 		},
 		y = -128,
 	},
+	--Uses mouthHitbox for checking certain NPCs to damage it while charging a stream of fire attack and will hurt the player while not doing so
 	mouthHitbox = {
 		width = 96,
 		height = 96,
@@ -99,6 +101,7 @@ local draggadonBossSettings = {
 		y = -96,
 	},
 	totalHP = maxHP,
+	--Goes over each index and uses that attack as long as its health is abiding the requirements
 	attackTable = {
 		[1] = {
 			state = STATE.RAIN,
@@ -128,11 +131,13 @@ local draggadonBossSettings = {
 	},
 	streamoffireID=861,
 	fireRainID=859,
+	--Wave sprites placement
 	waveX = {
 		[-1] = -192,
 		[1] = 192,
 	},
 	waveY = -32,
+	--Head sprites placement
 	headOffset = {
 		[-1] = {
 			x = -192,
@@ -143,6 +148,7 @@ local draggadonBossSettings = {
 			y = -72,
 		}
 	},
+	--Spawn offsets starting from the headOffset positions
 	spawnOffset = {
 		[-1] = {
 			x = -58,
@@ -153,6 +159,7 @@ local draggadonBossSettings = {
 			y = -48,
 		}
 	},
+	--Drawing stuff
 	bodyFrames = 8,
 	bodyFrameStyle = 1,
 	headImg = Graphics.loadImageResolved("npc-"..npcID.."-head.png"),
@@ -175,9 +182,12 @@ local draggadonBossSettings = {
 		409,
 	},
 	priority = 15,
+	--hpDecWeak accounts for fireball attack damages
 	hpDecWeak= 0.25,
+	--hpDecStrong accounts for strong attacks like thrown npcs, swords, jumps, consuming is backfired, and etc.
 	hpDecStrong= 1,
 	iFramesDelay = 80,
+	--Fire Rain spawn configs
 	fireRainConfig = {
 		speedXMax = 18,
 		speedY = 7,
@@ -519,6 +529,10 @@ function draggadonBoss.onTickEndNPC(v)
 	--If despawned --
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary --
+		data.bodyimg = nil
+		data.headimg = nil
+		data.waveimg = nil
+		data.drawWave = false
 		data.initialized = false
 		return
 	end

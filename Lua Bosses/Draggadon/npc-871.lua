@@ -269,6 +269,8 @@ function draggadonBG.onTickEndNPC(v)
 		data.rotationTick = 0
 		data.shootTimer = lunatime.toTicks(cfg.Cooldown)
 		data.shootsFired = 0
+		data.bodyimg = nil
+		data.headimg = nil
 		return
 	end
 

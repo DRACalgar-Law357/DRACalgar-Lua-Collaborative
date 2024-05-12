@@ -233,13 +233,6 @@ local function handleFlyAround(v,data,config,settings)
 		v.speedY = math.sin(data.flyAroundTimer / verticalTime  )*verticalDistance   / verticalTime
 
 		data.flyAroundTimer = data.flyAroundTimer + 1
-		if (v.x + v.width/2 <= Camera.get()[1].x - 96) or (v.x + v.width/2 >= Camera.get()[1].x + Camera.get()[1].width + 96) or (v.y + v.height/2 <= Camera.get()[1].y - 96) or (v.y + v.height/2 >= Camera.get()[1].y + Camera.get()[1].height + 96) then
-			data.timer = 0
-			data.state = STATE.RETURN
-			data.icicling = false
-			v.ai1 = 0
-			v.ai2 = 0
-		end
 	elseif data.movementSet == 1 then
 		local ydirection
 		if v.y > v.spawnY then
@@ -315,16 +308,18 @@ function cryoBlaster.onTickEndNPC(v)
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
-		data.initalized = false
+		data.initialized = false
 		data.timer = 0
 		data.hurtTimer = 0
+		data.imgActive = false
+		data.shurikenDisplay = false
 		return
 	end
 	--Initialize
 	if not data.initialized then
 		--Initialize necessary data.
 		data.initialized = true
-
+		data.imgActive = true
 		settings.hp = settings.hp or 120
 		data.w = math.pi/65
 		data.timer = data.timer or 2
@@ -355,10 +350,10 @@ function cryoBlaster.onTickEndNPC(v)
 		data.sprSizey1 = 1
 		data.sprSizex2 = 1
 		data.sprSizey2 = 1
-		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = config.frames * (1 + config.framestyle), texture = Graphics.sprites.npc[v.id].img}
-		data.prop1img = data.prop1img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = 1, texture = config.prop1Image}
-		data.prop2img = data.prop2img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = 1, texture = config.prop2Image}
-			data.icicleimg = data.icicleimg or {
+		data.img = Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = config.frames * (1 + config.framestyle), texture = Graphics.sprites.npc[v.id].img}
+		data.prop1img = Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = 1, texture = config.prop1Image}
+		data.prop2img = Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = 1, texture = config.prop2Image}
+			data.icicleimg = {
 				--Set icicle drawings
 				[0] = Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = 4, texture = config.icicleImage},
 				[1] = Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = 4, texture = config.icicleImage},
@@ -1480,8 +1475,7 @@ function cryoBlaster.onDrawNPC(v)
 	local settings = v.data._settings
 	local config = NPC.config[v.id]
 	data.w = math.pi/65
-
-	if v.legacyBoss == true and data.state ~= STATE.KILL and data.state ~= STATE.KAMIKAZE and data.health then
+	if v.legacyBoss == true and data.state ~= STATE.KILL and data.state ~= STATE.KAMIKAZE and data.health and v.despawnTimer > 0 then
 		Graphics.drawImage(hpboarder, 740, 120)
 		local healthoffset = 126
 		healthoffset = healthoffset-(126*(data.health/settings.hp))
@@ -1493,96 +1487,98 @@ function cryoBlaster.onDrawNPC(v)
 		priority = flashPriority,
 		}
 	end
-	--Setup code by Mal8rk
-	local pivotOffsetX = 0
-	local pivotOffsetY = 0
+	if data.imgActive == true then
+		--Setup code by Mal8rk
+		local pivotOffsetX = 0
+		local pivotOffsetY = 0
 
-	local opacity = 1
+		local opacity = 1
 
-	local priority = 1
-	if lowPriorityStates[v:mem(0x138,FIELD_WORD)] then
-		priority = -75
-	elseif v:mem(0x12C,FIELD_WORD) > 0 then
-		priority = -30
-	end
+		local priority = 1
+		if lowPriorityStates[v:mem(0x138,FIELD_WORD)] then
+			priority = -75
+		elseif v:mem(0x12C,FIELD_WORD) > 0 then
+			priority = -30
+		end
 
-	--Text.print(v.x, 8,8)
-	--Text.print(data.timer, 8,32)
+		--Text.print(v.x, 8,8)
+		--Text.print(data.timer, 8,32)
 
-	if data.iFrames then
-		opacity = math.sin(lunatime.tick()*math.pi*0.25)*0.75 + 0.9
-	end
-	if data.icicling then
-		for i=0,2 do
-			if data.icicleimg[i] then
-				-- Setting some properties --
-				local offsetX
-				local offsetY
-				local frameSet
-				if i == 0 then
-					offsetX = config.cannonLeftX
-					offsetY = config.cannonLeftY
-					frameSet = 2
-				elseif i == 1 then
-					offsetX = config.cannonUpX
-					offsetY = config.cannonUpY
-					frameSet = 1
-				else
-					offsetX = config.cannonRightX
-					offsetY = config.cannonRightY
-					frameSet = 3
+		if data.iFrames then
+			opacity = math.sin(lunatime.tick()*math.pi*0.25)*0.75 + 0.9
+		end
+		if data.icicling then
+			for i=0,2 do
+				if data.icicleimg[i] then
+					-- Setting some properties --
+					local offsetX
+					local offsetY
+					local frameSet
+					if i == 0 then
+						offsetX = config.cannonLeftX
+						offsetY = config.cannonLeftY
+						frameSet = 2
+					elseif i == 1 then
+						offsetX = config.cannonUpX
+						offsetY = config.cannonUpY
+						frameSet = 1
+					else
+						offsetX = config.cannonRightX
+						offsetY = config.cannonRightY
+						frameSet = 3
+					end
+					data.icicleimg[i].x, data.icicleimg[i].y = v.x + 0.5 * v.width + config.gfxoffsetx + offsetX, v.y + 0.5 * v.height + offsetY
+					data.icicleimg[i].transform.scale = vector(1, 1)
+			
+					local p = -44.9
+			
+					-- Drawing --
+					data.icicleimg[i]:draw{frame = frameSet + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
 				end
-				data.icicleimg[i].x, data.icicleimg[i].y = v.x + 0.5 * v.width + config.gfxoffsetx + offsetX, v.y + 0.5 * v.height + offsetY
-				data.icicleimg[i].transform.scale = vector(1, 1)
-		
-				local p = -44.9
-		
-				-- Drawing --
-				data.icicleimg[i]:draw{frame = frameSet + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
 			end
 		end
-	end
-	if data.shurikenDisplay then
-		if data.prop1img then
-			-- Setting some properties --
-			data.prop1img.x, data.prop1img.y = v.x + 0.5 * v.width + config.gfxoffsetx, v.y + 0.5 * v.height --[[+ config.gfxoffsety]]
-			data.prop1img.transform.scale = vector(data.sprSizex1, data.sprSizey1)
-			data.prop1img.rotation = data.prop1rotation
-	
-			local p = -45.1
-	
-			-- Drawing --
-			data.prop1img:draw{frame = 0, sceneCoords = true, priority = p, color = Color.white..opacity}
-		end
-		if data.prop2img then
-			-- Setting some properties --
-			data.prop2img.x, data.prop2img.y = v.x + 0.5 * v.width + config.gfxoffsetx, v.y + 0.5 * v.height --[[+ config.gfxoffsety]]
-			data.prop2img.transform.scale = vector(data.sprSizex2, data.sprSizey2)
-			data.prop2img.rotation = data.prop2rotation
-	
-			local p = -45.2
-	
-			-- Drawing --
-			data.prop2img:draw{frame = 0, sceneCoords = true, priority = p, color = Color.white..opacity}
-		end
-	end
-
-	if data.img then
-		-- Setting some properties --
-		data.img.x, data.img.y = v.x + 0.5 * v.width + config.gfxoffsetx, v.y + 0.5 * v.height --[[+ config.gfxoffsety]]
-		if config.framestyle == 1 then
-			data.img.transform.scale = vector(data.sprSizex * -v.direction, data.sprSizey)
-		else
-			data.img.transform.scale = vector(data.sprSizex, data.sprSizey)
-		end
-		data.img.rotation = data.angle
-
-		local p = -45
-
-		-- Drawing --
+		if data.shurikenDisplay then
+			if data.prop1img then
+				-- Setting some properties --
+				data.prop1img.x, data.prop1img.y = v.x + 0.5 * v.width + config.gfxoffsetx, v.y + 0.5 * v.height --[[+ config.gfxoffsety]]
+				data.prop1img.transform.scale = vector(data.sprSizex1, data.sprSizey1)
+				data.prop1img.rotation = data.prop1rotation
 		
-		data.img:draw{frame = v.animationFrame, sceneCoords = true, priority = p, color = Color.white..opacity}
-		npcutils.hideNPC(v)
+				local p = -45.1
+		
+				-- Drawing --
+				data.prop1img:draw{frame = 0, sceneCoords = true, priority = p, color = Color.white..opacity}
+			end
+			if data.prop2img then
+				-- Setting some properties --
+				data.prop2img.x, data.prop2img.y = v.x + 0.5 * v.width + config.gfxoffsetx, v.y + 0.5 * v.height --[[+ config.gfxoffsety]]
+				data.prop2img.transform.scale = vector(data.sprSizex2, data.sprSizey2)
+				data.prop2img.rotation = data.prop2rotation
+		
+				local p = -45.2
+		
+				-- Drawing --
+				data.prop2img:draw{frame = 0, sceneCoords = true, priority = p, color = Color.white..opacity}
+			end
+		end
+
+		if data.img then
+			-- Setting some properties --
+			data.img.x, data.img.y = v.x + 0.5 * v.width + config.gfxoffsetx, v.y + 0.5 * v.height --[[+ config.gfxoffsety]]
+			if config.framestyle == 1 then
+				data.img.transform.scale = vector(data.sprSizex * -v.direction, data.sprSizey)
+			else
+				data.img.transform.scale = vector(data.sprSizex, data.sprSizey)
+			end
+			data.img.rotation = data.angle
+
+			local p = -45
+
+			-- Drawing --
+			
+			data.img:draw{frame = v.animationFrame, sceneCoords = true, priority = p, color = Color.white..opacity}
+			npcutils.hideNPC(v)
+		end
 	end
 end
 
