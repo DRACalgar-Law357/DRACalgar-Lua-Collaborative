@@ -178,6 +178,28 @@ function kuroku.onInitAPI()
 	npcManager.registerEvent(npcID,kuroku,"onDrawNPC")
 end
 
+function isNearPit(v)
+	--This function either returns false, or returns the direction the npc should go to. numbers can still be used as booleans.
+	local testblocks = Block.SOLID.. Block.SEMISOLID.. Block.PLAYER
+
+	local centerbox = Colliders.Box(v.x + 8, v.y, 8, v.height + 10)
+	local l = centerbox
+	if v.direction == DIR_RIGHT then
+		l.x = l.x + 38
+	end
+	
+	for _,centerbox in ipairs(
+	  Colliders.getColliding{
+		a = testblocks,
+		b = l,
+		btype = Colliders.BLOCK
+	  }) do
+		return false
+	end
+	
+	return true
+end
+
 -- This function is just to fix   r e d i g i t   issues lol
 local function gfxSize(config)
 	local gfxwidth  = config.gfxwidth
@@ -245,30 +267,27 @@ function kuroku.onTickEndNPC(v)
 
 	--Handling frames (animation code by Murphmario)
 
-	data.currentFrame = config.frameStates[data.state].frames[data.frameCounter]
-	data.currentFrameTimer = config.frameStates[data.state].framespeed
-	data.frameTimer = data.frameTimer - data.currentFrameTimer
+	data.currentFrame = config.frameStates[data.animateState].frames[data.frameCounter]
+	data.currentFrameTimer = config.frameStates[data.animateState].framespeed
+	data.frameTimer = data.frameTimer - 1
 	
 	v.animationFrame = data.currentFrame
 
-	if config.frameStates[data.state].loopFrames == true then
+	if config.frameStates[data.animateState].loopFrames == true then
 		if data.frameTimer <= 0 then
-			data.frameTimer = 60
-			if data.frameCounter < #config.frameStates[data.state].frames then
+			data.frameTimer = config.frameStates[data.animateState].framespeed
+			if data.frameCounter < #config.frameStates[data.animateState].frames then
 				data.frameCounter = data.frameCounter + 1
 			else
 				data.currentFrameTimer = 0
-				data.frameTimer = 0
 				data.frameCounter = 1
 			end
 		end
 	else
 		if data.frameTimer <= 0 then
-			data.frameTimer = 60
-			if data.frameCounter < #config.frameStates[data.state].frames then
+			data.frameTimer = config.frameStates[data.animateState].framespeed
+			if data.frameCounter < #config.frameStates[data.animateState].frames then
 				data.frameCounter = data.frameCounter + 1
-			else
-
 			end
 		end
 	end
@@ -300,6 +319,9 @@ function kuroku.onTickEndNPC(v)
 			data.currentFrameTimer = 0
 			data.frameCounter = 1
 			data.frameTimer = 0
+		end
+		if isNearPit(v) and v.collidesBlockBottom or v.collidesBlockLeft or v.collidesBlockRight then
+			v.direction = -v.direction
 		end
 	--[[elseif data.state == STATE.THROW then
 		if not data.animationBall then
