@@ -27,7 +27,8 @@ local deathEffectID = (npcID)
 ]]
 local throwTable = {
 	[1] = {
-		id = 1,
+		id = 30,
+		delay = 40,
 		throwSet = 0,
 		throwSpeedX = 4,
 		throwSpeedY = 4,
@@ -35,25 +36,31 @@ local throwTable = {
 		pickupSFX= 18,
 		availableHPMin = 0,
 		availableHPMax = 3,
+		cooldown = {min = 60, max = 60},
 	},
 	[2] = {
-		id = 2,
+		id = 28,
+		delay = 40,
 		throwSet = 1,
 		throwSpeedY = 7,
 		throwSpeedRestrictRate = 7.5,
 		availableHPMin = 0,
 		availableHPMax = 3,
+		cooldown = {min = 60, max = 60},
 	},
 	[3] = {
-		id = 3,
+		id = 210,
+		delay = 40,
 		throwSet = 2,
 		throwSpeedX = 3,
 		throwSpeedRestrictRate = 7.5,
 		availableHPMin = 0,
 		availableHPMax = 3,
+		cooldown = {min = 60, max = 60},
 	},
 	[4] = {
-		id = 4,
+		id = 134,
+		delay = 40,
 		throwSet = 3,
 		throwSpeedXMin = 3,
 		throwSpeedXMax = 5,
@@ -61,6 +68,7 @@ local throwTable = {
 		throwSpeedYMax = 6,
 		availableHPMin = 0,
 		availableHPMax = 3,
+		cooldown = {min = 60, max = 60},
 	},
 }
 
@@ -96,7 +104,7 @@ local kurokuSettings = {
 	spinjumpsafe = false,
 	harmlessgrab = false,
 	harmlessthrown = false,
-	cliffturn = true,
+	staticdirection = true,
 
 	frameStates = {
 		[0] = {
@@ -200,6 +208,24 @@ function isNearPit(v)
 	return true
 end
 
+local function decideThrowNPC(v,data,config,settings)
+	local options = {}
+	if throwTable and #throwTable > 0 then
+		for i in ipairs(throwTable) do
+			if data.health >= throwTable[i].availableHPMin and data.health <= throwTable[i].availableHPMax then
+				table.insert(options,throwTable[i].id)
+			end
+		end
+	end
+	if #options > 0 then
+		data.throwIndex = RNG.irandomEntry(options)
+		data.throwing = true
+		data.throwID = throwTable[data.throwIndex].id
+		data.throwCooldown = RNG.randomInt(throwTable[data.throwIndex].cooldown.min,throwTable[data.throwIndex].cooldown.max)
+	end
+	data.throwTimer = 0
+end
+
 -- This function is just to fix   r e d i g i t   issues lol
 local function gfxSize(config)
 	local gfxwidth  = config.gfxwidth
@@ -262,7 +288,9 @@ function kuroku.onTickEndNPC(v)
 		data.frameTimer = 0
 		data.animationState = 0
 
-		data.moveState = 0
+		data.throwing = false
+		data.throwIndex = 0
+		data.throwCooldown = RNG.randomInt(120,210)
 	end
 
 	--Handling frames (animation code by Murphmario)
@@ -302,6 +330,16 @@ function kuroku.onTickEndNPC(v)
 		return
 	end
 	data.timer = data.timer + 1
+	if data.state == STATE.IDLE or data.state == STATE.RUN then
+		if data.throwing == true then
+			
+		else
+			data.throwTimer = data.throwTimer + 1
+			if data.throwTimer >= data.throwCooldown then
+				decideThrowNPC(v,data,config,nil)
+			end
+		end
+	end
 	if data.state == STATE.IDLE then
 		v.speedX = 0
 		if data.animateState ~= 0 then
@@ -323,9 +361,9 @@ function kuroku.onTickEndNPC(v)
 		if isNearPit(v) and v.collidesBlockBottom or v.collidesBlockLeft or v.collidesBlockRight then
 			v.direction = -v.direction
 		end
-	--[[elseif data.state == STATE.THROW then
+	--[[if data.throwing then
 		if not data.animationBall then
-			local goalY = -v.height - NPC.config[config.throwID].height/2
+			local goalY = -v.height - NPC.config[data.throwID].height/2
 			local t = 24
 
 			local speedY = (goalY / t) - (Defines.npc_grav * t) / 2
@@ -345,10 +383,10 @@ function kuroku.onTickEndNPC(v)
 		if b.speedY >= 0 and b.yOffset >= -v.height then
 			b.yOffset = -v.height
 			b.speedY = 0
-			data.timer = data.timer + 1
-			if data.timer >= config.holdTime then
-				data.state = STATE.IDLE
-				data.timer = -32
+			data.throwTimer = data.throwTimer + 1
+			if data.throwTimer >= throwTable[data.throwIndex].delay then
+				data.throwing = false
+				data.throwTimer = 0
 				local s = NPC.spawn(
 					data.throwID,
 					v.x + (v.width  / 2),
@@ -358,8 +396,19 @@ function kuroku.onTickEndNPC(v)
 				)
 				
 				s.direction = v.direction
-				s.speedX = (config.throwXSpeed) * v.direction
-				s.speedY = -(config.throwYSpeed)
+				if throwTable[data.throwIndex].throwSet == 0 then
+					s.speedX = (throwTable[data.throwIndex].throwSpeedX) * v.direction
+					s.speedY = -(throwTable[data.throwIndex].throwSpeedY)
+				elseif throwthrowTable[data.throwIndex].throwSet == 1 then
+				local throwxspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
+				s.speedX = math.clamp(throwxspeed.x / throwTable[data.throwIndex].throwSpeedRestrictRate, throwTable[data.throwIndex].speedLimitMin, )
+				s.speedY = -(throwTable[data.throwIndex].throwSpeedY)
+				elseif throwTable[data.throwIndex].throwSet == 2 then
+
+				elseif throwTable[data.throwIndex].throwSet == 3 then
+					s.speedX = (throwTable[data.throwIndex].throwSpeedXMin) * v.direction
+					s.speedY = -(throwTable[data.throwIndex].throwSpeedYMin)
+				end
 				s.data.rotation = 0
 				s.data.bounced = false
 				s.friendly = v.friendly
@@ -392,34 +441,8 @@ function kuroku.onDrawNPC(v)
 	if v:mem(0x12A, FIELD_WORD) <= 0 then return end
 
 	local data = v.data
-	local b = data.animationBall
-
-	if not b then return end
-
 	local config = NPC.config[v.id]
-	local bconfig = NPC.config[data.throwID]
-
-	local gfxwidth,gfxheight = gfxSize(bconfig)
-
-	local priority
-	if bconfig.priority then
-		priority = -16
-	else
-		priority = -46
-	end
-
-	local frame = 0
-	if v.direction == DIR_RIGHT and bconfig.framestyle >= 1 then
-		frame = bconfig.frames
-	end
-
-	drawBall(
-		data,
-		data.throwID,
-		(v.x + (v.width / 2)) + bconfig.gfxoffsetx,
-		(v.y + v.height) - (gfxheight/2) + b.yOffset + bconfig.gfxoffsety,
-		frame,priority,0
-	)
+	local b = data.animationBall
 
 	data.w = math.pi/65
 
@@ -457,6 +480,32 @@ function kuroku.onDrawNPC(v)
 		data.img:draw{frame = v.animationFrame + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
 		npcutils.hideNPC(v)
 	end
+
+	if not b then return end
+
+	local bconfig = NPC.config[data.throwID]
+
+	local gfxwidth,gfxheight = gfxSize(bconfig)
+
+	local priority
+	if bconfig.priority then
+		priority = -16
+	else
+		priority = -46
+	end
+
+	local frame = 0
+	if v.direction == DIR_RIGHT and bconfig.framestyle >= 1 then
+		frame = bconfig.frames
+	end
+
+	drawBall(
+		data,
+		data.throwID,
+		(v.x + (v.width / 2)) + bconfig.gfxoffsetx,
+		(v.y + v.height) - (gfxheight/2) + b.yOffset + bconfig.gfxoffsety,
+		frame,priority,0
+	)
 end
 
 return kuroku
