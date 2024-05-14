@@ -36,7 +36,7 @@ local throwTable = {
 		pickupSFX= 18,
 		availableHPMin = 0,
 		availableHPMax = 3,
-		cooldown = {min = 60, max = 60},
+		cooldown = {min = 40, max = 60},
 	},
 	[2] = {
 		id = 28,
@@ -44,9 +44,11 @@ local throwTable = {
 		throwSet = 1,
 		throwSpeedY = 7,
 		throwSpeedRestrictRate = 7.5,
+		speedLimitMin = 2,
+		speedLimitMax = 6,
 		availableHPMin = 0,
 		availableHPMax = 3,
-		cooldown = {min = 60, max = 60},
+		cooldown = {min = 40, max = 60},
 	},
 	[3] = {
 		id = 210,
@@ -54,9 +56,11 @@ local throwTable = {
 		throwSet = 2,
 		throwSpeedX = 3,
 		throwSpeedRestrictRate = 7.5,
+		speedLimitMin = -6,
+		speedLimitMax = 6,
 		availableHPMin = 0,
 		availableHPMax = 3,
-		cooldown = {min = 60, max = 60},
+		cooldown = {min = 40, max = 60},
 	},
 	[4] = {
 		id = 134,
@@ -68,7 +72,7 @@ local throwTable = {
 		throwSpeedYMax = 6,
 		availableHPMin = 0,
 		availableHPMax = 3,
-		cooldown = {min = 60, max = 60},
+		cooldown = {min = 40, max = 60},
 	},
 }
 
@@ -401,10 +405,12 @@ function kuroku.onTickEndNPC(v)
 					s.speedY = -(throwTable[data.throwIndex].throwSpeedY)
 				elseif throwthrowTable[data.throwIndex].throwSet == 1 then
 				local throwxspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
-				s.speedX = math.clamp(throwxspeed.x / throwTable[data.throwIndex].throwSpeedRestrictRate, throwTable[data.throwIndex].speedLimitMin, )
+				s.speedX = math.clamp(throwxspeed.x / throwTable[data.throwIndex].throwSpeedRestrictRate, throwTable[data.throwIndex].speedLimitMin * v.direction, throwTable[data.throwIndex].speedLimitMax * v.direction)
 				s.speedY = -(throwTable[data.throwIndex].throwSpeedY)
 				elseif throwTable[data.throwIndex].throwSet == 2 then
-
+				local throwyspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
+				s.speedY = math.clamp(throwxspeed.y / throwTable[data.throwIndex].throwSpeedRestrictRate, throwTable[data.throwIndex].speedLimitMin, throwTable[data.throwIndex].speedLimitMax)
+				s.speedX = (throwTable[data.throwIndex].throwSpeedX) * v.direction
 				elseif throwTable[data.throwIndex].throwSet == 3 then
 					s.speedX = (throwTable[data.throwIndex].throwSpeedXMin) * v.direction
 					s.speedY = -(throwTable[data.throwIndex].throwSpeedYMin)
