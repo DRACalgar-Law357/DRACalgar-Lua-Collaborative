@@ -3,5 +3,6 @@ This is a collection meant for users to help users collaborate, make, and test c
 We currently have the following contributors dedicated to help:
 -Murphmario
 -Suckerman7 GM
--Prism Emerald
+-Prism Emerald [Spriter]
 -MegaDood
+-aaron3b [Spriter]
