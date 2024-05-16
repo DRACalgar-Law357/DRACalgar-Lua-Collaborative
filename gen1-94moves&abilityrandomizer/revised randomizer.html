@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <title></title>
+        <title>Pokemon</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
@@ -24,19 +24,11 @@
                 <h4>Set A</h4>
                 <p id="A"></p>
             </div>
-            <div style="border: 4px solid blue; border-radius: 12px; margin: 12px;">
-                <h4>Set B</h4>
-                <p id="B"></p>
-            </div>
-            <p>Select ONE of the two sets and use the keywords to design your boss's attacks, appearance or other elements relating to the fight.</p>
+            <p>You may use them for your randomizer playthrough.</p>
             <p>Good luck and have fun.</p>
 
-            <button onclick="OnRefreshAll()"
-            style="
-            border-radius: 8px;
-            border: none;
-            background-color: orange;
-            padding: 4px 12px;">Reroll</button>
+            <button onclick="onRefresh('A')" style="border-radius: 8px; border: none; background-color: orange; padding: 4px 12px;">Reroll</button>
+
         </div>
 
         <script>
@@ -1287,32 +1279,107 @@
 "Teraform Zero",
 "Poison Puppeteer"
 ];
-
-            function onRefresh(elementID) {
-                var randomInts = [-1,-1,-1,-1];
-                var i = 0;
-                while (i < 4) {
-                    randomInts[i] = parseInt(Math.random() * moves.length);
-                    if (randomInts[i] != -1 && 
-                        randomInts[i] != randomInts[(i+1)%4] &&
-                        randomInts[i] != randomInts[(i+2)%4] &&
-                        randomInts[i] != randomInts[(i+3)%4]
-                    ) {
-                        i++;
-                    }
-                }
-
-                document.getElementById(elementID)
-                    .innerHTML = moves[randomInts[0]] + "<br>" + moves[randomInts[1]] + "<br>" + moves[randomInts[2]] + "<br>" + moves[randomInts[3]] + "<br>" + abilities[parseInt(Math.random() * abilities.length)];
-
+    function onRefresh(elementID) {
+        var statMin = 5;
+        var statMax = 255;
+        var BSTMin = 175;
+        var BSTMax = 1125;
+        var IVMin = 0;
+        var IVMax = 31;
+        var EVMin = 0;
+        var EVMax = 255;
+        var EVTMin = 0;
+        var EVTMax = 510;
+        
+        // Generate random moves
+        var randomMoveInts = [-1,-1,-1,-1];
+        var i = 0;
+        while (i < 4) {
+            randomMoveInts[i] = parseInt(Math.random() * moves.length);
+            if (randomMoveInts[i] != -1 && 
+                randomMoveInts[i] != randomMoveInts[(i+1)%4] &&
+                randomMoveInts[i] != randomMoveInts[(i+2)%4] &&
+                randomMoveInts[i] != randomMoveInts[(i+3)%4]
+            ) {
+                i++;
             }
+        }
+        
+        // Generate random base stats
+        var randomStatInts = [-1,-1,-1,-1,-1,-1];
+        var BST = 0;
+        while (BST < BSTMin || BST > BSTMax) {
+            i = 0;
+            while (i < 6) {
+                randomStatInts[i] = parseInt(Math.random() * (statMax - statMin) + statMin);
+                i++;
+            }
+            BST = randomStatInts.reduce((total, stat) => total + stat, 0);
+        }
+        
+        // Generate random IVs
+        var randomIVInts = [-1,-1,-1,-1,-1,-1];
+        i = 0;
+        while (i < 6) {
+            randomIVInts[i] = parseInt(Math.random() * (IVMax - IVMin + 1) + IVMin);
+            i++;
+        }
+        
+        // Generate random EVs
+        var randomEVInts = [-1,-1,-1,-1,-1,-1];
+        i = 0;
+        while (i < 6) {
+            randomEVInts[i] = parseInt(Math.random() * (EVMax - EVMin + 1) + EVMin);
+            i++;
+        }
+        
+        // Ensure EV total does not exceed the maximum
+        var EVTotal = randomEVInts.reduce((total, ev) => total + ev, 0);
+        while (EVTotal > EVTMax) {
+            var randomIndex = Math.floor(Math.random() * 6);
+            var difference = EVTotal - EVTMax;
+            if (randomEVInts[randomIndex] >= difference) {
+                randomEVInts[randomIndex] -= difference;
+                EVTotal = EVTMax;
+            }
+        }
+        
+        // Display results
+        document.getElementById(elementID).innerHTML = 
+            "Move 1: " + moves[randomMoveInts[0]] + "<br>" +
+            "Move 2: " + moves[randomMoveInts[1]] + "<br>" +
+            "Move 3: " + moves[randomMoveInts[2]] + "<br>" +
+            "Move 4: " + moves[randomMoveInts[3]] + "<br>" +
+            "Ability: " + abilities[Math.floor(Math.random() * abilities.length)] + "<br>" +
+            "Base Stats:<br>" +
+            "HP: " + randomStatInts[0] + "<br>" +
+            "Attack: " +  randomStatInts[1] + "<br>" +
+            "Defense: " +  randomStatInts[2] + "<br>" +
+            "Special Attack: " +  randomStatInts[3] + "<br>" +
+            "Special Defense: " +  randomStatInts[4] + "<br>" +
+            "Speed: " +  randomStatInts[5] + "<br>" +
+            "BST: " + BST + "<br>" +
+            "IVs:<br>" +
+            "HP: " + randomIVInts[0] + "<br>" +
+            "Attack: " + randomIVInts[1] + "<br>" +
+            "Defense: " + randomIVInts[2] + "<br>" +
+            "Special Attack: " + randomIVInts[3] + "<br>" +
+            "Special Defense: " + randomIVInts[4] + "<br>" +
+            "Speed: " + randomIVInts[5] + "<br>" +
+            "EVs:<br>" +
+            "HP: " + randomEVInts[0] + "<br>" +
+            "Attack: " + randomEVInts[1] + "<br>" +
+            "Defense: " + randomEVInts[2] + "<br>" +
+            "Special Attack: " + randomEVInts[3] + "<br>" +
+            "Special Defense: " + randomEVInts[4] + "<br>" +
+            "Speed: " + randomEVInts[5];
+    }
 
             function OnRefreshAll() {
                 onRefresh("A");
-                onRefresh("B");
             }
 
-            OnRefreshAll()
+            OnRefreshAll();
 
         </script>
     </body>
