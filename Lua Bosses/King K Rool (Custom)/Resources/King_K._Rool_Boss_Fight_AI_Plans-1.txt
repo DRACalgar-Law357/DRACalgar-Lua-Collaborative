@@ -1,0 +1,32 @@
+--K. Rool Eight Hits, between two forms--
+Pre-Hit One: K.Rool throws his crown, then after getting hit he run back and forth across the arena once before looping back to crown throw. The player must stomp on him when he's not wearing his crown at all.
+
+Hit One: K.Rool throws his crown, then after getting hit he run back and forth across the arena two times before looping back to crown throw, each time he reaches the other side he runs faster. The player must stomp on him when he's not wearing his crown at all.
+
+Hit Two: K.Rool throws his crown, then after getting hit he makes a mighty dragoon jump all the way to the other side of the arena, then cannonballs rain from the ceiling back and forth once, before looping back to crown throw. The player must stomp on him when he's not wearing his crown at all. 
+
+Hit Three: K.Rool throws his crown, small bunny-hops to the other side of the arena, then cannonballs rain from the ceiling back and forth twice, before looping back to crown throw. The player must stomp on him when he's not wearing his crown at all.
+
+Hit Four: K.Rool throws his crown, large bunny-hops to the other side of the arena, then cannonballs rain back and forth two and a half times, before looping back to crown throw. The player must stomp on him when he's not wearing his crown at all.
+
+Fakeout: It plays the SMW Boss beaten jingle and then a second or two of silence, at which point K.Rool begins to rise up. The music dramatically changing to from the silence to "Crocodile Cacophony" from DKC2 as he gets up and quickly pulls out his blunderbuss.
+
+Hit Five: His blunderbuss spits out a cannonball our heroes can throw at him, he jets across the arena to the other side then trys to vacuum the player in. The throwable cannonball will shatter if the player takes too long. The player throws the free cannonball in his blunderbuss. K. Rool takes damage and gets all sooty for his troubles, while a dangerous fast moving cannonball flies out the blunderbuss thanks to his misfire.
+
+Hit Six: His Blunderbuss shoots out three spiky cannonballs, the first landing right in front of him, the second landing three blocks away, and the third three blocks away from the second one. K. Rool will jet back and forth across the arena once and can jet right through the cannonballs. When he tries to vacuum up the player this time one of the three cannonballs retracts it's spikes and becomes throwable. 
+The player once again throws the cannonball into his blunderbuss when K.Rool attempts to vacuum the player and the cannonball will shatter if the player takes too long.
+K. Rool once again takes damage and gets all sooty for his troubles, while a dangerous fast moving cannonball flies out the blunderbuss thanks to his misfire.
+
+Hit Seven: After jetting back and forth across the arena twice, K.Rool now shoots out a barrage of cannons in either of the following pattern:
+A. A fast shot, two slow shots, a fast shot, then a slow shot
+B. A low boucing shot, a high bouncing shot, two low bouncing shot, then two high bouncing shots
+Both possible patterns end with a final shot where the blunderbuss spits out a throwable cannon ball.  
+The player once again throws the free cannonball in his blunderbuss when K.Rool attempts to vacuum the player. K. Rool once again takes damage and gets all sooty for his troubles, while a dangerous fast moving cannonball flies out the blunderbuss thanks to his misfire.
+
+Hit Eight:
+K.Rool jets across back and forth across the arena three times, each time he reaches the other end K.Rool becomes more transparent; the only way to detect his movement is via a dust trail created by his movement. 
+After treking across the arena, K.Rool now temporalily unghosts himself then shoots out a barrage of cannons in either of the following pattern:
+A. A tight knuckleball shot, a loose knuckleball shot, two tight knuckleball shots, then three loose knuckleball shots
+B. A tall sinewave shot, three short sinewave shots, a normal shot, then a tall sinewave shot
+Both possible patterns end with a final shot where the blunderbuss spits out a throwable cannon ball.  
+The player once again throws the free cannonball in his blunderbuss when K.Rool attempts to vacuum the player while he's teleporting around, K.Rool will try to teleport near the player and unghost himself before attempting to vacuum them. The cannonball will shatter if the player takes too long. K. Rool for the last time takes damage and gets all sooty for his troubles, while a dangerous and slightly delayed final fast moving cannonball flies out the blunderbuss thanks to his misfire.
