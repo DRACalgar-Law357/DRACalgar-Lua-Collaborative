@@ -55,7 +55,18 @@ local sampleNPCSettings = {
 	grabside=false,
 	grabtop=false,
 
-	health=10,
+	health=9,
+
+	airImage = Graphics.loadImageResolved("npc-"..npcID.."-air.png"),
+
+	airOffsetXRight = -54,
+	airOffsetXLeft = 138,
+	airOffsetXLeftOG = 138,
+	airOffsetY = 48,
+
+	airFrames = 6,
+	airFramespeed = 4,
+	airHeight = 90,
 }
 
 npcManager.setNpcSettings(sampleNPCSettings)
@@ -86,7 +97,7 @@ npcManager.registerHarmTypes(npcID,
 		--[HARM_TYPE_SWORD]=10,
 	}
 );
-
+--Phase 1
 local STATE_IDLE = 0
 local STATE_THROW = 1
 local STATE_CATCH = 2
@@ -103,6 +114,25 @@ local STATE_HURT = 12
 local STATE_FAKEOUT = 13
 local STATE_DEFEAT = 14
 local STATE_INTRO = 15
+--Phase 2
+local STATE_INTRO = 0
+local STATE_SHOOT = 1
+local STATE_PROPEL1 = 2
+local STATE_PROPEL2 = 3
+local STATE_PROPEL3 = 4
+local STATE_VACCUM = 5
+local STATE_BACKFIRE = 6
+local STATE_SHOOT2 = 7
+local STATE_SHOOT3 = 8
+local STATE_SHOOTSTRAIGHT = 10
+local STATE_SHOOTBOUNCY = 11
+local STATE_SHOOTCIRCLE = 12
+local STATE_STUNCLOUD = 13
+local STATE_SLOWCLOUD = 14
+local STATE_REVERSECLOUD = 15
+local STATE_APPEARDISAPPEAR = 16
+local STATE_ATTACK = 17
+local STATE_DEFEATED = 18
 
 local spawnOffset = {
 	[-1] = -32,
