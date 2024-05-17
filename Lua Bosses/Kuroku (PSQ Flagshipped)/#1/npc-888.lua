@@ -30,8 +30,8 @@ local deathEffectID = (npcID)
 local throwTable = {
 	[1] = {
 		index = 1,
-		id = 30,
-		delay = 40,
+		id = 889,
+		delay = 45,
 		throwSet = 3,
 		throwSpeedXMin = -6,
 		throwSpeedXMax = 6,
@@ -41,34 +41,34 @@ local throwTable = {
 		pickupSFX= 73,
 		availableHPMin = 0,
 		availableHPMax = 3,
-		cooldown = {min = 40, max = 60},
+		cooldown = {min = 50, max = 70},
 		getThrown = false,
 	},
 	[2] = {
 		index = 2,
-		id = 28,
-		delay = 40,
+		id = 890,
+		delay = 60,
 		throwSet = 3,
-		throwSpeedXMin = -6,
-		throwSpeedXMax = 6,
-		throwSpeedYMin = 4,
-		throwSpeedYMax = 6,
+		throwSpeedXMin = -5,
+		throwSpeedXMax = 5,
+		throwSpeedYMin = 5,
+		throwSpeedYMax = 7,
 		throwSFX = 25,
 		pickupSFX= 73,
 		availableHPMin = 0,
 		availableHPMax = 3,
-		cooldown = {min = 40, max = 60},
+		cooldown = {min = 90, max = 110},
 		getThrown = false,
 	},
 	[3] = {
 		index = 3,
-		id = 210,
+		id = 891,
 		delay = 40,
-		throwSet = 3,
-		throwSpeedXMin = -6,
-		throwSpeedXMax = 6,
-		throwSpeedYMin = 4,
-		throwSpeedYMax = 6,
+		throwSet = 1,
+		throwSpeedY = 6,
+		throwSpeedRestrictRate = 60,
+		speedLimitMin = 0,
+		speedLimitMax = 9,
 		throwSFX = 25,
 		pickupSFX= 73,
 		availableHPMin = 0,
@@ -87,7 +87,7 @@ local throwTable = {
 		throwSpeedYMax = 6,
 		throwSFX = 25,
 		pickupSFX= 73,
-		availableHPMin = 0,
+		availableHPMin = 2,
 		availableHPMax = 3,
 		cooldown = {min = 40, max = 60},
 		getThrown = false,
@@ -486,8 +486,9 @@ function kuroku.onTickEndNPC(v)
 					s.speedX = (throwTable[data.throwIndex].throwSpeedX) * v.direction
 					s.speedY = -(throwTable[data.throwIndex].throwSpeedY)
 				elseif throwTable[data.throwIndex].throwSet == 1 then
+					npcutils.faceNearestPlayer(s)
 					local throwxspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
-					s.speedX = math.clamp(throwxspeed.x / throwTable[data.throwIndex].throwSpeedRestrictRate, throwTable[data.throwIndex].speedLimitMin * v.direction, throwTable[data.throwIndex].speedLimitMax * v.direction)
+					s.speedX = math.clamp(math.abs(throwxspeed.x / throwTable[data.throwIndex].throwSpeedRestrictRate), throwTable[data.throwIndex].speedLimitMin, throwTable[data.throwIndex].speedLimitMax) * s.direction
 					s.speedY = -(throwTable[data.throwIndex].throwSpeedY)
 				elseif throwTable[data.throwIndex].throwSet == 2 then
 					local throwyspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).y + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).height - (v.y + 0.5 * v.height))
