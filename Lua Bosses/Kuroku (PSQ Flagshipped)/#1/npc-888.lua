@@ -359,6 +359,7 @@ function kuroku.onTickEndNPC(v)
 		data.throwCooldown = RNG.randomInt(120,210)
 
 		data.health = maxHP
+		data.shiftStuff = 0 --0 run around and throw things, 1 furious and zoom around
 	end
 
 	--Handling frames (animation code by Murphmario)

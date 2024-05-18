@@ -31,7 +31,7 @@ local sampleNPCSettings = {
 	--Frameloop-related
 	frames = 8,
 	framestyle = 1,
-	framespeed = 2, -- number of ticks (in-game frames) between animation frame changes
+	framespeed = 4, -- number of ticks (in-game frames) between animation frame changes
 
 	foreground = false, -- Set to true to cause built-in rendering to render the NPC to Priority -15 rather than -45
 
