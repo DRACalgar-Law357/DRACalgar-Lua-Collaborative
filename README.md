@@ -6,3 +6,4 @@ We currently have the following contributors dedicated to help:
 -Prism Emerald [Spriter]
 -MegaDood
 -aaron3b [Spriter]
+-Mal8rk
