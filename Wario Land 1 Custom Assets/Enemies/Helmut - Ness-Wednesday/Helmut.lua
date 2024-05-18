@@ -117,11 +117,11 @@ function HelmutNPC.onTickEndNPC(v)
 			end
 			if not config.sturdy then
 				if Colliders.collide(p, data.buttBox) then
-					if (p.forcedState == 0 and p.deathTimer == 0 and (not p:mem(0x13C,FIELD_BOOL) and v:mem(0x1C,FIELD_WORD) > 0)) or v.direction == 1 then
+					if (p.forcedState == 0 and p.deathTimer == 0 and (not p:mem(0x13C,FIELD_BOOL) and v:mem(0x1C,FIELD_WORD) > 0)) then
 						v:harm(3)
-					end
-					if v.direction == 1 then
-						Colliders.bounceResponse(p)
+						if v.direction == 1 then
+							Colliders.bounceResponse(p)
+						end
 					end
 				end
 			end
