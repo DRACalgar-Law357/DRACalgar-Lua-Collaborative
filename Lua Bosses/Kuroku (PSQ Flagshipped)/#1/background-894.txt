@@ -1,0 +1,8 @@
+image = background-894e.png
+name = "Bowling Ball Spawn Point"
+description = "A BGO that spawns bowling balls in this spot. Usually used by a bowling ball thrown by Kuroku"
+frames = 1
+framespeed = 8
+noshadows = false
+priority = -85
+grid = 4

@@ -1,0 +1,8 @@
+image = background-888e.png
+name = "Kuroku Dash Point"
+description = "A BGO that Kuroku will use to teleport there and dash across an area."
+frames = 1
+framespeed = 8
+noshadows = false
+priority = -85
+grid = 16

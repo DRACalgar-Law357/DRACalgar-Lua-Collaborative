@@ -13,17 +13,17 @@ local sampleNPCSettings = {
 
 	-- ANIMATION
 	--Sprite size
-	gfxwidth = 64,
-	gfxheight = 64,
+	gfxwidth = 32,
+	gfxheight = 32,
 	--Hitbox size. Bottom-center-bound to sprite size.
-	width = 64,
-	height = 64,
+	width = 32,
+	height = 32,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
 	gfxoffsety = 0,
 	--Frameloop-related
 	frames = 1,
-	framestyle = 0,
+	framestyle = 1,
 	framespeed = 8, -- number of ticks (in-game frames) between animation frame changes
 
 	foreground = false, -- Set to true to cause built-in rendering to render the NPC to Priority -15 rather than -45
@@ -69,11 +69,9 @@ local sampleNPCSettings = {
 	grabside=false,
 	grabtop=false,
 
-	weight = 3,
-
 	--Define custom properties below
 	fallNoClipDuration = 48,
-	bouncesBeforeFall = 2,
+	bouncesBeforeFall = 4,
 	stayInPlaceInstances = 4,
 	harmNPCs = false,
 }
@@ -174,10 +172,10 @@ function sampleNPC.onTickEndNPC(v)
 	end
 	if v.ai3 < sampleNPCSettings.stayInPlaceInstances then
 		if v.collidesBlockBottom then
-			v.speedX = RNG.random(-1.5,1.5)
+			npcutils.faceNearestPlayer(v)
+			v.speedX = RNG.random(0.2,2) * v.direction
 			v.speedY = -4
-			SFX.play(37)
-			defines.earthquake = 4
+			SFX.play(3)
 			v.ai1 = v.ai1 + 1
 			if v.ai1 >= sampleNPCSettings.bouncesBeforeFall then
 				v.ai3 = v.ai3 + 1

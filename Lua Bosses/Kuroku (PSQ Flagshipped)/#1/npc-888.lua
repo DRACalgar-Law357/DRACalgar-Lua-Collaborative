@@ -4,17 +4,34 @@ local npcutils = require("npcs/npcutils")
 local kuroku = {}
 local npcID = NPC_ID
 
-local STATE = {
-	IDLE = 0,
-	RUN = 1,
-	THROW = 2,
-	FURIOUS1 = 3,
-	FURIOUS2 = 4,
-	HURT = 5,
-	KILL = 6,
+local coinTable = {
+	--Sets basegame coins or other NPCs to take gravity or others in effect by changing their ai1 value to 1
+	10,
+	33,
+	88,
+	103,
+	138,
+	152,
+	251,
+	252,
+	253, 
+	258,
+	274,
+	411,
+	558,
 }
 
-local maxHP = 3
+local STATE = {
+	IDLE = 0, --Stand around and throw stuff
+	RUN = 1, --Run around and throw stuff
+	FURIOUS1 = 2, --Show rage animation and then jump to pop into one of the three lanes
+	FURIOUS2 = 3, --Dash through lanes
+	FURIOUS3 = 4, --Reveal where he is gonna dash initially and then start dashing
+	RETURN = 5, --jump out directly back at his spawn position
+	HURT = 6, --Return to vertical position by jumping
+}
+
+local maxHP = 6
 
 local deathEffectID = (npcID)
 --[[
@@ -26,6 +43,9 @@ local deathEffectID = (npcID)
 	-availableHP: uses these values to compare with his HP to use it or not at these moments
 	-throwSpeedRestrictRate: restricts the vector speed; intended to be optimal; used for throwSet 1 and 2
 	-throwSpeedXMin, throwSpeedXMax, throwSpeedYMin, throwSpeedYMax: used for throwSet 3 that uses RNG.random to determine their velocity
+	-getThrown makes spawned npc have thrown state
+	-clipThrown makes spawned npc have clip through blocks
+	-cooldowns have a range from min and max to allow Kuroku wait in time before throwing another
 ]]
 local throwTable = {
 	[1] = {
@@ -40,9 +60,10 @@ local throwTable = {
 		throwSFX = 25,
 		pickupSFX= 73,
 		availableHPMin = 0,
-		availableHPMax = 3,
-		cooldown = {min = 50, max = 70},
+		availableHPMax = 6,
+		cooldown = {min = 40, max = 60},
 		getThrown = false,
+		clipThrown = false,
 	},
 	[2] = {
 		index = 2,
@@ -56,9 +77,10 @@ local throwTable = {
 		throwSFX = 25,
 		pickupSFX= 73,
 		availableHPMin = 0,
-		availableHPMax = 3,
-		cooldown = {min = 90, max = 110},
+		availableHPMax = 2,
+		cooldown = {min = 70, max = 90},
 		getThrown = false,
+		clipThrown = false,
 	},
 	[3] = {
 		index = 3,
@@ -66,31 +88,99 @@ local throwTable = {
 		delay = 40,
 		throwSet = 1,
 		throwSpeedY = 6,
-		throwSpeedRestrictRate = 60,
+		throwSpeedRestrictRate = 64,
 		speedLimitMin = 0,
 		speedLimitMax = 9,
 		throwSFX = 25,
 		pickupSFX= 73,
 		availableHPMin = 0,
-		availableHPMax = 3,
-		cooldown = {min = 40, max = 60},
+		availableHPMax = 6,
+		cooldown = {min = 30, max = 50},
 		getThrown = false,
+		clipThrown = true,
 	},
 	[4] = {
 		index = 4,
-		id = 134,
+		id = 892,
 		delay = 40,
 		throwSet = 3,
-		throwSpeedXMin = -6,
-		throwSpeedXMax = 6,
+		throwSpeedXMin = -2,
+		throwSpeedXMax = 2,
+		throwSpeedYMin = 7,
+		throwSpeedYMax = 9,
+		throwSFX = 59,
+		pickupSFX= 23,
+		availableHPMin = 0,
+		availableHPMax = 6,
+		cooldown = {min = 20, max = 35},
+		getThrown = false,
+		clipThrown = true,
+	},
+	[5] = {
+		index = 5,
+		id = 893,
+		delay = 40,
+		throwSet = 3,
+		throwSpeedXMin = -4,
+		throwSpeedXMax = 4,
 		throwSpeedYMin = 4,
 		throwSpeedYMax = 6,
+		throwSFX = 59,
+		pickupSFX= 23,
+		availableHPMin = 0,
+		availableHPMax = 2,
+		cooldown = {min = 30, max = 45},
+		getThrown = false,
+		clipThrown = false,
+	},
+	[6] = {
+		index = 6,
+		id = 33,
+		delay = 40,
+		throwSet = 3,
+		throwSpeedXMin = -3,
+		throwSpeedXMax = 3,
+		throwSpeedYMin = 7,
+		throwSpeedYMax = 9,
+		throwSFX = 59,
+		pickupSFX= 23,
+		availableHPMin = 2.1,
+		availableHPMax = 4,
+		cooldown = {min = 35, max = 50},
+		getThrown = false,
+		clipThrown = true,
+	},
+	[7] = {
+		index = 7,
+		id = 185,
+		delay = 40,
+		throwSet = 3,
+		throwSpeedXMin = -3,
+		throwSpeedXMax = 3,
+		throwSpeedYMin = 7,
+		throwSpeedYMax = 9,
+		throwSFX = 59,
+		pickupSFX= 7,
+		availableHPMin = 2.1,
+		availableHPMax = 4,
+		cooldown = {min = 35, max = 50},
+		getThrown = false,
+		clipThrown = true,
+	},
+	[8] = {
+		index = 8,
+		id = 894,
+		delay = 60,
+		throwSet = 0,
+		throwSpeedX = 0,
+		throwSpeedY = 7,
 		throwSFX = 25,
 		pickupSFX= 73,
-		availableHPMin = 2,
-		availableHPMax = 3,
-		cooldown = {min = 40, max = 60},
+		availableHPMin = 0,
+		availableHPMax = 6,
+		cooldown = {min = 80, max = 95},
 		getThrown = false,
+		clipThrown = false,
 	},
 }
 
@@ -174,6 +264,50 @@ local kurokuSettings = {
 	priority = -45,
 	spriteoffsetx = 0,
 	spriteoffsety = -10,
+	BGOID = 888,
+
+	--SFX List for stuff
+	sfx_dash = Misc.resolveFile("Kuroku_Dash.ogg"),
+	sfx_jump = 1,
+
+	--SFX List for voice
+	sfxTable_throw = {
+		nil,
+		nil,
+	},
+	sfxTable_pickup = {
+		nil,
+		nil,
+	},
+	sfxTable_getFurious = {
+		nil,
+		nil,
+	},
+	sfxTable_prepareFuriousDash = {
+		nil,
+		nil,
+	},
+	sfxTable_beginFuriousDash = {
+		nil,
+		nil,
+	},
+	sfxTable_hurt = {
+		nil,
+		nil,
+	},
+	sfxTable_defeat = {
+		nil,
+		nil,
+	},
+	sfxTable_jumpVoice = {
+		nil,
+		nil,
+	},
+	--Maybe?
+	sfxTable_laugh = {
+		nil,
+		nil,
+	},
 }
 
 npcManager.setNpcSettings(kurokuSettings)
@@ -207,6 +341,37 @@ function kuroku.onInitAPI()
 	npcManager.registerEvent(npcID,kuroku,"onTickEndNPC")
 	npcManager.registerEvent(npcID,kuroku,"onDrawNPC")
 	registerEvent(kuroku, "onNPCHarm")
+end
+
+local skidOffset = {
+	[1] = {x = 0, y = kurokuSettings.height},
+	[-1] = {x = kurokuSettings.width, y = kurokuSettings.height},
+	}
+
+local function SFXPlay(sfx)
+	--Checks a variable if it has a sound and produces a sound of it; if not, then don't play a sound.
+	if sfx then
+		SFX.play(sfx)
+	end
+end
+
+local function changeAnimateState(v,data,config,animateState)
+	--Change animation state
+	data.animateState = animateState
+	data.currentFrame = config.frameStates[animateState].frames[0]
+	data.currentFrameTimer = 0
+	data.frameCounter = 1
+	data.frameTimer = 0
+end
+
+local function SFXPlayTable(sfx)
+	--Uses a table variable to choose one of the listed entries and produces a sound of it; if not, then don't play a sound.
+	if sfx then
+		local sfxChoice = RNG.irandomEntry(sfx)
+		if sfxChoice then
+			SFX.play(sfxChoice)
+		end
+	end
 end
 
 function isNearPit(v)
@@ -281,21 +446,36 @@ function kuroku.onNPCHarm(e, v, o, c)
 	local data = v.data
 	local config = NPC.config[v.id]
 	if v:mem(0x156, FIELD_WORD) <= 0 then
-		if o == HARM_TYPE_JUMP or o == HARM_TYPE_SPINJUMP or o == HARM_TYPE_SWORD or o == HARM_TYPE_FROMBELOW or (type(c) == "NPC" and c.id ~= 13) then
-			data.health = (data.health or maxHP) - 1
+		--[[if o == HARM_TYPE_JUMP or o == HARM_TYPE_SPINJUMP or o == HARM_TYPE_SWORD or o == HARM_TYPE_FROMBELOW or (type(c) == "NPC" and c.id ~= 13) then
+            data.health = (data.health or maxHP) - 1
 	    elseif type(c) == "NPC" and c.id == 13 then
             data.health = (data.health or maxHP) - 1
         else
             data.health = (data.health or maxHP) - 1
-		end
+		end]]
 		if o ~= HARM_TYPE_JUMP and o ~= HARM_TYPE_SPINJUMP then
 			if c then
 				Animation.spawn(75, c.x+c.width/2-16, c.y+c.width/2-16)
 			end
         end
+		if data.health > 0 then
+			data.health = (data.health or maxHP) - 1
+			if data.beFurious == 0 then
+				data.timer = 0
+				data.beFurious = 1
+				data.state = STATE.FURIOUS1
+			else
+				data.timer = 0
+				data.beFurious = 0
+				data.state = STATE.HURT
+			end
+			data.animationBall = nil -- Remove animation version of ball
+			data.ballSprite = nil
+			data.throwing = false
+			data.throwTimer = 0
+		end
         if data.health > 0 then
 			e.cancelled = true
-			data.timer = 0
 			if o == HARM_TYPE_JUMP or o == HARM_TYPE_SPINJUMP then
 				SFX.play(2)
 				v:mem(0x156, FIELD_WORD,25)
@@ -311,6 +491,8 @@ function kuroku.onNPCHarm(e, v, o, c)
 					v:mem(0x156, FIELD_WORD,25)
 			    end
 			end
+		else
+			SFXPlayTable(config.sfxTable_defeat)
 		end
 	else
 		e.cancelled = true
@@ -336,7 +518,7 @@ function kuroku.onTickEndNPC(v)
 
 	local config = NPC.config[v.id]
 	if not data.state then
-		data.state = STATE.RUN
+		data.state = STATE.IDLE
 		data.timer = 0
 		data.animationBall = nil
 
@@ -359,7 +541,11 @@ function kuroku.onTickEndNPC(v)
 		data.throwCooldown = RNG.randomInt(120,210)
 
 		data.health = maxHP
-		data.shiftStuff = 0 --0 run around and throw things, 1 furious and zoom around
+		data.beFurious = 0
+		--Dash stuff, god this might get messy
+		data.bgoTable = BGO.get(NPC.config[v.id].BGOID)
+
+		data.dashTier = 0
 	end
 
 	--Handling frames (animation code by Murphmario)
@@ -410,41 +596,128 @@ function kuroku.onTickEndNPC(v)
 				if throwTable[data.throwIndex].pickupSFX then
 					SFX.play(throwTable[data.throwIndex].pickupSFX)
 				end
+				SFXPlayTable(config.sfxTable_pickup)
 			end
 		end
 	end
 	if data.state == STATE.IDLE then
 		v.speedX = 0
 		if data.animateState ~= 0 and data.throwing == false then
-			data.animateState = 0
-			data.currentFrame = config.frameStates[data.animateState].frames[0]
-			data.currentFrameTimer = 0
-			data.frameCounter = 1
-			data.frameTimer = 0
+			changeAnimateState(v,data,config,0)
 		elseif data.animateState ~= 2 and data.throwing == true then
-			data.animateState = 2
-			data.currentFrame = config.frameStates[data.animateState].frames[0]
-			data.currentFrameTimer = 0
-			data.frameCounter = 1
-			data.frameTimer = 0
+			changeAnimateState(v,data,config,2)
 		end
+		if data.timer >= 64 then data.timer = 0 data.state = STATE.RUN v.direction = RNG.irandomEntry{-1,1} end
 	elseif data.state == STATE.RUN then
 		v.speedX = 2 * v.direction
 		if data.animateState ~= 1 and data.throwing == false then
-			data.animateState = 1
-			data.currentFrame = config.frameStates[data.animateState].frames[0]
-			data.currentFrameTimer = 0
-			data.frameCounter = 1
-			data.frameTimer = 0
+			changeAnimateState(v,data,config,1)
 		elseif data.animateState ~= 3 and data.throwing == true then
-			data.animateState = 3
-			data.currentFrame = config.frameStates[data.animateState].frames[0]
-			data.currentFrameTimer = 0
-			data.frameCounter = 1
-			data.frameTimer = 0
+			changeAnimateState(v,data,config,3)
 		end
 		if isNearPit(v) and v.collidesBlockBottom or v.collidesBlockLeft or v.collidesBlockRight then
 			v.direction = -v.direction
+		end
+	elseif data.state == STATE.FURIOUS1 then
+		if data.timer < 150 then
+			if data.animateState ~= 5 then changeAnimateState(v,data,config,5) end
+		else
+			v.speedY = -4.5 - defines.npc_grav
+			if data.animateState ~= 4 then changeAnimateState(v,data,config,4) end
+		end
+		v.speedX = 0
+		if data.timer == 1 then SFXPlayTable(config.sfxTable_getFurious) end
+		if data.timer >= 270 then
+			data.timer = 0
+			data.state = STATE.FURIOUS3
+			v.speedY = 0
+			local relocate = RNG.irandomEntry(data.bgoTable)
+			v.x = relocate.x
+			v.y = relocate.y
+			v.direction = -1
+			if relocate.x + 24 <= camera.x + camera.width/2 then v.direction = 1 end
+		end
+		if data.timer == 150 then SFXPlay(config.sfx_jump) SFXPlayTable(config.sfxTable_jumpVoice) end
+	elseif data.state == STATE.FURIOUS2 then
+		if data.animateState ~= 6 then changeAnimateState(v,data,config,6) end
+		if data.timer % 3 == 0 then
+			local a = Effect.spawn(74, v.x + skidOffset[v.direction].x, v.y + skidOffset[v.direction].y)
+			a.x=a.x-a.width/2
+			a.y=a.y-a.height/2
+		end
+		v.speedX = 6 * v.direction
+		if v.x + v.width / 2 <= camera.x - 128 or v.x + v.width /2 >= camera.x + camera.width + 128 then
+			local relocate = RNG.irandomEntry(data.bgoTable)
+			v.x = relocate.x
+			v.y = relocate.y
+			v.direction = -1
+			if relocate.x + 24 <= camera.x + camera.width/2 then v.direction = 1 end
+			if relocate.y >= camera.y + 224 and relocate.y < camera.y + 224 + 96 then
+				data.dashTier = 0
+			elseif relocate.y >= camera.y + 224 + 96 and relocate.y < camera.y + 224 + 96 + 100 then
+				data.dashTier = 1
+			else
+				data.dashTier = 2
+			end
+		end
+		if v.collidesBlockLeft or v.collidesBlockRight then
+			v.direction = -v.direction
+		end
+	elseif data.state == STATE.FURIOUS3 then
+		if data.animateState ~= 6 then changeAnimateState(v,data,config,6) end
+		if data.timer == 1 then SFXPlayTable(config.sfxTable_prepareFuriousDash) end
+		if data.timer >= 70 then
+			SFXPlay(config.sfx_dash)
+			data.state = STATE.FURIOUS2
+		end
+		if data.timer < 25 then v.x = v.x + 4 * v.direction end
+		if data.timer >= 195 then
+			local a = Effect.spawn(74, v.x + skidOffset[v.direction].x, v.y + skidOffset[v.direction].y)
+			a.x=a.x-a.width/2
+			a.y=a.y-a.height/2
+		end
+	elseif data.state == STATE.HURT then
+		if data.timer == 1 then SFXPlayTable(config.sfxTable_hurt) end
+		if data.animateState ~= 7 then changeAnimateState(v,data,config,7) end
+		v.speedX = 0
+		v.friendly = true
+		if data.timer >= 70 then
+			v.friendly = false
+			data.timer = 0
+			data.state = STATE.RETURN
+
+		end
+
+	elseif data.state == STATE.RETURN then
+		--[[v.x=v.spawnX
+		v.y=v.spawnY
+		data.timer = 0
+		v.speedX = 0
+		v.speedY = 0
+		data.state = STATE.IDLE]]
+		if data.animateState ~= 4 then changeAnimateState(v,data,config,4) end
+		if data.timer == 1 then
+			v.noblockcollision = true
+			SFXPlay(config.sfx_jump)
+			SFXPlayTable(config.sfxTable_jumpVoice)
+			if data.dashTier == 0 then
+				v.speedY = -10
+				local lungexspeed = vector.v2(v.spawnX + v.width / 2 - (v.x + 0.5 * v.width))
+				v.speedX = lungexspeed.x / 78
+			else
+				v.speedY = -16
+				local lungexspeed = vector.v2(v.spawnX + v.width / 2 - (v.x + 0.5 * v.width))
+				v.speedX = lungexspeed.x / 85
+			end
+		end
+		if (data.dashTier == 0 and data.timer >= 55) or (data.dashTier == 1 and data.timer >= 90) or (data.dashTier == 2 and data.timer >= 105) then
+			v.noblockcollision = false
+			if v.collidesBlockBottom then
+				v.speedX = 0
+				v.speedY = 0
+				data.timer = 0
+				data.state = STATE.IDLE
+			end
 		end
 	end
 
@@ -472,6 +745,9 @@ function kuroku.onTickEndNPC(v)
 			b.speedY = 0
 			data.throwTimer = data.throwTimer + 1
 			if data.throwTimer >= throwTable[data.throwIndex].delay then
+
+				SFXPlayTable(config.sfxTable_throw)
+
 				data.throwing = false
 				data.throwTimer = 0
 				local s = NPC.spawn(
@@ -483,26 +759,38 @@ function kuroku.onTickEndNPC(v)
 				)
 				
 				s.direction = v.direction
+				--Throw Sets direct velocities in many ways
 				if throwTable[data.throwIndex].throwSet == 0 then
+					--Do a set of speed
 					s.speedX = (throwTable[data.throwIndex].throwSpeedX) * v.direction
 					s.speedY = -(throwTable[data.throwIndex].throwSpeedY)
 				elseif throwTable[data.throwIndex].throwSet == 1 then
+					--Aim at player's horizontal position
 					npcutils.faceNearestPlayer(s)
 					local throwxspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
 					s.speedX = math.clamp(math.abs(throwxspeed.x / throwTable[data.throwIndex].throwSpeedRestrictRate), throwTable[data.throwIndex].speedLimitMin, throwTable[data.throwIndex].speedLimitMax) * s.direction
 					s.speedY = -(throwTable[data.throwIndex].throwSpeedY)
 				elseif throwTable[data.throwIndex].throwSet == 2 then
+					--Aim at player's vertical position
 					local throwyspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).y + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).height - (v.y + 0.5 * v.height))
 					s.speedY = math.clamp(throwyspeed.y / throwTable[data.throwIndex].throwSpeedRestrictRate, throwTable[data.throwIndex].speedLimitMin, throwTable[data.throwIndex].speedLimitMax)
 					s.speedX = (throwTable[data.throwIndex].throwSpeedX) * v.direction
 				elseif throwTable[data.throwIndex].throwSet == 3 then
+					--Do randomized sets of speed
 					s.speedX = RNG.random(throwTable[data.throwIndex].throwSpeedXMin,throwTable[data.throwIndex].throwSpeedXMax) * v.direction
 					s.speedY = -(throwTable[data.throwIndex].throwSpeedYMin)
 				end
 				s.data.rotation = 0
 				s.data.bounced = false
 				s.friendly = v.friendly
+				--Check if the npc he is throwing is what its ai1 value to be changed to 1
+				for i in ipairs(throwTable) do
+					if s.id == coinTable[i] then
+						s.ai1 = 1
+					end
+				end
 				if throwTable[data.throwIndex].getThrown == true then s:mem(0x136, FIELD_BOOL,true) end
+				if throwTable[data.throwIndex].clipThrown == true then s.noblockcollision = true end
 				data.animationBall = nil -- Remove animation version of ball
 				data.ballSprite = nil
 
