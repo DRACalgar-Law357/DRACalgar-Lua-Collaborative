@@ -101,23 +101,6 @@ local throwTable = {
 	},
 	[4] = {
 		index = 4,
-		id = 892,
-		delay = 40,
-		throwSet = 3,
-		throwSpeedXMin = -2,
-		throwSpeedXMax = 2,
-		throwSpeedYMin = 7,
-		throwSpeedYMax = 9,
-		throwSFX = 59,
-		pickupSFX= 23,
-		availableHPMin = 0,
-		availableHPMax = 6,
-		cooldown = {min = 20, max = 35},
-		getThrown = false,
-		clipThrown = true,
-	},
-	[5] = {
-		index = 5,
 		id = 893,
 		delay = 40,
 		throwSet = 3,
@@ -133,8 +116,106 @@ local throwTable = {
 		getThrown = false,
 		clipThrown = false,
 	},
+	[5] = {
+		index = 5,
+		id = 894,
+		delay = 60,
+		throwSet = 0,
+		throwSpeedX = 0,
+		throwSpeedY = 7,
+		throwSFX = 25,
+		pickupSFX= 73,
+		availableHPMin = 0,
+		availableHPMax = 6,
+		cooldown = {min = 80, max = 95},
+		getThrown = false,
+		clipThrown = false,
+	},
 	[6] = {
 		index = 6,
+		id = 889,
+		delay = 45,
+		throwSet = 3,
+		throwSpeedXMin = -6,
+		throwSpeedXMax = 6,
+		throwSpeedYMin = 4,
+		throwSpeedYMax = 6,
+		throwSFX = 25,
+		pickupSFX= 73,
+		availableHPMin = 0,
+		availableHPMax = 6,
+		cooldown = {min = 40, max = 60},
+		getThrown = false,
+		clipThrown = false,
+	},
+	[7] = {
+		index = 7,
+		id = 890,
+		delay = 60,
+		throwSet = 3,
+		throwSpeedXMin = -5,
+		throwSpeedXMax = 5,
+		throwSpeedYMin = 5,
+		throwSpeedYMax = 7,
+		throwSFX = 25,
+		pickupSFX= 73,
+		availableHPMin = 0,
+		availableHPMax = 2,
+		cooldown = {min = 70, max = 90},
+		getThrown = false,
+		clipThrown = false,
+	},
+	[8] = {
+		index = 8,
+		id = 891,
+		delay = 40,
+		throwSet = 1,
+		throwSpeedY = 6,
+		throwSpeedRestrictRate = 64,
+		speedLimitMin = 0,
+		speedLimitMax = 9,
+		throwSFX = 25,
+		pickupSFX= 73,
+		availableHPMin = 0,
+		availableHPMax = 6,
+		cooldown = {min = 30, max = 50},
+		getThrown = false,
+		clipThrown = true,
+	},
+	[9] = {
+		index = 9,
+		id = 893,
+		delay = 40,
+		throwSet = 3,
+		throwSpeedXMin = -4,
+		throwSpeedXMax = 4,
+		throwSpeedYMin = 4,
+		throwSpeedYMax = 6,
+		throwSFX = 59,
+		pickupSFX= 23,
+		availableHPMin = 0,
+		availableHPMax = 2,
+		cooldown = {min = 30, max = 45},
+		getThrown = false,
+		clipThrown = false,
+	},
+	[10] = {
+		index = 10,
+		id = 894,
+		delay = 60,
+		throwSet = 0,
+		throwSpeedX = 0,
+		throwSpeedY = 7,
+		throwSFX = 25,
+		pickupSFX= 73,
+		availableHPMin = 0,
+		availableHPMax = 6,
+		cooldown = {min = 80, max = 95},
+		getThrown = false,
+		clipThrown = false,
+	},
+	[11] = {
+		index = 11,
 		id = 33,
 		delay = 40,
 		throwSet = 3,
@@ -150,8 +231,8 @@ local throwTable = {
 		getThrown = false,
 		clipThrown = true,
 	},
-	[7] = {
-		index = 7,
+	[12] = {
+		index = 12,
 		id = 185,
 		delay = 40,
 		throwSet = 3,
@@ -167,20 +248,22 @@ local throwTable = {
 		getThrown = false,
 		clipThrown = true,
 	},
-	[8] = {
-		index = 8,
-		id = 894,
-		delay = 60,
-		throwSet = 0,
-		throwSpeedX = 0,
-		throwSpeedY = 7,
-		throwSFX = 25,
-		pickupSFX= 73,
+	[13] = {
+		index = 13,
+		id = 892,
+		delay = 40,
+		throwSet = 3,
+		throwSpeedXMin = -2,
+		throwSpeedXMax = 2,
+		throwSpeedYMin = 7,
+		throwSpeedYMax = 9,
+		throwSFX = 59,
+		pickupSFX= 23,
 		availableHPMin = 0,
 		availableHPMax = 6,
-		cooldown = {min = 80, max = 95},
+		cooldown = {min = 20, max = 35},
 		getThrown = false,
-		clipThrown = false,
+		clipThrown = true,
 	},
 }
 
@@ -627,6 +710,7 @@ function kuroku.onTickEndNPC(v)
 		end
 		v.speedX = 0
 		if data.timer == 1 then SFXPlayTable(config.sfxTable_getFurious) end
+		v.friendly = true
 		if data.timer >= 270 then
 			data.timer = 0
 			data.state = STATE.FURIOUS3
@@ -636,6 +720,14 @@ function kuroku.onTickEndNPC(v)
 			v.y = relocate.y
 			v.direction = -1
 			if relocate.x + 24 <= camera.x + camera.width/2 then v.direction = 1 end
+			if relocate.y >= camera.y + 224 and relocate.y < camera.y + 224 + 88 then
+				data.dashTier = 0
+			elseif relocate.y >= camera.y + 224 + 88 and relocate.y < camera.y + 224 + 88 + 88 then
+				data.dashTier = 1
+			else
+				data.dashTier = 2
+			end
+			v.friendly = false
 		end
 		if data.timer == 150 then SFXPlay(config.sfx_jump) SFXPlayTable(config.sfxTable_jumpVoice) end
 	elseif data.state == STATE.FURIOUS2 then
@@ -652,9 +744,9 @@ function kuroku.onTickEndNPC(v)
 			v.y = relocate.y
 			v.direction = -1
 			if relocate.x + 24 <= camera.x + camera.width/2 then v.direction = 1 end
-			if relocate.y >= camera.y + 224 and relocate.y < camera.y + 224 + 96 then
+			if relocate.y >= camera.y + 224 and relocate.y < camera.y + 224 + 88 then
 				data.dashTier = 0
-			elseif relocate.y >= camera.y + 224 + 96 and relocate.y < camera.y + 224 + 96 + 100 then
+			elseif relocate.y >= camera.y + 224 + 88 and relocate.y < camera.y + 224 + 88 + 88 then
 				data.dashTier = 1
 			else
 				data.dashTier = 2
@@ -682,7 +774,6 @@ function kuroku.onTickEndNPC(v)
 		v.speedX = 0
 		v.friendly = true
 		if data.timer >= 70 then
-			v.friendly = false
 			data.timer = 0
 			data.state = STATE.RETURN
 
@@ -696,6 +787,7 @@ function kuroku.onTickEndNPC(v)
 		v.speedY = 0
 		data.state = STATE.IDLE]]
 		if data.animateState ~= 4 then changeAnimateState(v,data,config,4) end
+		v.friendly = true
 		if data.timer == 1 then
 			v.noblockcollision = true
 			SFXPlay(config.sfx_jump)
@@ -710,13 +802,14 @@ function kuroku.onTickEndNPC(v)
 				v.speedX = lungexspeed.x / 85
 			end
 		end
-		if (data.dashTier == 0 and data.timer >= 55) or (data.dashTier == 1 and data.timer >= 90) or (data.dashTier == 2 and data.timer >= 105) then
+		if (data.dashTier == 0 and data.timer >= 55) or (data.dashTier == 1 and data.timer >= 90) or (data.dashTier == 2 and data.timer >= 88) then
 			v.noblockcollision = false
 			if v.collidesBlockBottom then
 				v.speedX = 0
 				v.speedY = 0
 				data.timer = 0
 				data.state = STATE.IDLE
+				v.friendly = false
 			end
 		end
 	end
