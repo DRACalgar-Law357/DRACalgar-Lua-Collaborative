@@ -4,7 +4,6 @@ local npcutils = require("npcs/npcutils")
 local klonoa = require("characters/klonoa")
 local easing = require("ext/easing")
 klonoa.UngrabableNPCs[NPC_ID] = true
-local imagic = require("imagic")
 --Create the library table
 local sampleNPC = {}
 --NPC_ID is dynamic based on the name of the library file
@@ -21,9 +20,9 @@ local sampleNPCSettings = {
 	height = 72,
 	--Sprite offset from hitbox for adjusting hitbox anchor on sprite.
 	gfxoffsetx = 0,
-	gfxoffsety = 14,
+	gfxoffsety = 0,
 	--Frameloop-related
-	frames = 55,
+	frames = 62,
 	framestyle = 0,
 	framespeed = 8, --# frames between frame change
 	--Movement speed. Only affects speedX by default.
@@ -51,6 +50,108 @@ local sampleNPCSettings = {
 	grabtop=false,
 	staticdirection = true,
 	-- ultra-configurable beam stuff!
+	frameStates = {
+		[0] = {
+			frames = {0,1,2},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[1] = {
+			frames = {3,4,5},
+			framespeed = 8,
+			loopFrames = true,
+		},
+		[2] = {
+			frames = {6,7,8,9,10,11},
+			framespeed = 4,
+			loopFrames = false,
+		},
+		[3] = {
+			frames = {12,13,14,15,16,17,18,19,20,21,22},
+			framespeed = 4,
+			loopFrames = true,
+		},
+		[4] = {
+			frames = {23},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[5] = {
+			frames = {24},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[6] = {
+			frames = {25,26,27,28,29},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[7] = {
+			frames = {30,31},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[8] = {
+			frames = {32,33,34},
+			framespeed = 4,
+			loopFrames = false,
+		},
+		[9] = {
+			frames = {35,36,37,38,39,40,41,42,43,44,45},
+			framespeed = 4,
+			loopFrames = false,
+		},
+		[10] = {
+			frames = {46,47,48,49},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[11] = {
+			frames = {50,51,52},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[12] = {
+			frames = {53,54},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[13] = {
+			frames = {3,4,5},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[14] = {
+			frames = {55,24},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[15] = {
+			frames = {56,57},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[16] = {
+			frames = {24,58},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[17] = {
+			frames = {23,24,59,60,61},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[18] = {
+			frames = {17,18,19,20},
+			framespeed = 6,
+			loopFrames = false,
+		},
+	},
+	flipSpriteWhenFacingDirection = true, --flips the sprite by a scale
+	priority = -45,
+	spriteoffsetx = 0,
+	spriteoffsety = -120,
+
 	beamlength = 6,
 	beamanglestart = 0,
 	beamangleend = 150,
@@ -89,7 +190,7 @@ npcManager.registerHarmTypes(npcID,
 		HARM_TYPE_LAVA,
 		HARM_TYPE_HELD,
 		--HARM_TYPE_TAIL,
-		HARM_TYPE_SPINJUMP,
+		--HARM_TYPE_SPINJUMP,
 		--HARM_TYPE_OFFSCREEN,
 		HARM_TYPE_SWORD
 	}, 
@@ -136,35 +237,15 @@ local BOSSANIMSTATE = {
 	LANDED = 20,
 	RUNNING = 21
 }
-local bossFrameData = {
-    [BOSSANIMSTATE.IDLE]   = {frames = 3, framespeed = 6, loops = true},
-	[BOSSANIMSTATE.WALK]   = {frames = 3, framespeed = 8, loops = true},
-	[BOSSANIMSTATE.CHARGEBEAM]   = {frames = 6, framespeed = 4, loops = true},
-	[BOSSANIMSTATE.HOP]   = {frames = 1, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.PREPAREJUMP]   = {frames = 1, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.RELEASEBEAM]   = {frames = 11, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.AIRBEAMINDICATE]   = {frames = 1, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.AIRBEAMWHIP]   = {frames = 4, framespeed = 12, loops = false},
-	[BOSSANIMSTATE.FALLING]   = {frames = 2, framespeed = 8, loops = false},
-	[BOSSANIMSTATE.BEAMINDICATE]   = {frames = 1, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.BEAMWHIP]   = {frames = 6, framespeed = 8, loops = false},
-	[BOSSANIMSTATE.BEAMWHIPAFTER]   = {frames = 4, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.DEFEATEDAIR]   = {frames = 4, framespeed = 8, loops = false},
-	[BOSSANIMSTATE.DEFEATEDLANDED]   = {frames = 5, framespeed = 8, loops = false},
-	[BOSSANIMSTATE.DEFEATEDSTATIC]   = {frames = 1, framespeed = 8, loops = false},
-	[BOSSANIMSTATE.LOB1]   = {frames = 1, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.LOB2]   = {frames = 1, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.SUPERJUMP]   = {frames = 1, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.AIRBALL1]   = {frames = 1, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.AIRBALL2]   = {frames = 1, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.LANDED]   = {frames = 3, framespeed = 6, loops = false},
-	[BOSSANIMSTATE.RUNNING]   = {frames = 4, framespeed = 6, loops = true},
-}
-local function switchAnimation(v, newstate)
-	if newstate == v.data.bossframeX then return end
-	v.bossframeTimer = 0
-	v.animFinished = false
-    v.data.bossframeX = newstate
+local function changeAnimateState(v,data,config,animateState)
+	if data.animateState ~= animateState then
+		--Change animation state
+		data.animateState = animateState
+		data.currentFrame = config.frameStates[animateState].frames[0]
+		data.currentFrameTimer = 0
+		data.frameCounter = 1
+		data.frameTimer = 0
+	end
 end
 
 --Waddle Doo States
@@ -228,6 +309,7 @@ function sampleNPC.onTickEndDoo(v)
 	
 	local data = v.data
 	local cfg = NPC.config[v.id]
+	local config = NPC.config[v.id]
 	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height)
 	--If despawned
 	if v.despawnTimer <= 0 then
@@ -237,7 +319,6 @@ function sampleNPC.onTickEndDoo(v)
 		data.hurtTimer = 0
 		return
 	end
-	data.boss = Graphics.loadImageResolved("kingdoosprites.png")
 	--Initialize
 	if not data.initialized then
 		--Initialize necessary data.
@@ -258,18 +339,17 @@ function sampleNPC.onTickEndDoo(v)
 		data.sparkOffset = 0
 		data.beamConsecutive = 0
 
-		--Sprite System
-		switchAnimation(v, BOSSANIMSTATE.IDLE)
-		v.data.bossframeX = 0
-		v.data.bossframeY = 0
-		v.data.bossframeTimer = 0
-		v.data.bossSprite = Sprite.box{ --King Doo Sprites
-			width = cfg.gfxwidth, height = cfg.gfxheight,
-			texture = data.boss, pivot = Sprite.align.CENTER,
-			priority = -45,
-			frames = {data.boss.width/cfg.gfxwidth, data.boss.height/cfg.gfxheight},
-			y=cfg.gfxoffsety
+		--Handling animations
+		data.currentFrame = 0
+		data.currentFrameTimer = 0
+		data.frameCounter = 1
+		data.frameTimer = 0
+		data.animateState = 0
+		data.img = {
+			[-1] = Graphics.sprites.npc[v.id].img,
+			[1] = Graphics.loadImageResolved("npc-"..npcID.."-right.png"),
 		}
+		data.imgInitTick = 0
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -280,12 +360,41 @@ function sampleNPC.onTickEndDoo(v)
 		data.state = STATE_IDLE
 		data.timer = 0
 	end
+
+	--Handling frames (animation code by Murphmario and refined by DRACalgar Law)
+
+	data.currentFrame = config.frameStates[data.animateState].frames[data.frameCounter]
+	data.currentFrameTimer = config.frameStates[data.animateState].framespeed
+	data.frameTimer = data.frameTimer - 1
+	
+	v.animationFrame = data.currentFrame
+
+	if config.frameStates[data.animateState].loopFrames == true then
+		if data.frameTimer <= 0 then
+			data.frameTimer = config.frameStates[data.animateState].framespeed
+			if data.frameCounter < #config.frameStates[data.animateState].frames then
+				data.frameCounter = data.frameCounter + 1
+			else
+				data.currentFrameTimer = 0
+				data.frameCounter = 1
+			end
+		end
+	else
+		if data.frameTimer <= 0 then
+			data.frameTimer = config.frameStates[data.animateState].framespeed
+			if data.frameCounter < #config.frameStates[data.animateState].frames then
+				data.frameCounter = data.frameCounter + 1
+			end
+		end
+	end
+	--Colliders.getHitbox(v):draw()
+
+	data.imgInitTick = math.clamp(data.imgInitTick+1,0,3)
 	
 	data.timer = data.timer + 1
-	v.data.bossframeTimer = v.data.bossframeTimer + 1
 	if data.state == STATE_IDLE then
 		v.speedX = 0
-		switchAnimation(v, BOSSANIMSTATE.IDLE)
+		changeAnimateState(v,data,config,0)
 		npcutils.faceNearestPlayer(v)
 		if (data.timer >= NPC.config[v.id].idletime and v.collidesBlockBottom) then
 			data.timer = 0
@@ -298,13 +407,13 @@ function sampleNPC.onTickEndDoo(v)
 			v.speedY = -5
 			SFX.play("Kirby Jump.wav")
 		end
-		if data.timer < 24 then switchAnimation(v, BOSSANIMSTATE.PREPAREJUMP) else switchAnimation(v, BOSSANIMSTATE.HOP) end
+		if data.timer < 24 then changeAnimateState(v,data,config,4) else changeAnimateState(v,data,config,5) end
 		if data.timer > 24 and v.collidesBlockBottom then
 			npcutils.faceNearestPlayer(v)
 			data.state = STATE_RAM
 		end
 	elseif data.state == STATE_RAM then
-		switchAnimation(v, BOSSANIMSTATE.RUNNING)
+		changeAnimateState(v,data,config,13)
 		v.speedX = (NPC.config[v.id].walkspeed + NPC.config[v.id].speedIncrease) * v.direction
 		if (v.collidesBlockLeft and v.direction == -1) or (v.collidesBlockRight and v.direction == 1) then
 			SFX.play(37)
@@ -324,7 +433,7 @@ function sampleNPC.onTickEndDoo(v)
 			Effect.spawn(131, v.x + effectOffsetSkid[v.direction], v.y + v.height * 0.75)
 		end
 	elseif data.state == STATE_SKID then
-		switchAnimation(v, BOSSANIMSTATE.HOP)
+		changeAnimateState(v,data,config,5)
 		v.speedX = v.speedX - 0.1 * v.direction
 		Effect.spawn(74, v.x + effectOffsetSkid[v.direction], v.y + v.height)
 		if data.timer % 8 == 0 then
@@ -336,7 +445,7 @@ function sampleNPC.onTickEndDoo(v)
 			data.state = STATE_IDLE
 		end
 	elseif data.state == STATE_DONE_RAM then
-		switchAnimation(v, BOSSANIMSTATE.DEFEATEDAIR)
+		changeAnimateState(v,data,config,10)
 		if data.timer <= 8 then
 			v.animationFrame = 46
 		elseif data.timer <= 16 then
@@ -356,7 +465,7 @@ function sampleNPC.onTickEndDoo(v)
 			data.state = STATE_IDLE
 		end
 	elseif data.state == STATE_WALK then
-		switchAnimation(v, BOSSANIMSTATE.WALK)
+		changeAnimateState(v,data,config,1)
 		if (data.timer >= NPC.config[v.id].walktime and v.collidesBlockBottom) then
 			data.timer = 0
 			data.state = STATE_IDLE
@@ -373,16 +482,17 @@ function sampleNPC.onTickEndDoo(v)
 	else
 		--Death stuff
 		--Make the npc flash to show it's almost dead
-			if data.timer <= 24 then
-				switchAnimation(v, BOSSANIMSTATE.DEFEATEDAIR)
-			elseif data.timer <= 48 then
-				switchAnimation(v, BOSSANIMSTATE.DEFEATEDLANDED)
+		data.animationTick = data.animationTick or 0
+			if data.animationTick == 0 then
+				changeAnimateState(v,data,config,10)
+			elseif data.animationTick == 1 then
+				changeAnimateState(v,data,config,11)
 			else
-				switchAnimation(v, BOSSANIMSTATE.DEFEATEDSTATIC)
+				changeAnimateState(v,data,config,12)
 			end
 		--Bounce a little bit to simulate physics
 		if v.collidesBlockBottom and data.timer >= 8 then
-
+			data.animationTick = math.clamp(data.animationTick+1,0,2)
 			if math.abs(v.speedX) >= 2 then
 				v.speedX = v.speedX / 2
 				v.speedY = -3
@@ -421,41 +531,58 @@ function sampleNPC.onTickEndDoo(v)
 end
 
 function sampleNPC.onDrawDoo(v)
-	if Defines.levelFreeze then return end
-
 	--just making sure the npc is right
 	if v.id ~= npcID then return end
 	local data = v.data
-	if data.bossSprite then
-		local bossanimData = bossFrameData[v.data.bossframeX]
+	local config = NPC.config[v.id]
+	data.w = math.pi/65
 
-		if bossanimData then
+	--Setup code by Mal8rk
 
-			local frameCount = bossanimData.frames
-			local frameIndex = math.floor(v.data.bossframeTimer / (bossanimData.framespeed or 8))
+	local opacity = 1
 
-			if frameIndex >= frameCount then -- the animation is finished
-				if bossanimData.loops then -- this animation loops
-					frameIndex = frameIndex % frameCount
-				else -- this animation doesn't loop
-					frameIndex = frameCount - 1
-				end
-				v.animFinished = true
-			end
-			Text.print(frameIndex,110,110)
-			Text.print(frameCount,110,126)
-			Text.print(v.animFinished,110,142)
+	local priority = 1
+	--[[if lowPriorityStates[v:mem(0x138,FIELD_WORD)] then
+		priority = -75
+	elseif v:mem(0x12C,FIELD_WORD) > 0 then
+		priority = -30
+	end]]
 
-			v.data.bossframeY = frameIndex
+	--Text.print(v.x, 8,8)
+	--Text.print(data.timer, 8,32)
+
+	if data.iFrames then
+		opacity = math.sin(lunatime.tick()*math.pi*0.25)*0.75 + 0.9
+	end
+	local faceLeft = true
+	if config.flipSpriteWhenFacingDirection and v.direction == 1 then faceLeft = false end
+	if data.imgInitTick == 1 then faceLeft = false end
+	if data.img then
+		if faceLeft then
+			Graphics.drawImageToSceneWP( --King Doo Left
+				data.img[-1],
+				v.x+v.width/2-config.gfxwidth/2+config.spriteoffsetx,
+				v.y+v.height/2-config.gfxheight/2+config.spriteoffsety,
+				0,
+				config.gfxheight*(v.animationFrame),
+				config.gfxwidth,
+				config.gfxheight,
+				opacity,
+				config.priority
+			)
+		else
+			Graphics.drawImageToSceneWP( --King Doo Right
+				data.img[1],
+				v.x+v.width/2-config.gfxwidth/2+config.spriteoffsetx,
+				v.y+v.height/2-config.gfxheight/2+config.spriteoffsety,
+				0,
+				config.gfxheight*(v.animationFrame),
+				config.gfxwidth,
+				config.gfxheight,
+				opacity,
+				config.priority
+			)
 		end
-		local posX = v.x + sampleNPCSettings.width/2 + sampleNPCSettings.gfxoffsetx * v.direction
-		local posY = v.y + sampleNPCSettings.height/2 + sampleNPCSettings.gfxoffsety
-		local bossframe = {v.data.bossframeX + 1, v.data.bossframeY + 1}
-		v.opacity = math.cos((data.hurtTimer % 5) / 4)
-		v.data.bossSprite.position = vector(v.x+40, v.y-82)
-		v.data.bossSprite.scale = vector(-v.direction, 1)
-		v.data.bossSprite:draw{frame = bossframe, sceneCoords = true, color = Color.white..v.opacity, priority = -44.9}
-
 	end
 	if Misc.isPaused() and data.sound and data.sound.isValid and data.sound:isPlaying() then
 		data.sound:Stop()
