@@ -7,27 +7,53 @@
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
-    <body style="font-family: 'Roboto', sans-serif; background-color: black;">
+    <body style="            font-family: 'Roboto', sans-serif;
+    background-color: black;
+    margin: 0;
+    margin-top: 48px;
+    margin-bottom: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: auto;">
         <div style="
             width: 400px;
-            height:auto;
-            align-content: center;
-            text-align: center;
-            background-color:azure;
-            margin: 24px;
+            background-color: azure;
             padding: 24px;
             border: 12px solid aqua;
-            border-style:outset;
-            border-radius: 24px;">
+            border-style: outset;
+            border-radius: 24px;
+            text-align: center;">
             <h1>Your sets are</h1>
             <div style="border: 4px solid red;border-radius: 12px; margin: 12px;">
                 <h4>Set A</h4>
                 <p id="A"></p>
             </div>
-            <p>You may use them for your randomizer playthrough.</p>
+            <div style="border: 4px solid blue;border-radius: 12px; margin: 12px;">
+                <h4>Set B</h4>
+                <p id="B"></p>
+            </div>
+            <div style="border: 4px solid green;border-radius: 12px; margin: 12px;">
+                <h4>Set C</h4>
+                <p id="C"></p>
+            </div>
+            <div style="border: 4px solid yellow;border-radius: 12px; margin: 12px;">
+                <h4>Set D</h4>
+                <p id="D"></p>
+            </div>
+            <div style="border: 4px solid violet;border-radius: 12px; margin: 12px;">
+                <h4>Set E</h4>
+                <p id="E"></p>
+            </div>
+            <div style="border: 4px solid silver;border-radius: 12px; margin: 12px;">
+                <h4>Set F</h4>
+                <p id="F"></p>
+            </div>
+
+            <p>You may use them for your Pokémon randomizer playthrough.</p>
             <p>Good luck and have fun.</p>
 
-            <button onclick="onRefresh('A')" style="border-radius: 8px; border: none; background-color: orange; padding: 4px 12px;">Reroll</button>
+            <button onclick="OnRefreshAll()" style="border-radius: 8px; border: none; background-color: orange; padding: 4px 12px;">Reroll</button>
 
         </div>
 
@@ -1284,12 +1310,6 @@
         var statMax = 255;
         var BSTMin = 175;
         var BSTMax = 1125;
-        var IVMin = 0;
-        var IVMax = 31;
-        var EVMin = 0;
-        var EVMax = 255;
-        var EVTMin = 0;
-        var EVTMax = 510;
         
         // Generate random moves
         var randomMoveInts = [-1,-1,-1,-1];
@@ -1317,32 +1337,6 @@
             BST = randomStatInts.reduce((total, stat) => total + stat, 0);
         }
         
-        // Generate random IVs
-        var randomIVInts = [-1,-1,-1,-1,-1,-1];
-        i = 0;
-        while (i < 6) {
-            randomIVInts[i] = parseInt(Math.random() * (IVMax - IVMin + 1) + IVMin);
-            i++;
-        }
-        
-        // Generate random EVs
-        var randomEVInts = [-1,-1,-1,-1,-1,-1];
-        i = 0;
-        while (i < 6) {
-            randomEVInts[i] = parseInt(Math.random() * (EVMax - EVMin + 1) + EVMin);
-            i++;
-        }
-        
-        // Ensure EV total does not exceed the maximum
-        var EVTotal = randomEVInts.reduce((total, ev) => total + ev, 0);
-        while (EVTotal > EVTMax) {
-            var randomIndex = Math.floor(Math.random() * 6);
-            var difference = EVTotal - EVTMax;
-            if (randomEVInts[randomIndex] >= difference) {
-                randomEVInts[randomIndex] -= difference;
-                EVTotal = EVTMax;
-            }
-        }
         
         // Display results
         document.getElementById(elementID).innerHTML = 
@@ -1358,25 +1352,16 @@
             "Special Attack: " +  randomStatInts[3] + "<br>" +
             "Special Defense: " +  randomStatInts[4] + "<br>" +
             "Speed: " +  randomStatInts[5] + "<br>" +
-            "BST: " + BST + "<br>" +
-            "IVs:<br>" +
-            "HP: " + randomIVInts[0] + "<br>" +
-            "Attack: " + randomIVInts[1] + "<br>" +
-            "Defense: " + randomIVInts[2] + "<br>" +
-            "Special Attack: " + randomIVInts[3] + "<br>" +
-            "Special Defense: " + randomIVInts[4] + "<br>" +
-            "Speed: " + randomIVInts[5] + "<br>" +
-            "EVs:<br>" +
-            "HP: " + randomEVInts[0] + "<br>" +
-            "Attack: " + randomEVInts[1] + "<br>" +
-            "Defense: " + randomEVInts[2] + "<br>" +
-            "Special Attack: " + randomEVInts[3] + "<br>" +
-            "Special Defense: " + randomEVInts[4] + "<br>" +
-            "Speed: " + randomEVInts[5];
+            "BST: " + BST;
     }
 
             function OnRefreshAll() {
                 onRefresh("A");
+                onRefresh("B");
+                onRefresh("C");
+                onRefresh("D");
+                onRefresh("E");
+                onRefresh("F");
             }
 
             OnRefreshAll();
