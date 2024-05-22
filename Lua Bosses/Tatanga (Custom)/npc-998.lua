@@ -645,6 +645,10 @@ function sampleNPC.onNPCHarm(e, v, r, o)
 					end
 				end
 			end
+		else
+			if type(culprit) == "Player" then
+				culprit:harm()
+			end
 		end
 		e.cancelled = true
 	else
