@@ -4,6 +4,7 @@ local npcutils = require("npcs/npcutils")
 local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
 local temperaturesync = require("temperaturesynced")
+local playerStun = require("playerstun")
 
 --Create the library table
 local frank = {}
@@ -79,7 +80,7 @@ local frankSettings = {
     debrisID = 755, --Spawns at specified BGOs and falls down. Can be killed from strong attacks except jumps.
     flameID = 756,
     crystalID = 757,
-    fireballID = 511,
+    fireballID = 706,
     --Sprite stuff for hurt animation
     sweatImg = {
         texture = Graphics.loadImageResolved("npc-"..npcID.."-sweat.png"),
@@ -120,6 +121,7 @@ local frankSettings = {
     debrisDelay = 240,
     idleDelay = 50,
     shootDelay = 200,
+    beforeShootFireballDelay = 8,
     shootFireball = {
         delay = 30,
         cord = {
@@ -127,14 +129,14 @@ local frankSettings = {
             [1] = {x = 24, y = 0},
         },
         speedX = {min = 4.5, max = 4.5},
-        speedY = {min = -2.2, max = 2.2},
+        speedY = {min = -0.25, max = 0.25},
         amountOnly = 6,
     },
     groundPound = {
         amount = 3,
         jumpHeight = -9,
-        speedXRestrictRate = 40,
-        speedXMax = 10,
+        speedXRestrictRate = 5,
+        speedXMax = 18,
         causeStun = false,
         stunDelay = 24,
         landDelay = 8,
@@ -239,6 +241,28 @@ local function SFXPlay(sfx)
 	end
 end
 
+function isNearPit(v)
+	--This function either returns false, or returns the direction the npc should go to. numbers can still be used as booleans.
+	local testblocks = Block.SOLID.. Block.SEMISOLID.. Block.PLAYER
+
+	local centerbox = Colliders.Box(v.x + 8, v.y, 8, v.height + 10)
+	local l = centerbox
+	if v.direction == DIR_RIGHT then
+		l.x = l.x + 38
+	end
+	
+	for _,centerbox in ipairs(
+	  Colliders.getColliding{
+		a = testblocks,
+		b = l,
+		btype = Colliders.BLOCK
+	  }) do
+		return false
+	end
+	
+	return true
+end
+
 function frank.onTickEndNPC(v)
 	--Don't act during time freeze
 	if Defines.levelFreeze then return end
@@ -276,6 +300,8 @@ function frank.onTickEndNPC(v)
 		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = frankSettings.frames * (1 + frankSettings.framestyle), texture = Graphics.sprites.npc[v.id].img}
 		data.angle = 0
 		data.selectedAttack = 0
+        data.shootConsecutive = 0
+        data.jumpConsecutive = 0
 	end
 
 	--Depending on the NPC, these checks must be handled differently
@@ -291,11 +317,96 @@ function frank.onTickEndNPC(v)
 	if data.state == STATE.IDLE then
 		v.animationFrame = math.floor(data.timer / 8) % 2
 		v.speedX =  0
-        npcutils.faceNearestPlayer(v)
-		--[[if data.timer >= config.idleDelay then
+		if data.timer >= config.idleDelay then
 			data.timer = 0
-			decideAttack(v,data,config,settings)
-		end]]
+			data.state = STATE.GROUNDPOUND
+            data.shootConsecutive = 0
+            data.jumpConsecutive = 0
+		end
+    elseif data.state == STATE.WALK then
+        if data.timer < config.beforeWalkDelay then
+            v.speedX = 0
+            v.animationFrame = 2
+        else
+            v.speedX = config.walkSpeed * v.direction
+            v.animationFrame = math.floor((data.timer - config.beforeWalkDelay) / 8) % 4 + 3
+            if isNearPit(v) and v.collidesBlockBottom or v.collidesBlockLeft or v.collidesBlockRight then
+                v.direction = -v.direction
+                data.timer = 0
+                data.state = STATE.IDLE
+            end
+        end
+    elseif data.state == STATE.SHOOT then
+        v.speedX = 0
+        if data.timer < config.beforeShootFireballDelay then
+            v.animationFrame = 2
+        else
+            v.animationFrame = 7
+        end
+        if data.timer % config.shootFireball.delay == 1 + config.beforeShootFireballDelay and data.shootConsecutive < config.shootFireball.amountOnly then
+            local n = NPC.spawn(config.fireballID,v.x+v.width/2+config.shootFireball.cord[v.direction].x,v.y+v.height/2+config.shootFireball.cord[v.direction].y,v.section,false,true)
+            n.speedX = RNG.random(config.shootFireball.speedX.min,config.shootFireball.speedX.max) * v.direction
+            n.speedY = RNG.random(config.shootFireball.speedY.min,config.shootFireball.speedY.max)
+            SFX.play(18)
+            data.shootConsecutive = data.shootConsecutive + 1
+        end
+        if data.timer >= config.shootDelay + config.beforeShootFireballDelay then
+            data.timer = 0
+            data.state = STATE.IDLE
+        end
+    elseif data.state == STATE.GROUNDPOUND then
+        if v.ai1 == 0 then
+            if data.timer < config.groundPound.beforeAllJumpsDelay then
+                v.speedX = 0
+                v.animationFrame = 8
+            elseif data.timer < config.groundPound.beforeJumpDelay + config.groundPound.beforeAllJumpsDelay then
+                v.speedX = 0
+                v.animationFrame = 8
+            else
+                v.speedX = v.speedX * 0.9
+                if data.timer == config.groundPound.beforeJumpDelay + config.groundPound.beforeAllJumpsDelay then
+                    local bombxspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
+                    v.speedX = math.abs(bombxspeed.x / config.groundPound.speedXRestrictRate) * v.direction
+                    if v.speedX > config.groundPound.speedXMax then v.speedX = config.groundPound.speedXMax end
+                    if v.speedX < -config.groundPound.speedXMax then v.speedX = -config.groundPound.speedXMax end
+                    v.speedY = config.groundPound.jumpHeight
+                    SFX.play(1)
+                end
+                if v.speedY < 0 then
+                    v.animationFrame = 9
+                else
+                    v.animationFrame = 10
+                end
+                if data.timer > config.groundPound.beforeJumpDelay + config.groundPound.beforeAllJumpsDelay and v.collidesBlockBottom then
+                    SFX.play(37)
+                    defines.earthquake = 3
+                    v.ai1 = 1
+                    data.timer = 0
+                    data.jumpConsecutive = data.jumpConsecutive + 1
+                    if config.groundPound.causeStun == true then
+                        for k, p in ipairs(Player.get()) do --Section copypasted from the Sledge Bros. code
+                            if p:isGroundTouching() and not playerStun.isStunned(k) and v:mem(0x146, FIELD_WORD) == player.section then
+                                playerStun.stunPlayer(k, config.groundPound.stunDelay )
+                            end
+                        end
+                    end
+                end
+            end
+        else
+            v.speedX = 0
+            v.animationFrame = 8
+            if data.timer >= config.groundPound.landDelay then
+                if data.jumpConsecutive < config.groundPound.amount then
+                    data.timer = config.groundPound.beforeAllJumpsDelay
+                    v.ai1 = 0
+                else
+                    v.ai1 = 0
+                    data.timer = 0
+                    data.state = STATE.WALK
+                    v.direction = RNG.irandomEntry{-1,1}
+                end
+            end
+        end
     elseif data.state == STATE.HURT then
         v.animationFrame = 11
         v.speedX = 0
@@ -335,7 +446,13 @@ function frank.onTickEndNPC(v)
             v.animationFrame = v.animationFrame + 13
         end
     else
+        if data.state == STATE.MELT then
 
+        elseif data.state == STATE.SELFDESTRUCT then
+            if data.timer % 12 < 6 then
+                v.animationFrame = v.animationFrame + 13 
+            end
+        end
     end
 	if v.animationFrame >= 0 then
 		-- animation controlling
