@@ -3,10 +3,10 @@ local npcManager = require("npcManager")
 local npcutils = require("npcs/npcutils")
 local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
-local sync = require("blocks/ai/synced")
+local temperaturesync = require("temperaturesynced")
 
 --Create the library table
-local sampleNPC = {}
+local frank = {}
 --NPC_ID is dynamic based on the name of the library file
 local npcID = NPC_ID
 
@@ -25,7 +25,7 @@ local STATE = {
 }
 
 --Defines NPC config for our NPC. You can remove superfluous definitions.
-local sampleNPCSettings = {
+local frankSettings = {
 	id = npcID,
 	--Sprite size
 	gfxheight = 128,
@@ -67,12 +67,16 @@ local sampleNPCSettings = {
     hp = 5,
     beInPinch = true,
     pinchHP = 2,
+    --This decreases the hp when hit by strong attacks
+	hpDecStrong = 1,
+	--This decreases the hp when hit by a fireball
+	hpDecWeak = 1,
     --NPC ID stuff
     frosteeID = 751, --Chases the player
     fireEnemyID = 758, --Hops at the player
     ballID = 752, --An object that can be carried by the player and depending on its temperature state, it can be used to attack Frank depending on his temperature state
     pillarID = 754, --Sliding pillars that'll disappear for a brief time
-    debrisID = 755 --Spawns at specified BGOs and falls down. Can be killed from strong attacks except jumps.
+    debrisID = 755, --Spawns at specified BGOs and falls down. Can be killed from strong attacks except jumps.
     flameID = 756,
     crystalID = 757,
     fireballID = 511,
@@ -171,88 +175,283 @@ local sampleNPCSettings = {
 
 
 
+	flipSpriteWhenFacingDirection = false, --flips the sprite by a scale
+	priority = -45,
+	spriteoffsetx = 0,
+	spriteoffsety = 0,
 
-
+    iFramesDelay = 48,
 }
 
 --Applies NPC settings
-npcManager.setNpcSettings(sampleNPCSettings)
+npcManager.setNpcSettings(frankSettings)
 
 --Register the vulnerable harm types for this NPC. The first table defines the harm types the NPC should be affected by, while the second maps an effect to each, if desired.
 npcManager.registerHarmTypes(npcID,
 	{
-		HARM_TYPE_JUMP,
-		HARM_TYPE_FROMBELOW,
+		--HARM_TYPE_JUMP,
+		--HARM_TYPE_FROMBELOW,
 		HARM_TYPE_NPC,
 		HARM_TYPE_PROJECTILE_USED,
 		HARM_TYPE_LAVA,
-		HARM_TYPE_HELD,
-		HARM_TYPE_TAIL,
-		HARM_TYPE_SPINJUMP,
+		--HARM_TYPE_HELD,
+		--HARM_TYPE_TAIL,
+		--HARM_TYPE_SPINJUMP,
 		--HARM_TYPE_OFFSCREEN,
-		HARM_TYPE_SWORD
+		--HARM_TYPE_SWORD
 	}, 
 	{
-		[HARM_TYPE_JUMP]={id=npcID, speedX=0, speedY=0},
-		[HARM_TYPE_FROMBELOW]=npcID,
-		[HARM_TYPE_NPC]=npcID,
-		[HARM_TYPE_PROJECTILE_USED]=npcID,
+		--[HARM_TYPE_JUMP]={id=npcID, speedX=0, speedY=0},
+		--[HARM_TYPE_FROMBELOW]=npcID,
+		[HARM_TYPE_NPC]=10,
+		[HARM_TYPE_PROJECTILE_USED]=10,
 		[HARM_TYPE_LAVA]={id=13, xoffset=0.5, xoffsetBack = 0, yoffset=1, yoffsetBack = 1.5},
-		[HARM_TYPE_HELD]=npcID,
-		[HARM_TYPE_TAIL]=npcID,
-		[HARM_TYPE_SPINJUMP]=10,
+		--[HARM_TYPE_HELD]=npcID,
+		--[HARM_TYPE_TAIL]=npcID,
+		--[HARM_TYPE_SPINJUMP]=10,
 		--[HARM_TYPE_OFFSCREEN]=10,
-		[HARM_TYPE_SWORD]=10,
+		--[HARM_TYPE_SWORD]=10,
 	}
 );
 
 --Register events
-function sampleNPC.onInitAPI()
-	npcManager.registerEvent(npcID, sampleNPC, "onTickEndNPC")
+function frank.onInitAPI()
+	npcManager.registerEvent(npcID, frank, "onTickEndNPC")
+	npcManager.registerEvent(npcID, frank, "onDrawNPC")
+	registerEvent(frank, "onNPCHarm")
+	registerEvent(frank, "onNPCKill")
 end
 
-function sampleNPC.onTickEndNPC(v)
+local function SFXPlayTable(sfx)
+	--Uses a table variable to choose one of the listed entries and produces a sound of it; if not, then don't play a sound.
+	if sfx then
+		local sfxChoice = RNG.irandomEntry(sfx)
+		if sfxChoice then
+			SFX.play(sfxChoice)
+		end
+	end
+end
+
+local function SFXPlay(sfx)
+	--Checks a variable if it has a sound and produces a sound of it; if not, then don't play a sound.
+	if sfx then
+		SFX.play(sfx)
+	end
+end
+
+function frank.onTickEndNPC(v)
 	--Don't act during time freeze
 	if Defines.levelFreeze then return end
 	
 	local data = v.data
-	
+	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
+	local config = NPC.config[v.id]
+	local settings = v.data._settings
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
 		data.initialized = false
+		data.timer = 0
 		return
 	end
-
 	--Initialize
 	if not data.initialized then
 		--Initialize necessary data.
 		data.initialized = true
+
+		data.w = math.pi/65
+		data.timer = data.timer or 0
+		data.hurtTimer = data.hurtTimer or 0
+		data.iFrames = false
+		data.health = config.hp
+		data.state = STATE.IDLE
+		data.iFramesDelay = config.iFramesDelay
+		v.ai1 = 0
+		v.ai2 = 0
+		v.ai3 = 0
+		v.ai4 = 0
+		data.sprSizex = 1
+		data.sprSizey = 1
+		data.pinch = false
+		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = frankSettings.frames * (1 + frankSettings.framestyle), texture = Graphics.sprites.npc[v.id].img}
+		data.angle = 0
+		data.selectedAttack = 0
+	end
+
+	--Depending on the NPC, these checks must be handled differently
+	if v:mem(0x12C, FIELD_WORD) > 0    --Grabbed
+	or v:mem(0x136, FIELD_BOOL)        --Thrown
+	or v:mem(0x138, FIELD_WORD) > 0    --Contained within
+	then
+		data.state = STATE.IDLE
+		v.ai1 = 0
+		data.timer = 0
+	end
+	data.timer = data.timer + 1
+	if data.state == STATE.IDLE then
+		v.animationFrame = math.floor(data.timer / 8) % 2
+		v.speedX =  0
+        npcutils.faceNearestPlayer(v)
+		--[[if data.timer >= config.idleDelay then
+			data.timer = 0
+			decideAttack(v,data,config,settings)
+		end]]
+    elseif data.state == STATE.HURT then
+        v.animationFrame = 11
+        v.speedX = 0
+        if data.timer >= config.hurtDelay then
+            data.timer = 0
+            data.state = STATE.IDLE
+        end
+    elseif data.state == STATE.SELFDESTRUCT then
+        v.speedX = 0
+        v.animationFrame = 12
+        if data.timer >= config.selfdestructDelay then
+			Misc.doBombExplosion(v.x + v.width/2, v.y + v.height/2, 3)
+            v:kill(9)
+        end
+	end
+	--Give Frank some i-frames to make the fight less cheesable
+	--iFrames System made by MegaDood & DRACalgar Law
+	if data.iFrames then
+		v.friendly = true
+		data.hurtTimer = data.hurtTimer + 1
+		
+		if data.hurtTimer == 1 and data.health > 0 then
+		    SFXPlay(39)
+			data.state = STATE.HURT
+			data.timer = 0
+		end
+		if data.hurtTimer >= data.iFramesDelay then
+			v.friendly = false
+			data.iFrames = false
+			data.hurtTimer = 0
+		end
+	end
+    if data.state ~= STATE.SELFDESTRUCT and data.state ~= STATE.MELT then
+        if temperaturesync.state == 1 then
+
+        else
+            v.animationFrame = v.animationFrame + 13
+        end
+    else
+
+    end
+	if v.animationFrame >= 0 then
+		-- animation controlling
+		v.animationFrame = npcutils.getFrameByFramestyle(v, {
+			frame = data.frame,
+			frames = frankSettings.frames
+		});
+	end
+	if config.beInPinch == true and not data.pinch and data.health <= config.pinchHP then
+		data.pinch = true
 	end
 	
-	--React to switch block states
-	if sync.state == false then
-		v.animationFrame = 0 + ((1 + v.direction) * 1.5)
-		v.friendly = false
-		local tbl = Block.SOLID
-		local list = Colliders.getColliding{
-		a = v,
-		b = tbl,
-		btype = Colliders.BLOCK,
-		filter = function(other)
-			if other.isHidden or other:mem(0x5A, FIELD_BOOL) then
-				return false
+	--Prevent Frank from turning around when he hits NPCs because they make him get stuck
+	if v:mem(0x120, FIELD_BOOL) then
+		v:mem(0x120, FIELD_BOOL, false)
+	end
+	if Colliders.collide(plr, v) and not v.friendly and data.state ~= STATE.HURT and data.state ~= STATE.MELT and data.state ~= STATE.SELFDESTRUCT and not Defines.cheat_donthurtme then
+		plr:harm()
+	end
+end
+function frank.onNPCHarm(eventObj, v, reason, culprit)
+	local data = v.data
+	local config = NPC.config[v.id]
+	if v.id ~= npcID then return end
+
+			if data.iFrames == false and data.state ~= STATE.MELT and data.state ~= STATE.SELFDESTRUCT and data.state ~= STATE.HURT then
+				local hpd = config.hpDecStrong
+				if reason == HARM_TYPE_LAVA then
+					v:kill(HARM_TYPE_LAVA)
+				else
+					hpd = 0
+					if reason == HARM_TYPE_LAVA and v ~= nil then
+						v:kill(HARM_TYPE_OFFSCREEN)
+					elseif v:mem(0x12, FIELD_WORD) == 2 then
+						v:kill(HARM_TYPE_OFFSCREEN)
+					else
+                        if culprit and ((temperaturesync.state == 1 and NPC.config[culprit.id].iscold) or (temperaturesync.state == 2 and NPC.config[culprit.id].ishot)) then
+                            data.iFrames = true
+                            hpd = config.hpDecStrong
+
+                        end
+					end
+					if data.iFrames then
+						data.hurting = true
+                        data.health = data.health - hpd
+                        data.state = STATE.HURT
+                        data.timer = 0
+					end
+				end
 			end
-			v:kill(HARM_TYPE_OFFSCREEN)
-			Explosion.spawn(v.x + 0.5 * v.width, v.y + 0.5 * v.height, 3)
-			return true
+			if culprit then
+				if type(culprit) == "NPC" and (culprit.id ~= 195 and culprit.id ~= 50) and NPC.HITTABLE_MAP[culprit.id] then
+					culprit:kill(HARM_TYPE_NPC)
+				elseif culprit.__type == "Player" then
+					--Bit of code taken from the basegame chucks
+					if (culprit.x + 0.5 * culprit.width) < (v.x + v.width*0.5) then
+						culprit.speedX = -5
+					else
+						culprit.speedX = 5
+					end
+				elseif type(culprit) == "NPC" and (NPC.HITTABLE_MAP[culprit.id] or culprit.id == 45) and culprit.id ~= 50 and v:mem(0x138, FIELD_WORD) == 0 then
+					culprit:kill(HARM_TYPE_NPC)
+				end
+			end
+			if data.health <= 0 then
+				data.state = STATE.SELFDESTRUCT
+				data.timer = 0
+			else
+				v:mem(0x156,FIELD_WORD,60)
+			end
+	eventObj.cancelled = true
+end
+local lowPriorityStates = table.map{1,3,4}
+function frank.onDrawNPC(v)
+	local data = v.data
+	local settings = v.data._settings
+	local config = NPC.config[v.id]
+	data.w = math.pi/65
+
+	--Setup code by Mal8rk
+	local pivotOffsetX = 0
+	local pivotOffsetY = 0
+
+	local opacity = 1
+
+	local priority = 1
+	if lowPriorityStates[v:mem(0x138,FIELD_WORD)] then
+		priority = -75
+	elseif v:mem(0x12C,FIELD_WORD) > 0 then
+		priority = -30
+	end
+
+	--Text.print(v.x, 8,8)
+	--Text.print(data.timer, 8,32)
+
+	if data.iFrames then
+		opacity = math.sin(lunatime.tick()*math.pi*0.25)*0.75 + 0.9
+	end
+
+	if data.img then
+		-- Setting some properties --
+		data.img.x, data.img.y = v.x + 0.5 * v.width + config.spriteoffsetx, v.y + 0.5 * v.height + config.spriteoffsety
+		if config.flipSpriteWhenFacingDirection then
+			data.img.transform.scale = vector(data.sprSizex * -v.direction, data.sprSizey)
+		else
+			data.img.transform.scale = vector(data.sprSizex, data.sprSizey)
 		end
-		}
-	else
-		v.animationFrame = math.floor(lunatime.tick() / 8) % 2 + 1 + ((1 + v.direction) * 1.5)
-		v.friendly = true
+		data.img.rotation = data.angle
+
+		local p = config.priority
+
+		-- Drawing --
+		data.img:draw{frame = v.animationFrame + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
+		npcutils.hideNPC(v)
 	end
 end
 
 --Gotta return the library table!
-return sampleNPC
+return frank
