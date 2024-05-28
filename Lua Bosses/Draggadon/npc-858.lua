@@ -1128,7 +1128,13 @@ function draggadonBoss.onTickEndNPC(v)
 		if data.timer >= 190 then
 			v.y = v.y + 1*data.lavaMult
 		end
-		if data.timer >= 190 + config.deathFallDelay then v:kill(HARM_TYPE_VANISH) end
+		if data.timer >= 190 + config.deathFallDelay then
+    data.bodyimg = nil
+		  data.headimg = nil
+		  data.waveimg = nil
+		  data.drawWave = false    
+    v:kill(HARM_TYPE_VANISH)
+end
 		for _,blck in Block.iterateIntersecting(v.x, v.y, v.x + v.width, v.y + v.height*3/4) do
 			if Block.LAVA_MAP[blck.id] then
 				if data.lavaMult == 1.5 then --since this can only happen once when bowsy is dead i thought might as well spawn the sound here
@@ -1201,6 +1207,7 @@ function draggadonBoss.onNPCHarm(eventObj, v, reason, culprit)
 						data.headcurrentAnim = 2
 						data.headcurrentFrame = 1
 						data.headframeTimer = 0
+      data.drawWave = false
 					end
 				end
 				
@@ -1224,10 +1231,12 @@ function draggadonBoss.onNPCHarm(eventObj, v, reason, culprit)
 				if data.health >= maxHP then
 					data.state = STATE.KILL
 					data.timer = 0
+		  data.drawWave = false
 				else
 					v:mem(0x156,FIELD_WORD,60)
 					data.timer = 0
 					data.state = STATE.KILL
+		  data.drawWave = false
 				end
 			end
 	eventObj.cancelled = true
