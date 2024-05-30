@@ -5,7 +5,6 @@ local klonoa = require("characters/klonoa")
 klonoa.UngrabableNPCs[NPC_ID] = true
 local temperaturesync = require("temperaturesynced")
 local playerStun = require("playerstun")
-
 --Create the library table
 local frank = {}
 --NPC_ID is dynamic based on the name of the library file
@@ -63,6 +62,8 @@ local frankSettings = {
 
 	grabside=false,
 	grabtop=false,
+    luahandlespeed = true,
+    nohurt = true,
 
     --HP stuff
     hp = 5,
@@ -73,14 +74,15 @@ local frankSettings = {
 	--This decreases the hp when hit by a fireball
 	hpDecWeak = 1,
     --NPC ID stuff
-    frosteeID = 751, --Chases the player
-    fireEnemyID = 758, --Hops at the player
-    ballID = 752, --An object that can be carried by the player and depending on its temperature state, it can be used to attack Frank depending on his temperature state
+    frosteeID = 761, --Chases the player
+    fireEnemyID = 762, --Hops at the player
+    magmaballID = 759, --A hot object that can be carried by the player and it can be used to attack Frank if he is cold
+    iceballID = 760, --A cold object that can be carried by the player and it can be used to attack Frank if he is hot
     pillarID = 754, --Sliding pillars that'll disappear for a brief time
     debrisID = 755, --Spawns at specified BGOs and falls down. Can be killed from strong attacks except jumps.
     flameID = 756,
     crystalID = 757,
-    fireballID = 706,
+    fireballID = 752,
     --Sprite stuff for hurt animation
     sweatImg = {
         texture = Graphics.loadImageResolved("npc-"..npcID.."-sweat.png"),
@@ -104,39 +106,42 @@ local frankSettings = {
     conditionSet: 0 regardless, 1 hot state, 2 cold state
     ]]
     attackTable = {
-        [1] = {index = 1, state = STATE.WALK, availableHPMin = 0, availableHPMax = 5, conditionSet = 0},
-        [2] = {index = 2, state = STATE.QUAKE, availableHPMin = 0, availableHPMax = 5, conditionSet = 0},
-        [3] = {index = 3, state = STATE.SHOOT, availableHPMin = 0, availableHPMax = 5, conditionSet = 0},
-        [4] = {index = 4, state = STATE.PILLAR, availableHPMin = 0, availableHPMax = 5, conditionSet = 0},
-        [5] = {index = 5, state = STATE.HOTATTACK, availableHPMin = 0, availableHPMax = 2, conditionSet = 1},
-        [6] = {index = 6, state = STATE.COLDATTACK, availableHPMin = 0, availableHPMax = 2, conditionSet = 2},
-        [7] = {index = 7, state = STATE.GROUNDPOUND, availableHPMin = 0, availableHPMax = 2, conditionSet = 0},
+        [1] = {state = STATE.WALK, availableHPMin = 2, availableHPMax = 5, conditionSet = 0},
+        [2] = {state = STATE.SHOOT, availableHPMin = 0, availableHPMax = 5, conditionSet = 0},
+        [3] = {state = STATE.PILLAR, availableHPMin = 0, availableHPMax = 5, conditionSet = 0},
+        [4] = {state = STATE.HOTATTACK, availableHPMin = 0, availableHPMax = 2, conditionSet = 1},
+        [5] = {state = STATE.COLDATTACK, availableHPMin = 0, availableHPMax = 2, conditionSet = 2},
+        [6] = {state = STATE.GROUNDPOUND, availableHPMin = 0, availableHPMax = 2, conditionSet = 0},
     },
+    necessaryQuake = true,
+    quakeTick = {min = 3, max = 5,},
 
     beforeWalkDelay = 14,
     walkSpeed = 3.5,
     beforeJumpDelay = 10,
-    jumpHeight = -8.5,
+    jumpHeight = -10,
     debrisFallDelay = 12,
-    debrisDelay = 240,
-    idleDelay = 50,
-    shootDelay = 200,
+    debrisDelay = 200,
+    debrisAmount = 16,
+    debrisBGOID = 755,
+    idleDelay = 72,
+    shootDelay = 250,
     beforeShootFireballDelay = 8,
     shootFireball = {
-        delay = 30,
+        delay = 36,
         cord = {
             [-1] = {x = -24, y = 0},
             [1] = {x = 24, y = 0},
         },
-        speedX = {min = 4.5, max = 4.5},
-        speedY = {min = -0.25, max = 0.25},
+        speedX = {min = 4.5, max = 5},
+        speedY = {min = -0.125, max = 0.125},
         amountOnly = 6,
     },
     groundPound = {
         amount = 3,
-        jumpHeight = -9,
-        speedXRestrictRate = 5,
-        speedXMax = 18,
+        jumpHeight = -10,
+        speedXRestrictRate = 30,
+        speedXMax = 12,
         causeStun = false,
         stunDelay = 24,
         landDelay = 8,
@@ -149,7 +154,7 @@ local frankSettings = {
         hopDelay = 8,
         beforeWalkDelay = 12,
         walkSpeed = 4,
-        flameDelay = 16,
+        flameDelay = 32,
     },
     coldExclusiveAttack = {
         hopAmount = 2,
@@ -157,18 +162,26 @@ local frankSettings = {
         hopDelay = 8,
         beforeShootDelay = 16,
         afterShootDelay = 50,
-        shootSpeedX = {min = 2, max = 5},
-        shootSpeedY = {min = -6, max = 0.5},
-        shootAmount = 2,
+        shootDelay = 32,
+        shootSpeedX = {min = 3, max = 5},
+        shootSpeedY = {min = -6, max = 1},
+        amountOnly = 2,
+        cord = {
+            [-1] = {x = -24, y = 0},
+            [1] = {x = 24, y = 0},
+        },
     },
     pillar = {
         amount = {nonpinch = 1, pinch = 2},
-        speedX = 4.5,
+        speedX = 5,
         delay = 40,
     },
     hurtDelay = 90,
     selfdestructDelay = 48,
     meltDelay = 48,
+    freezeDelay = 48,
+    freezeCooldown = 72,
+    harmNPCsOnJump = true,
     temperatureStateChngeSet = 0,
     --0 change temperature state based on temperature states usually switched by temperature blocks
     --1 change temperature state based on basegame ON/OFF switch states
@@ -241,6 +254,43 @@ local function SFXPlay(sfx)
 	end
 end
 
+local function decideAttack(v,data,config,settings)
+	local options = {}
+    if config.necessaryQuake == true then
+        data.quakeTick = data.quakeTick + 1
+        if data.quakeTick >= data.quakeThreshold then
+            data.quakeTick = 0
+            data.quakeThreshold = RNG.randomInt(config.quakeTick.min,config.quakeTick.max)
+            data.state = STATE.QUAKE
+        else
+            if config.attackTable and #config.attackTable > 0 then
+                for i in ipairs(config.attackTable) do
+                    if ((config.attackTable[i].conditionSet == 0) or (config.attackTable[i].conditionSet == 1 and data.temperatureState == 1) or (config.attackTable[i].conditionSet == 2 and data.temperatureState == 2)) and data.health > config.attackTable[i].availableHPMin and data.health <= config.attackTable[i].availableHPMax then
+                        if config.attackTable[i].state ~= data.selectedAttack then table.insert(options,config.attackTable[i].state) end
+                    end
+                end
+            end
+            if #options > 0 then
+                data.state = RNG.irandomEntry(options)
+                data.selectedAttack = data.state
+            end
+        end
+    else
+        if config.attackTable and #config.attackTable > 0 then
+            for i in ipairs(config.attackTable) do
+                if ((config.attackTable[i].conditionSet == 0) or (config.attackTable[i].conditionSet == 1 and data.temperatureState == 1) or (config.attackTable[i].conditionSet == 2 and data.temperatureState == 2)) and data.health > config.attackTable[i].availableHPMin and data.health <= config.attackTable[i].availableHPMax then
+                    if config.attackTable[i].state ~= data.selectedAttack then table.insert(options,config.attackTable[i].state) end
+                end
+            end
+        end
+        if #options > 0 then
+            data.state = RNG.irandomEntry(options)
+            data.selectedAttack = data.state
+        end
+    end
+	data.timer = 0
+end
+
 function isNearPit(v)
 	--This function either returns false, or returns the direction the npc should go to. numbers can still be used as booleans.
 	local testblocks = Block.SOLID.. Block.SEMISOLID.. Block.PLAYER
@@ -271,6 +321,11 @@ function frank.onTickEndNPC(v)
 	local plr = Player.getNearest(v.x + v.width/2, v.y + v.height/2)
 	local config = NPC.config[v.id]
 	local settings = v.data._settings
+    v.collisionGroup = "FrankBoss"
+    Misc.groupsCollide["FrankBoss"]["FrankProjectile"] = false
+    Misc.groupsCollide["FrankBoss"]["FrankBoss"] = false
+    Misc.groupsCollide["FrankProjectile"]["FrankProjectile"] = false
+    Misc.groupsCollide["FrankBoss"]["FrankEnemy"] = false
 	--If despawned
 	if v.despawnTimer <= 0 then
 		--Reset our properties, if necessary
@@ -302,8 +357,14 @@ function frank.onTickEndNPC(v)
 		data.selectedAttack = 0
         data.shootConsecutive = 0
         data.jumpConsecutive = 0
+        data.temperatureState = temperaturesync.state
+        data.bgoTable = BGO.get(config.debrisBGOID)
+        data.freezeCooldown = 0
+        data.selectedAttack = -1
+        data.quakeTick = 0
+        data.quakeThreshold = RNG.randomInt(config.quakeTick.min,config.quakeTick.max)
 	end
-
+    Text.print(data.selectedAttack,110,110)
 	--Depending on the NPC, these checks must be handled differently
 	if v:mem(0x12C, FIELD_WORD) > 0    --Grabbed
 	or v:mem(0x136, FIELD_BOOL)        --Thrown
@@ -314,14 +375,18 @@ function frank.onTickEndNPC(v)
 		data.timer = 0
 	end
 	data.timer = data.timer + 1
+    data.freezeCooldown = data.freezeCooldown - 1
+    data.temperatureState = temperaturesync.state
 	if data.state == STATE.IDLE then
 		v.animationFrame = math.floor(data.timer / 8) % 2
 		v.speedX =  0
 		if data.timer >= config.idleDelay then
+            npcutils.faceNearestPlayer(v)
 			data.timer = 0
-			data.state = STATE.GROUNDPOUND
+            decideAttack(v,data,config,settings)
             data.shootConsecutive = 0
             data.jumpConsecutive = 0
+            v.ai1 = 0
 		end
     elseif data.state == STATE.WALK then
         if data.timer < config.beforeWalkDelay then
@@ -335,6 +400,202 @@ function frank.onTickEndNPC(v)
                 data.timer = 0
                 data.state = STATE.IDLE
             end
+        end
+    elseif data.state == STATE.HOTATTACK then
+        if v.ai1 == 0 then
+            v.speedX = 0
+            if data.timer == config.hotExclusiveAttack.hopDelay-1 then
+                if not v.collidesBlockBottom then
+                    data.timer = 0
+                else
+                    v.speedY = config.hotExclusiveAttack.hopHeight
+                end
+            end
+            if data.timer < config.hotExclusiveAttack.hopDelay then
+                v.animationFrame = 8
+            else
+                if data.temperatureState == 2 and Colliders.collide(plr, v) and not v.friendly and not Defines.cheat_donthurtme and data.temperatureState == 2 then
+                    plr:harm()
+                end
+                if v.speedY < 0 then
+                    v.animationFrame = 9
+                else
+                    v.animationFrame = 10
+                end
+                if v.collidesBlockBottom then
+                    data.timer = 0
+                    data.jumpConsecutive = data.jumpConsecutive + 1
+                    if data.jumpConsecutive >= config.hotExclusiveAttack.hopAmount then
+                        v.ai1 = 1
+                    end
+                end
+            end
+        elseif v.ai1 == 1 then
+            if data.timer < config.hotExclusiveAttack.beforeWalkDelay then
+                v.speedX = 0
+                v.animationFrame = 2
+            else
+                v.speedX = config.hotExclusiveAttack.walkSpeed * v.direction
+                v.animationFrame = math.floor((data.timer - config.hotExclusiveAttack.beforeWalkDelay) / 8) % 4 + 3
+                if (data.timer - config.hotExclusiveAttack.beforeWalkDelay) % config.hotExclusiveAttack.flameDelay == 0 then
+                    SFX.play(16)
+                    local n = NPC.spawn(config.flameID, v.x + v.width/2 - NPC.config[config.flameID].width/2, v.y + v.height - NPC.config[config.flameID].height, v.section, false, false)
+                end
+                if isNearPit(v) and v.collidesBlockBottom or v.collidesBlockLeft or v.collidesBlockRight then
+                    v.direction = -v.direction
+                    data.timer = 0
+                    data.state = STATE.IDLE
+                end
+            end
+        else
+            v.ai1 = 0
+        end
+    elseif data.state == STATE.COLDATTACK then
+        if v.ai1 == 0 then
+            v.speedX = 0
+            if data.timer == config.coldExclusiveAttack.hopDelay-1 then
+                if not v.collidesBlockBottom then
+                    data.timer = 0
+                else
+                    v.speedY = config.coldExclusiveAttack.hopHeight
+                end
+            end
+            if data.timer < config.coldExclusiveAttack.hopDelay then
+                v.animationFrame = 8
+            else
+                if data.temperatureState == 2 and Colliders.collide(plr, v) and not v.friendly and not Defines.cheat_donthurtme and data.temperatureState == 2 then
+                    plr:harm()
+                end
+                if v.speedY < 0 then
+                    v.animationFrame = 9
+                else
+                    v.animationFrame = 10
+                end
+                if v.collidesBlockBottom then
+                    data.timer = 0
+                    data.jumpConsecutive = data.jumpConsecutive + 1
+                    if data.jumpConsecutive >= config.coldExclusiveAttack.hopAmount then
+                        v.ai1 = 1
+                    end
+                end
+            end
+        elseif v.ai1 == 1 then
+            v.speedX = 0
+            if data.timer < config.coldExclusiveAttack.beforeShootDelay then
+                v.animationFrame = 2
+            else
+                v.animationFrame = 7
+            end
+            if data.timer % config.coldExclusiveAttack.shootDelay == 1 + config.coldExclusiveAttack.beforeShootDelay and data.shootConsecutive < config.coldExclusiveAttack.amountOnly then
+                local n = NPC.spawn(config.crystalID,v.x+v.width/2+config.coldExclusiveAttack.cord[v.direction].x,v.y+v.height/2+config.coldExclusiveAttack.cord[v.direction].y,v.section,false,true)
+                n.speedX = RNG.random(config.coldExclusiveAttack.shootSpeedX.min,config.coldExclusiveAttack.shootSpeedX.max) * v.direction
+                n.speedY = RNG.random(config.coldExclusiveAttack.shootSpeedY.min,config.coldExclusiveAttack.shootSpeedY.max)
+                SFX.play(18)
+                data.shootConsecutive = data.shootConsecutive + 1
+            end
+            if data.timer >= config.coldExclusiveAttack.afterShootDelay + config.coldExclusiveAttack.beforeShootDelay then
+                data.timer = 0
+                data.state = STATE.IDLE
+            end
+        else
+            v.ai1 = 0
+        end
+    elseif data.state == STATE.PILLAR then
+        if data.timer < 8 then
+            v.animationFrame = 2
+        else
+            v.animationFrame = math.floor((data.timer - 8) / 4) % 4 + 3
+        end
+        v.speedX = 0
+        if data.timer >= 8 + config.pillar.delay then
+            data.shootConsecutive = data.shootConsecutive + 1
+            SFX.play(Misc.resolveSoundFile("magikoopa-magic"))
+            local n = NPC.spawn(config.pillarID,v.x+v.width/2-NPC.config[config.pillarID].width/2,v.y+v.height-NPC.config[config.pillarID].height,v.section,false,false)
+            n.ai1 = data.temperatureState - 1
+            n.direction = v.direction
+            n.data.speedX = config.pillar.speedX
+            n.speedX = n.data.speedX * n.direction
+            if (data.shootConsecutive >= config.pillar.amount.nonpinch and data.health > config.pinchHP) or (data.shootConsecutive >= config.pillar.amount.pinch and data.health <= config.pinchHP) then
+                data.timer = 0
+                data.state = STATE.IDLE
+            else
+                data.timer = 0
+            end
+        end
+    elseif data.state == STATE.QUAKE then
+        if v.ai1 == 0 then
+            v.speedX = 0
+            if data.timer == config.beforeJumpDelay-1 then
+                if not v.collidesBlockBottom then
+                    data.timer = 0
+                else
+                    v.speedY = config.jumpHeight
+                end
+            end
+            if data.timer < config.beforeJumpDelay then
+                v.animationFrame = 8
+            else
+                if data.temperatureState == 2 and Colliders.collide(plr, v) and not v.friendly and not Defines.cheat_donthurtme and data.temperatureState == 2 then
+                    plr:harm()
+                end
+                if v.speedY < 0 then
+                    v.animationFrame = 9
+                else
+                    v.animationFrame = 10
+                end
+                if v.collidesBlockBottom then
+                    data.timer = 0
+                    v.ai1 = 1
+                    SFX.play(37)
+                    Routine.setFrameTimer(config.debrisFallDelay, (function() 
+                        if #data.bgoTable > 0 then
+                            local relocate = RNG.irandomEntry(data.bgoTable)
+                            local spawnNPC = config.debrisID
+                            local n = NPC.spawn(spawnNPC,relocate.x+16-NPC.config[spawnNPC].width/2,relocate.y-NPC.config[spawnNPC].height/2,v.section,false,false)
+        
+                            n.forcedState = 4
+                            n.forcedCounter1 = n.spawnY + n.height/2
+                            n.forcedCounter2 = 3
+                        end
+                    end), config.debrisAmount, false)
+                    if config.groundPound.causeStun == true then
+                        for k, p in ipairs(Player.get()) do --Section copypasted from the Sledge Bros. code
+                            if p:isGroundTouching() and not playerStun.isStunned(k) and v:mem(0x146, FIELD_WORD) == player.section then
+                                playerStun.stunPlayer(k, config.groundPound.stunDelay )
+                            end
+                        end
+                    end
+                    if config.harmNPCsOnJump then
+                        for _,n in ipairs(NPC.getIntersecting(v.x - 5, v.y - 5, v.x + v.width + 5, v.y + v.height + 5)) do
+                            if Colliders.collide(n,v) and not NPC.config[n.id].hp and not NPC.config[n.id].isCoin and not NPC.config[n.id].isInteractable and NPC.HITTABLE_MAP[n.id] and n.idx ~= v.idx then
+                                n:harm(HARM_TYPE_NPC)
+                            end
+                        end
+                    end
+                end
+            end
+        elseif v.ai1 == 1 then
+            v.animationFrame = math.floor(data.timer / 8) % 2
+            if data.timer >= config.debrisDelay then
+                v.ai1 = 0
+                data.timer = 0
+                data.state = STATE.WALK
+                --Spawn two NPCs based on his temperature state
+                local orbNPC = 0
+                local enemyNPC = 0
+                if data.temperatureState == 1 then
+                    orbNPC = config.magmaballID
+                    enemyNPC = config.fireEnemyID
+                elseif data.temperatureState == 2 then
+                    orbNPC = config.iceballID
+                    enemyNPC = config.frosteeID
+                end
+                if orbNPC > 0 then local orb = NPC.spawn(orbNPC,v.x+v.width/2,v.y+v.height-NPC.config[orbNPC].height,v.section,false,true) end
+                if enemyNPC > 0 then local enemy = NPC.spawn(enemyNPC,v.x+v.width/2,v.y+v.height-NPC.config[enemyNPC].height,v.section,false,true) end
+            end
+        else
+            v.ai1 = 0
+            data.timer = 0
         end
     elseif data.state == STATE.SHOOT then
         v.speedX = 0
@@ -363,7 +624,7 @@ function frank.onTickEndNPC(v)
                 v.speedX = 0
                 v.animationFrame = 8
             else
-                v.speedX = v.speedX * 0.9
+                v.speedX = v.speedX * 0.97
                 if data.timer == config.groundPound.beforeJumpDelay + config.groundPound.beforeAllJumpsDelay then
                     local bombxspeed = vector.v2(Player.getNearest(v.x + v.width/2, v.y + v.height).x + 0.5 * Player.getNearest(v.x + v.width/2, v.y + v.height).width - (v.x + 0.5 * v.width))
                     v.speedX = math.abs(bombxspeed.x / config.groundPound.speedXRestrictRate) * v.direction
@@ -376,6 +637,9 @@ function frank.onTickEndNPC(v)
                     v.animationFrame = 9
                 else
                     v.animationFrame = 10
+                end
+                if data.temperatureState == 2 and Colliders.collide(plr, v) and not v.friendly and not Defines.cheat_donthurtme and data.temperatureState == 2 then
+                    plr:harm()
                 end
                 if data.timer > config.groundPound.beforeJumpDelay + config.groundPound.beforeAllJumpsDelay and v.collidesBlockBottom then
                     SFX.play(37)
@@ -390,6 +654,13 @@ function frank.onTickEndNPC(v)
                             end
                         end
                     end
+                    if config.harmNPCsOnJump then
+                        for _,n in ipairs(NPC.getIntersecting(v.x - 5, v.y - 5, v.x + v.width + 5, v.y + v.height + 5)) do
+                            if Colliders.collide(n,v) and not NPC.config[n.id].hp and not NPC.config[n.id].isCoin and not NPC.config[n.id].isInteractable and NPC.HITTABLE_MAP[n.id] and n.idx ~= v.idx then
+                                n:harm(HARM_TYPE_NPC)
+                            end
+                        end
+                    end
                 end
             end
         else
@@ -399,6 +670,7 @@ function frank.onTickEndNPC(v)
                 if data.jumpConsecutive < config.groundPound.amount then
                     data.timer = config.groundPound.beforeAllJumpsDelay
                     v.ai1 = 0
+                    npcutils.faceNearestPlayer(v)
                 else
                     v.ai1 = 0
                     data.timer = 0
@@ -439,8 +711,9 @@ function frank.onTickEndNPC(v)
 			data.hurtTimer = 0
 		end
 	end
+
     if data.state ~= STATE.SELFDESTRUCT and data.state ~= STATE.MELT then
-        if temperaturesync.state == 1 then
+        if data.temperatureState == 1 then
 
         else
             v.animationFrame = v.animationFrame + 13
@@ -469,8 +742,17 @@ function frank.onTickEndNPC(v)
 	if v:mem(0x120, FIELD_BOOL) then
 		v:mem(0x120, FIELD_BOOL, false)
 	end
-	if Colliders.collide(plr, v) and not v.friendly and data.state ~= STATE.HURT and data.state ~= STATE.MELT and data.state ~= STATE.SELFDESTRUCT and not Defines.cheat_donthurtme then
+	if Colliders.collide(plr, v) and not v.friendly and data.state ~= STATE.HURT and data.state ~= STATE.MELT and data.state ~= STATE.SELFDESTRUCT and not Defines.cheat_donthurtme and data.temperatureState == 1 then
 		plr:harm()
+    end
+    if Colliders.collide(plr, v) and not v.friendly and data.state ~= STATE.HURT and data.state ~= STATE.MELT and data.state ~= STATE.SELFDESTRUCT and not Defines.cheat_donthurtme and data.temperatureState == 2 and data.freezeCooldown <= 0 then
+        for k, p in ipairs(Player.get()) do --Section copypasted from the Sledge Bros. code
+            if not playerStun.isStunned(k) and v:mem(0x146, FIELD_WORD) == plr.section then
+                playerStun.stunPlayer(k, config.freezeDelay)
+                SFX.play(59)
+                data.freezeCooldown = config.freezeCooldown
+            end
+        end
 	end
 end
 function frank.onNPCHarm(eventObj, v, reason, culprit)

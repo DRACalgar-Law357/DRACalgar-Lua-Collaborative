@@ -320,7 +320,6 @@ function temperatureSwitch.onTick()
 		spiketimer = spiketimer - 1
 	end
 	
-	Text.print(temperatureSwitch.state,110,110)
 	-----------------
 	-- TIMED STUFF --
 	-----------------
