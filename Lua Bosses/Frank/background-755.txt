@@ -1,8 +1,0 @@
-image = background-755e.png
-name = "Frank Falling Debris Point"
-description = "A BGO that spawns falling debris made by Frank."
-frames = 1
-framespeed = 8
-noshadows = false
-priority = -85
-grid = 16
