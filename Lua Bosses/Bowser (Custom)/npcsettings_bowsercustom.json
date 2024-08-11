@@ -1,0 +1,14 @@
+{
+	"style" : "groupbox",
+	"title" : "Bowser (Custom) Settings",
+	"layout": [
+		{
+			"control": "checkbox",
+			"name": "intro",
+			"title": "Intro Animation",
+			"text-visible": true,
+			"value-default": false
+		}
+	]
+}
+
