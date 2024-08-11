@@ -496,9 +496,11 @@ function sampleNPC.onTickEndNPC(v)
 			v.y = camera.y - v.height - 4
 			v.nogravity = true
 			v.noblockcollision = true
+			v.friendly = true
 		else
 			if config.courtesyStyle < 2 then
 				data.state = STATE_THROW
+				v.friendly = true
 			else
 				data.state = STATE_IDLE
 			end

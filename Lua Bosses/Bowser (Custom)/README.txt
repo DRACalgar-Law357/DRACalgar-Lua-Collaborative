@@ -1,0 +1,1 @@
+Add Bowser (Custom) Shower Horizontal Point BGOs if you're intending to use a part of Bowser's FIERY attack.
