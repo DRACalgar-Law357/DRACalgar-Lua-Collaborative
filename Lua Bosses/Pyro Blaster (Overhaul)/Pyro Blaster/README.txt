@@ -1,0 +1,1 @@
+Add Emral's afterimages.lua and Freeze Highlights to your level folder with the boss in it in order to make certain effects work.

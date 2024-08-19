@@ -1,0 +1,4 @@
+[first]
+framespeed=4
+frames=5
+lifetime=20

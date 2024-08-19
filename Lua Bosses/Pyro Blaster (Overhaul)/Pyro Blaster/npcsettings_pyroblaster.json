@@ -1,0 +1,95 @@
+{
+	"style" : "groupbox",
+	"title" : "Pyro Blaster Settings",
+	"layout": [
+
+        {
+			"control": "description",
+			"text": "Burner Attack Settings"
+		},
+
+		{
+			"control": "spinBox",
+			"name": "fireLifetime",
+			"title": "Fire Lifetime",
+			"type": "double",
+			"tooltip": "How long the flame is alive before extinguishing, in seconds. 0 means forever.",
+			"value-default": 0.75,
+			"value-min": 0,
+			"value-max": 60
+		},
+        {
+			"control": "spinBox",
+			"name": "spawndelay",
+			"title": "Fire Spawn Delay",
+			"type": "double",
+			"tooltip": "How long before a flame spawns, in seconds. 0 means forever.",
+			"value-default": 1.25,
+			"value-min": 0,
+			"value-max": 60
+		},
+		{
+			"control": "spinBox",
+			"name": "downtime",
+			"title": "Downtime",
+			"type": "double",
+			"tooltip": "The amount of seconds between cycles.",
+			"value-default": 2,
+			"value-min": 0,
+			"value-max": 60
+		},
+		{
+			"control": "spinBox",
+			"name": "cycleCount",
+			"title": "Cycle Count",
+			"type": "int",
+			"tooltip": "The amount of cycles of burners with different cycle indices taking turns.",
+			"value-default": 2,
+			"value-min": 1,
+			"value-max": 99
+		},
+		{
+			"control": "spinBox",
+			"name": "cycleIndex",
+			"title": "Cycle Index",
+			"type": "int",
+			"tooltip": "The cycle this burner is on.",
+			"value-default": 1,
+			"value-min": 1,
+			"value-max": 99
+		},
+		{
+			"control": "spinBox",
+			"name": "fireScale",
+			"title": "Fire Scale",
+			"type": "double",
+			"tooltip": "Stretches/squashes the fire by this multiplier.",
+			"value-default": 4.2,
+			"value-min": 0.05,
+			"value-max": 10
+		},
+
+        {
+			"control": "description",
+			"text": "General"
+		},
+
+        {
+			"control": "checkbox",
+			"name": "mushroom",
+			"title": "Give mushrooms on certain points of hp?",
+			"text-visible": true,
+			"value-default": true
+		},
+
+		{
+			"control": "checkbox",
+			"name": "kamikaze",
+			"title": "Kamikaze after defeated?",
+			"tooltip": "If set to true, it'd use a set of powerful attacks when in a desperation.",
+			"text-visible": true,
+			"value-default": true
+		}
+	]
+}
+

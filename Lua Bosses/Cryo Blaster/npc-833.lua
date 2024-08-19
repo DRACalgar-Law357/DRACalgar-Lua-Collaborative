@@ -1291,7 +1291,7 @@ function cryoBlaster.onTickEndNPC(v)
 						ptl.x=ptl.x-ptl.width/2
 						ptl.y=ptl.y-ptl.height/2
 					end
-					SFX.play("Small Explosion.wav")
+					SFX.play("Zany Explosion.wav")
 				else
 					v.ai2 = v.ai2 + 1
 					v.speedY = -10
