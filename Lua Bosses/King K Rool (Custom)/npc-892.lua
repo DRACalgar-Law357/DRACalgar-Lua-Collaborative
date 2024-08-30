@@ -7,8 +7,8 @@ local npcID = NPC_ID
 local sampleNPCSettings = {
 	id = npcID,
 
-	gfxwidth = 130,
-	gfxheight = 104,
+	gfxwidth = 160,
+	gfxheight = 160,
 
 	width = 64,
 	height = 96,
@@ -16,8 +16,8 @@ local sampleNPCSettings = {
 	gfxoffsetx = 0,
 	gfxoffsety = 0,
 
-	frames = 35,
-	framestyle = 1,
+	frames = 77,
+	framestyle = 0,
 	framespeed = 8,
 
 	foreground = false,
@@ -64,9 +64,239 @@ local sampleNPCSettings = {
 	airOffsetXLeftOG = 138,
 	airOffsetY = 48,
 
-	airFrames = 6,
+	airFrames = 3,
 	airFramespeed = 4,
-	airHeight = 90,
+	airHeight = 88,
+
+	frameStates = {
+		[0] = {
+			frames = {0},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[1] = {
+			frames = {1,2,3,4,5,6,7},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[2] = {
+			frames = {8,9,10,11,12,13},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[3] = {
+			frames = {12,11,10,9,8},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[4] = {
+			frames = {14,15},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[5] = {
+			frames = {16,17},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[6] = {
+			frames = {16,15},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[7] = {
+			frames = {18,19,20,21,22},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[8] = {
+			frames = {20,19,18,18},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[9] = {
+			frames = {21,22},
+			framespeed = 8,
+			loopFrames = true,
+		},
+		[10] = {
+			frames = {22,11,20,19,18,0},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[11] = {
+			frames = {23,24,25,26,27},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[12] = {
+			frames = {27},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[13] = {
+			frames = {28,29},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[14] = {
+			frames = {30,31},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[15] = {
+			frames = {32,33,34,35},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[16] = {
+			frames = {36,37,38,39,40,41,42,43,44,45,46,47},
+			framespeed = 2,
+			loopFrames = true,
+		},
+		[17] = {
+			frames = {48,49,49,49},
+			framespeed = 2,
+			loopFrames = false,
+		},
+		[18] = {
+			frames = {50,51},
+			framespeed = 12,
+			loopFrames = true,
+		},
+		[19] = {
+			frames = {50,51},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[20] = {
+			frames = {51},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[21] = {
+			frames = {52,52,52,53},
+			framespeed = 4,
+			loopFrames = false,
+		},
+		[22] = {
+			frames = {54},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[23] = {
+			frames = {55,56},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[24] = {
+			frames = {57,58},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[25] = {
+			frames = {59,60},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[26] = {
+			frames = {61,62,63},
+			framespeed = 2,
+			loopFrames = true,
+		},
+		[27] = {
+			frames = {64,65,65,65},
+			framespeed = 2,
+			loopFrames = false,
+		},
+		[28] = {
+			frames = {66,67},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[29] = {
+			frames = {66},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[30] = {
+			frames = {67},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[31] = {
+			frames = {68,69},
+			framespeed = 12,
+			loopFrames = true,
+		},
+		[32] = {
+			frames = {68,69},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[33] = {
+			frames = {69},
+			framespeed = 4,
+			loopFrames = false,
+		},
+		[34] = {
+			frames = {66},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[35] = {
+			frames = {67},
+			framespeed = 8,
+			loopFrames = false,
+		},
+		[36] = {
+			frames = {68,69},
+			framespeed = 12,
+			loopFrames = true,
+		},
+		[37] = {
+			frames = {68,69},
+			framespeed = 6,
+			loopFrames = true,
+		},
+		[38] = {
+			frames = {70,70,70,71},
+			framespeed = 4,
+			loopFrames = true,
+		},
+		[39] = {
+			frames = {72,73,74,75,76},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[40] = {
+			frames = {74,73,72,72},
+			framespeed = 6,
+			loopFrames = false,
+		},
+		[41] = {
+			frames = {75,76},
+			framespeed = 8,
+			loopFrames = true,
+		},
+		[42] = {
+			frames = {76,75,74,73,72,54},
+			framespeed = 4,
+			loopFrames = false,
+		},
+		[43] = {
+			frames = {-50},
+			framespeed = 8,
+			loopFrames = false,
+		},
+	},
+
+	flipSpriteWhenFacingDirection = false, --flips the sprite by a scale
+	priority = -45,
+	spriteoffsetx = 0,
+	spriteoffsety = 0,
+
+    iFramesDelay = 48,
 }
 
 npcManager.setNpcSettings(sampleNPCSettings)
@@ -273,6 +503,38 @@ function sampleNPC.onTickEndNPC(v)
 		data.health = config.health
 		data.jumpTimer = 0
 		data.landTimer = 0
+
+		data.hurtTimer = data.hurtTimer or 0
+		data.iFrames = false
+		data.iFramesDelay = config.iFramesDelay
+		data.sprSizex = 1
+		data.sprSizey = 1
+		data.img = data.img or Sprite{x = 0, y = 0, pivot = vector(0.5, 0.5), frames = frankSettings.frames * (1 + frankSettings.framestyle), texture = Graphics.sprites.npc[v.id].img}
+	end
+
+	data.currentFrame = config.frameStates[data.animateState].frames[data.frameCounter]
+	data.currentFrameTimer = config.frameStates[data.animateState].framespeed
+	data.frameTimer = data.frameTimer - 1
+	
+	v.animationFrame = data.currentFrame
+
+	if config.frameStates[data.animateState].loopFrames == true then
+		if data.frameTimer <= 0 then
+			data.frameTimer = config.frameStates[data.animateState].framespeed
+			if data.frameCounter < #config.frameStates[data.animateState].frames then
+				data.frameCounter = data.frameCounter + 1
+			else
+				data.currentFrameTimer = 0
+				data.frameCounter = 1
+			end
+		end
+	else
+		if data.frameTimer <= 0 then
+			data.frameTimer = config.frameStates[data.animateState].framespeed
+			if data.frameCounter < #config.frameStates[data.animateState].frames then
+				data.frameCounter = data.frameCounter + 1
+			end
+		end
 	end
 
 	if v.heldIndex ~= 0
@@ -285,13 +547,14 @@ function sampleNPC.onTickEndNPC(v)
 	data.timer = data.timer + 1
 
 	if data.state == STATE_IDLE then
-		v.animationFrame = math.floor(data.timer/14)%4
+		--[[v.animationFrame = math.floor(data.timer/14)%4
 
 		if data.timer > 80 then
 			data.state = STATE_THROW
 			data.timer = 0
-		end
-	elseif data.state == STATE_THROW then
+		end]]
+		v.speedX = 0
+	--[[elseif data.state == STATE_THROW then
 		v.animationFrame = math.floor(data.timer/6)%5+4
 
 		if data.crown and data.crown.isValid then
@@ -685,6 +948,21 @@ function sampleNPC.onTickEndNPC(v)
 				data.timer = 0
 				data.landTimer = 0
 			end
+		end]]
+	end
+
+	--iFrames System made by MegaDood & DRACalgar Law
+	if data.iFrames then
+		v.friendly = true
+		data.hurtTimer = data.hurtTimer + 1
+		
+		if data.hurtTimer == 1 and data.health > 0 then
+		    SFX.Play(39)
+		end
+		if data.hurtTimer >= data.iFramesDelay then
+			v.friendly = false
+			data.iFrames = false
+			data.hurtTimer = 0
 		end
 	end
 
@@ -696,11 +974,51 @@ end
 
 function sampleNPC.onDrawNPC(v)
 	local data = v.data
+	local settings = v.data._settings
+	local config = NPC.config[v.id]
+	data.w = math.pi/65
+
+	--Setup code by Mal8rk
+	local pivotOffsetX = 0
+	local pivotOffsetY = 0
+
+	local opacity = 1
+
+	local priority = 1
+	if lowPriorityStates[v:mem(0x138,FIELD_WORD)] then
+		priority = -75
+	elseif v:mem(0x12C,FIELD_WORD) > 0 then
+		priority = -30
+	end
+
+	--Text.print(v.x, 8,8)
+	--Text.print(data.timer, 8,32)
+	if data.iFrames then
+		opacity = math.sin(lunatime.tick()*math.pi*0.25)*0.75 + 0.9
+	end
 
 	if data.state == STATE_DEFEAT then
 		npcutils.drawNPC(v,{priority = -32})
 		npcutils.hideNPC(v)
 	end
+
+	if data.img then
+		-- Setting some properties --
+		data.img.x, data.img.y = v.x + 0.5 * v.width + config.spriteoffsetx, v.y + 0.5 * v.height + config.spriteoffsety
+		if config.flipSpriteWhenFacingDirection then
+			data.img.transform.scale = vector(data.sprSizex * -v.direction, data.sprSizey)
+		else
+			data.img.transform.scale = vector(data.sprSizex, data.sprSizey)
+		end
+		data.img.rotation = data.angle
+
+		local p = config.priority
+
+		-- Drawing --
+		data.img:draw{frame = v.animationFrame + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
+		npcutils.hideNPC(v)
+	end
+
 end
 
 function sampleNPC.onNPCHarm(eventObj, v, reason, culprit)
