@@ -1,0 +1,29 @@
+{
+	"style" : "groupbox",
+	"title" : "Pouncer Settings",
+	"layout": [
+		{
+			"control": "combobox",
+			"name": "behaviour",
+			"title": "Behaviour",
+			"tooltip": "Decides whether it should move via redirectors or move like a thwomp.",
+			"elements": ["Redirector", "Thwomp"],
+			"value-default": 1
+		},
+		{
+			"control": "lineEdit",
+			"name": "event",
+			"title": "Event that triggers the NPC to begin moving",
+			"tooltip": "This will optionally cause the NPC to start moving when this event is triggered.",
+			"value-default": ""
+        },
+		{
+			"control": "checkbox",
+			"name": "touch",
+			"title": "Stand on to move?",
+			"tooltip": "Check to have the NPC only move when stood on.",
+			"text-visible": true,
+			"value-default": true
+		}
+	]
+}
