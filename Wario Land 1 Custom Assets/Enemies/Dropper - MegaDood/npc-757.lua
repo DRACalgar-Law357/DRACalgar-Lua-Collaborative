@@ -128,7 +128,7 @@ function dropper.onTickNPC(v)
 			p:harm()
 		end
 		--Detect a player and fall
-		if math.abs(p.x - v.x) <= 48 and data.state == 0 then
+		if (math.abs(p.x - v.x) <= 48) or Defines.earthquake >= 3 and data.state == 0 then
 			data.state = 1
 			v.speedX = 0
 		end
