@@ -1,0 +1,10 @@
+[1]
+import=AI_ARC
+onTick=TICK_BCDEATH
+frames=4
+framestyle=0
+framespeed=4
+gravity = 0
+speedX = 0
+speedY = -8
+lifetime = 500

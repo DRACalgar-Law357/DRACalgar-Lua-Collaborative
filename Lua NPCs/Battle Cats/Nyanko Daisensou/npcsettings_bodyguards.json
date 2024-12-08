@@ -1,0 +1,157 @@
+{
+	"style" : "groupbox",
+	"title" : "Bodyguard Configurations",
+	"layout": [	
+        {
+			"control": "checkbox",
+			"name": "rush",
+			"title": "Rush at the player?",
+			"text-visible": true,
+			"value-default": true
+		},
+        {
+			"control": "checkbox",
+			"name": "smoke",
+			"title": "Throw Smoke Grenades?",
+			"text-visible": true,
+			"value-default": false
+		},
+        {
+			"control": "checkbox",
+			"name": "fragmentation",
+			"title": "Throw Fragmentation Grenades?",
+			"text-visible": true,
+			"value-default": false
+		},
+        {
+			"control": "checkbox",
+			"name": "shoot",
+			"title": "Shoot at the player?",
+			"text-visible": true,
+			"value-default": false
+		},
+        {
+			"control": "checkbox",
+			"name": "punch",
+			"title": "Punch At The Player?",
+			"text-visible": true,
+			"value-default": false
+		},
+        {
+			"control": "checkbox",
+			"name": "backup",
+			"title": "Call Backup?",
+			"text-visible": true,
+			"value-default": false
+		},
+        {
+			"control": "checkbox",
+			"name": "patch",
+			"title": "Patch Wounds Upon Pinch?",
+			"text-visible": true,
+			"value-default": false
+		},
+        {
+			"control": "combobox",
+			"name": "punchSet",
+			"title": "Ways to punch",
+			"tooltip": "Determines how they'll punch",
+			"elements": ["Grounded & Midair", "Grounded", "Midair"],
+			"value-default": 0
+		},
+        {
+			"control": "combobox",
+			"name": "shootSet",
+			"title": "Ways to shoot",
+			"tooltip": "Determines how they'll shoot",
+			"elements": ["Low & High", "Low", "High"],
+			"value-default": 0
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "walkDelay",
+            "title": "Wander Delay",
+			"tooltip": "A delay that changes the NPC's direction.",
+			"value-default": 48,
+			"value-min": 1,
+			"value-max": 1000,
+			"single-step": 1
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "backupID",
+            "title": "Backup NPC ID",
+			"tooltip": "NPCs with the specified id will be summoned by this Bodyguard NPC.",
+			"value-default": 1,
+			"value-min": 1,
+			"value-max": 1000,
+			"single-step": 1
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "backupAmount",
+            "title": "Amount of Backup NPC",
+			"tooltip": "The caller will spawn an amount of NPCs.",
+			"value-default": 1,
+			"value-min": 1,
+			"value-max": 50,
+			"single-step": 1
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "backupFrequency",
+            "title": "Frame Timers NPCs Appear ",
+			"tooltip": "Once the caller successfully summons, the summoned NPCs will appear after another in specified frames.",
+			"value-default": 1,
+			"value-min": 1,
+			"value-max": 1000,
+			"single-step": 16
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "backupX",
+			"title": "Backup X Coord from Bodyguard",
+            "tooltip": "Once the NPC calls backup, it will summon the specified NPCs in those cords by 'v.spawnX + NPC.config[v.id].width/2 + settings.backupX'",
+			"value-default": 0,
+			"value-min": -9999,
+			"value-max": 9999,
+			"single-step": 16
+		},
+		{
+			"control": "spinBox",
+			"type": "int",
+			"name": "backupY",
+            "title": "Backup Y Coord from Bodyguard",
+            "tooltip": "Once the NPC calls backup, it will summon the specified NPCs in those cords by 'v.spawnY + NPC.config[v.id].height/2 + settings.backupY'",
+			"value-default": 0,
+			"value-min": -9999,
+			"value-max": 9999,
+			"single-step": 16
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "backupDirection",
+			"title": "Backup NPC Direction",
+			"value-default": -1,
+			"value-min": -1,
+			"value-max": 1,
+			"single-step": 2
+		},
+        {
+			"control": "spinBox",
+			"type": "int",
+			"name": "hp",
+			"title": "Health Modifier",
+			"value-default": 9,
+			"value-min": 1,
+			"value-max": 200,
+			"single-step": 3
+		}
+		]
+}
