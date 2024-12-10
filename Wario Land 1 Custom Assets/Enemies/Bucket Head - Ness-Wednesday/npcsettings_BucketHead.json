@@ -1,0 +1,52 @@
+{
+	"style" : "groupbox",
+	"title" : "Bucket Head Settings",
+	"layout": [
+		{
+			"control": "checkbox",
+			"name": "followTheLeader",
+			"title": "Aim at Player",
+			"tooltip": "Should the Bucket Head turn to face the player when spitting?",
+			"text-visible": false,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "useRadius",
+			"title": "Use Radius",
+			"tooltip": "Should the Bucket Head use its radius to detect the nearest player? Uncheck to make it spit automatically.",
+			"text-visible": false,
+			"value-default": true
+		},
+		{
+			"control": "spinBox",
+			"type": "int",
+			"name": "pauseTime",
+			"title": "Cooldown",
+			"tooltip": "How long should the Bucket Head wait until spitting again?",
+			"value-default": 55,
+			"value-min": 1,
+			"value-max": 9999
+		},
+		{
+			"control": "spinBox",
+			"type": "int",
+			"name": "volley",
+			"title": "Volley",
+			"tooltip": "How many projectiles should be spat out per volley?",
+			"value-default": 1,
+			"value-min": 1,
+			"value-max": 20
+		},
+		{
+			"control": "spinBox",
+			"type": "int",
+			"name": "spitShine",
+			"title": "spitTime",
+			"tooltip": "How many ticks should the Bucket Head wait until the next spit?",
+			"value-default": 17,
+			"value-min": 7,
+			"value-max": 54
+		}
+	]
+}
