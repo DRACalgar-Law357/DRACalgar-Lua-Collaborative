@@ -1,0 +1,37 @@
+{
+	"style" : "groupbox",
+	"title" : "Ghost Settings",
+	"layout": [
+		{
+			"control": "spinBox",
+			"name": "health",
+			"title": "Health",
+			"type": "int",
+			"value-default": 24,
+			"value-min": 1,
+			"value-max": 300
+		},
+
+		{
+			"control": "description",
+			"name": ".",
+			"text": "Damage values are: <br><b>Fireballs:</b> 2 <br><b>Strong Attacks</b> 8<br>"
+		},
+		
+		{
+			"control": "checkbox",
+			"name": "harm",
+			"title": "Stuns instead of harms the player?",
+			"text-visible": true,
+			"value-default": true
+		},
+		{
+			"control": "checkbox",
+			"name": "flash",
+			"title": "Does the boss flash?",
+			"text-visible": true,
+			"value-default": true
+		}
+	]
+}
+
