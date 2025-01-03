@@ -75,21 +75,13 @@ local docCrocSettings = {
 	hpDecWeak = 1,
 	--Lightning... ;used in STATE.LIGHTNING and STATE.SKIM
 	lightningID = 935,
-	--A config component in which sets the patterns in order for King Jelectro to follow in
-	patternTable = {
-		[0] = STATE.ENERGY1,
-		[1] = STATE.SHOCKWAVE,
-		[2] = STATE.ENERGY2,
-		[3] = STATE.VIAL,
-	},
 	--A config component in which King Jelectro will randomly choose. He'll still have a chance to choose to throw  mushroom vial.
 	alloutTable = {
-		STATE.ENERGY1,
-		STATE.SHOCKWAVE,
-		STATE.ENERGY2,
-		STATE.VIAL,
-		STATE.DRONE,
-		STATE.DRONE,
+		STATE.CHASE,
+		STATE.SKIM,
+		STATE.ZIGZAG,
+		STATE.LIGHTNING,
+		STATE.CHASE,
 	},
 	
 	--Coordinate offset when spawning NPCs; starts at 0 on the physical center coordinate
@@ -97,7 +89,7 @@ local docCrocSettings = {
 	spawnY = 0,
 	pulsex = false, -- controls the scaling of the sprite when firing
 	pulsey = false,
-	cameraOffsetY = {top=-32,bottom=32},
+	cameraOffsetY = -32,
 	idleDelay = 72,
 
 	--SFX List
@@ -131,8 +123,6 @@ local docCrocSettings = {
 	sfx_voiceDefeat2 = nil,
 
 	iFramesDelay = 60,
-	pinchHP = 16, --As the hp goes over this config, King Jelectro shifts into pinch mode; used in pinchSet 0
-	pinchSet = 0, --0 - initially becomes in a non-pinch state and then until King Jelectro's hp goes over a set of pinchHP, it'll become in a pinch state, becoming more aggressive; 1 - initially becomes in a non-pinch state, following a pattern table; 2 - initially becomes in a pinch state, will follow randomized attacks
 }
 
 --Applies NPC settings
