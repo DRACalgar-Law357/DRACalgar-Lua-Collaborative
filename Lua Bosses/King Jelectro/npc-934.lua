@@ -78,10 +78,10 @@ local docCrocSettings = {
 	--A config component in which King Jelectro will randomly choose. He'll still have a chance to choose to throw  mushroom vial.
 	alloutTable = {
 		STATE.CHASE,
+		STATE.CHASE,
 		STATE.SKIM,
 		STATE.ZIGZAG,
 		STATE.LIGHTNING,
-		STATE.CHASE,
 	},
 	
 	--Coordinate offset when spawning NPCs; starts at 0 on the physical center coordinate
@@ -91,15 +91,30 @@ local docCrocSettings = {
 	pulsey = false,
 	cameraOffsetY = -32,
 	idleDelay = 72,
+	chaseDelay = 240,
+	swimAcceleration = {
+		x = {
+			acc = 0.05,
+			cap = 5,
+		},
+		y = {
+			acc = 0.05,
+			cap = 5,
+		},
+	},
 
 	--SFX List
 	sfx_introSwimIn = nil,
 	sfx_introStart = nil,
 	sfxTable_swimming = {
-		[0] = nil,
+		nil,
 	},
-	sfxTable_startSwimming = {nil},
-	sfxTable_stopSwimming = {nil},
+	sfxTable_startSwimming = {
+		nil,
+	},
+	sfxTable_stopSwimming = {
+		nil,
+	},
 	sfx_lightningInd = nil,
 	sfxTable_lightningSpark = {Misc.resolveSoundFile("magikoopa-magic")},
 	sfx_lightningLoop = nil,
@@ -135,7 +150,7 @@ npcManager.registerHarmTypes(npcID,
 		--HARM_TYPE_FROMBELOW,
 		HARM_TYPE_NPC,
 		HARM_TYPE_PROJECTILE_USED,
-		HARM_TYPE_LAVA,
+		--HARM_TYPE_LAVA,
 		HARM_TYPE_HELD,
 		--HARM_TYPE_TAIL,
 		--HARM_TYPE_SPINJUMP,
@@ -161,7 +176,6 @@ function docCroc.onInitAPI()
 	npcManager.registerEvent(npcID, docCroc, "onTickEndNPC")
 	npcManager.registerEvent(npcID, docCroc, "onDrawNPC")
 	registerEvent(docCroc, "onNPCHarm")
-	registerEvent(docCroc, "onNPCKill")
 end
 
 local function SFXPlay(sfx)
@@ -182,20 +196,9 @@ end
 local function decideAttack(v,data,config,settings)
 	local options = {}
 
-	if data.pinch then
-		if config.alloutTable and #config.alloutTable > 0 then
-			for i in ipairs(config.alloutTable) do
-				table.insert(options,config.alloutTable[i])
-			end
-		end
-	else
-		if config.patternTable and #config.patternTable > 0 then
-			table.insert(options,config.patternTable[data.pattern])
-			if data.pattern > #config.patternTable - 1 then
-				data.pattern = 0
-			else
-				data.pattern = data.pattern + 1
-			end
+	if config.alloutTable and #config.alloutTable > 0 then
+		for i in ipairs(config.alloutTable) do
+			table.insert(options,config.alloutTable[i])
 		end
 	end
 	if #options > 0 then
@@ -243,6 +246,10 @@ function docCroc.onTickEndNPC(v)
 		v.ai2 = 0
 		v.ai3 = 0
 		v.ai4 = 0
+		data.moveSpeed = {
+			x = 0,
+			y = 0,
+		}
 		data.pinch = false
 		data.selectedAttack = 0
 		data.bgoTable = {
@@ -262,9 +269,6 @@ function docCroc.onTickEndNPC(v)
 		data.timer = 0
 	end
 	data.timer = data.timer + 1
-	local verticalDistance = 16*0.5
-	local verticalTime   = 48 / math.pi / 2
-	v.speedY = math.sin(lunatime.tick() / verticalTime  )*verticalDistance   / verticalTime
 	if data.state == STATE.IDLE then
 		v.animationFrame = math.floor(data.timer / 8) % 2
 		v.speedX =  0
@@ -272,6 +276,27 @@ function docCroc.onTickEndNPC(v)
 		if data.timer >= config.idleDelay then
 			data.timer = 0
 			decideAttack(v,data,config,settings)
+			data.moveSpeed.x = 0
+			data.moveSpeed.y = 0
+		end
+	elseif data.state == STATE.CHASE then
+		if npcutils.faceNearestPlayer(v) == -1 then
+			data.moveSpeed.x = math.clamp(data.moveSpeed.x - config.swimAcceleration.x.acc, -config.swimAcceleration.x.cap, config.swimAcceleration.x.cap)
+		elseif npcutils.faceNearestPlayer(v) == 1 then
+			data.moveSpeed.x = math.clamp(data.moveSpeed.x + config.swimAcceleration.x.acc, -config.swimAcceleration.x.cap, config.swimAcceleration.x.cap)
+		end
+		if plr.y + plr.height / 2 < v.y + v.height / 2 then
+			data.moveSpeed.y = math.clamp(data.moveSpeed.x - config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
+		else
+			data.moveSpeed.y = math.clamp(data.moveSpeed.x + config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
+		end
+		v.speedX = data.moveSpeed.x
+		v.speedY = data.moveSpeed.y
+		if data.timer % 
+		if data.timer == 1 then
+
+		elseif data.timer >= config.chaseDelay then
+
 		end
 	elseif data.state == STATE.INTRO then
 		v.friendly = true
@@ -292,6 +317,7 @@ function docCroc.onTickEndNPC(v)
 			v.animationFrame = math.floor(data.timer / 8) % 2
 			if data.timer >= 56 then data.state = STATE.IDLE v.ai1 = 0 data.timer = 0 v.friendly = false end
 		end
+
 	elseif data.state == STATE.HURT then
 		v.speedX = 0
 		v.speedY = 0
@@ -317,6 +343,11 @@ function docCroc.onTickEndNPC(v)
 			SFXPlay(config.sfx_voiceDefeat2)
 		end
 	end
+
+	local verticalDistance = 16*0.5
+	local verticalTime   = 48 / math.pi / 2
+	v.speedY = v.speedY + math.sin(lunatime.tick() / verticalTime  )*verticalDistance   / verticalTime
+
 	--Give Doc Croc some i-frames to make the fight less cheesable
 	--iFrames System made by MegaDood & DRACalgar Law
 	if data.iFrames then
@@ -354,6 +385,7 @@ function docCroc.onTickEndNPC(v)
 		plr:harm()
 	end
 end
+
 function docCroc.onNPCHarm(eventObj, v, reason, culprit)
 	local data = v.data
 	local config = NPC.config[v.id]
@@ -420,6 +452,7 @@ function docCroc.onNPCHarm(eventObj, v, reason, culprit)
 			end
 	eventObj.cancelled = true
 end
+
 local lowPriorityStates = table.map{1,3,4}
 function docCroc.onDrawNPC(v)
 	local data = v.data
@@ -458,21 +491,6 @@ function docCroc.onDrawNPC(v)
 		-- Drawing --
 		data.img:draw{frame = v.animationFrame + 1, sceneCoords = true, priority = p, color = Color.white..opacity}
 		npcutils.hideNPC(v)
-	end
-end
-
-function docCroc.onNPCKill(eventObj,v,reason)
-	local data = v.data
-	if v.id ~= npcID then return end
-	if reason == HARM_TYPE_OFFSCREEN then return end
-	if v.legacyBoss and reason ~= HARM_TYPE_LAVA then
-	  local ball = NPC.spawn(16, v.x, v.y)
-		ball.x = ball.x + ((v.width - ball.width) / 2)
-		ball.y = ball.y + ((v.height - ball.height) / 2)
-		ball.speedY = -6
-		ball.despawnTimer = 100
-				
-		SFX.play(20)
 	end
 end
 
