@@ -102,6 +102,10 @@ local docCrocSettings = {
 			cap = 5,
 		},
 	},
+	beforeChaseLightningDelay = 48,
+	chaseWithLightningDelay = 270,
+	initLightningDelay = 30,
+	lightningFrequency = 60,
 
 	--SFX List
 	sfx_introSwimIn = nil,
@@ -231,9 +235,10 @@ function docCroc.onTickEndNPC(v)
 
 		data.w = math.pi/65
 		data.timer = data.timer or 0
+		data.lightningTimer = data.lightningTimer or 0
 		data.hurtTimer = data.hurtTimer or 0
 		data.iFrames = false
-		data.health = config.hp
+		data.health = data.health or config.hp
 		if not settings.intro then
 			data.state = STATE.IDLE
 		else
@@ -280,23 +285,98 @@ function docCroc.onTickEndNPC(v)
 			data.moveSpeed.y = 0
 		end
 	elseif data.state == STATE.CHASE then
-		if npcutils.faceNearestPlayer(v) == -1 then
+		v.animationFrame = math.floor(data.timer / 8) % 2
+		if plr.x + plr.width / 2 < v.x + v.width / 2 then
 			data.moveSpeed.x = math.clamp(data.moveSpeed.x - config.swimAcceleration.x.acc, -config.swimAcceleration.x.cap, config.swimAcceleration.x.cap)
-		elseif npcutils.faceNearestPlayer(v) == 1 then
+		elseif plr.x + plr.width / 2 > v.x + v.width / 2 then
 			data.moveSpeed.x = math.clamp(data.moveSpeed.x + config.swimAcceleration.x.acc, -config.swimAcceleration.x.cap, config.swimAcceleration.x.cap)
 		end
 		if plr.y + plr.height / 2 < v.y + v.height / 2 then
 			data.moveSpeed.y = math.clamp(data.moveSpeed.x - config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
-		else
+		elseif plr.y + plr.height / 2 > v.y + v.height / 2
 			data.moveSpeed.y = math.clamp(data.moveSpeed.x + config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
 		end
 		v.speedX = data.moveSpeed.x
 		v.speedY = data.moveSpeed.y
-		if data.timer % 
 		if data.timer == 1 then
-
+			data.moveSpeed.x = 0
+			data.moveSpeed.y = 0
 		elseif data.timer >= config.chaseDelay then
-
+			data.moveSpeed.x = 0
+			data.moveSpeed.y = 0
+			data.timer = 0
+			data.state = STATE_IDLE
+			v.speedX = 0
+			v.speedY = 0
+		end
+	elseif data.state == STATE.LIGHTNING then
+		if v.ai1 == 0 then
+			v.speedX = 0
+			v.speedY = 0
+			if data.timer % 16 >= 12 then
+				v.animationFrame = 0
+			elseif data.timer % 16 >= 8 then
+				v.animationFrame = 4
+			elseif data.timer % 16 >= 4 then
+				v.animationFrame = 1
+			else
+				v.animationFrame = 5
+			end
+			if data.timer >= config.beforeChaseLightningDelay then
+				data.timer = 0
+				v.ai1 = 1
+			end
+		elseif v.ai1 == 1 then
+			if data.lightning then
+				if data.timer % 16 >= 12 then
+					v.animationFrame = 0
+				elseif data.timer % 16 >= 8 then
+					v.animationFrame = 4
+				elseif data.timer % 16 >= 4 then
+					v.animationFrame = 1
+				else
+					v.animationFrame = 5
+				end
+				v.speedX = 0
+				v.speedY = 0
+			else
+				if data.timer % 16 >= 12 then
+					v.animationFrame = 0
+				elseif data.timer % 16 >= 8 then
+					v.animationFrame = 0
+				elseif data.timer % 16 >= 4 then
+					v.animationFrame = 1
+				else
+					v.animationFrame = 1
+				end
+				if plr.x + plr.width / 2 < v.x + v.width / 2 then
+					data.moveSpeed.x = math.clamp(data.moveSpeed.x - config.swimAcceleration.x.acc, -config.swimAcceleration.x.cap, config.swimAcceleration.x.cap)
+				elseif plr.x + plr.width / 2 > v.x + v.width / 2 then
+					data.moveSpeed.x = math.clamp(data.moveSpeed.x + config.swimAcceleration.x.acc, -config.swimAcceleration.x.cap, config.swimAcceleration.x.cap)
+				end
+				if plr.y + plr.height / 2 < v.y + v.height / 2 then
+					data.moveSpeed.y = math.clamp(data.moveSpeed.x - config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
+				elseif plr.y + plr.height / 2 > v.y + v.height / 2
+					data.moveSpeed.y = math.clamp(data.moveSpeed.x + config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
+				end
+				v.speedX = data.moveSpeed.x
+				v.speedY = data.moveSpeed.y
+			end
+			if data.timer == 1 then
+				data.moveSpeed.x = 0
+				data.moveSpeed.y = 0
+			elseif data.timer >= config.chaseWithLightningDelay then
+				data.moveSpeed.x = 0
+				data.moveSpeed.y = 0
+				data.timer = 0
+				v.ai1 = 0
+				data.timer = 0
+				v.speedX = 0
+				v.speedY = 0
+			end
+		else
+			data.timer = 0
+			v.ai1 = 1
 		end
 	elseif data.state == STATE.INTRO then
 		v.friendly = true
