@@ -79,8 +79,8 @@ local docCrocSettings = {
 	alloutTable = {
 		STATE.CHASE,
 		STATE.CHASE,
-		STATE.SKIM,
-		STATE.ZIGZAG,
+		-- STATE.SKIM,
+		-- STATE.ZIGZAG,
 		STATE.LIGHTNING,
 	},
 	
@@ -327,6 +327,7 @@ function docCroc.onTickEndNPC(v)
 				v.ai1 = 1
 			end
 		elseif v.ai1 == 1 then
+			data.lightningTimer = data.lightningTimer + 1
 			if data.lightning then
 				if data.timer % 16 >= 12 then
 					v.animationFrame = 0
@@ -339,6 +340,10 @@ function docCroc.onTickEndNPC(v)
 				end
 				v.speedX = 0
 				v.speedY = 0
+				if data.lightningTimer >= config.lightningDelay then
+					data.lightning = false
+					data.lightningTimer = 0
+				end
 			else
 				if data.timer % 16 >= 12 then
 					v.animationFrame = 0
@@ -361,6 +366,16 @@ function docCroc.onTickEndNPC(v)
 				end
 				v.speedX = data.moveSpeed.x
 				v.speedY = data.moveSpeed.y
+				if data.lightningTimer >= config.lightningFrequency then
+					data.lightning = true
+					data.lightningTimer = 0
+					SFXPlay(sfxTable_lightningSpark)
+					for i = 0,1 do
+						local n = NPC.spawn(config.lightningID, v.x + v.width / 2, v.y + v.height / 2, v.section, false, true)
+						n.direction = -1 + (2 * i)
+						n.speedX = 5 * n.direction
+					end
+				end
 			end
 			if data.timer == 1 then
 				data.moveSpeed.x = 0
@@ -373,6 +388,8 @@ function docCroc.onTickEndNPC(v)
 				data.timer = 0
 				v.speedX = 0
 				v.speedY = 0
+				data.lightning = false
+				data.lightningTimer = 0
 			end
 		else
 			data.timer = 0
