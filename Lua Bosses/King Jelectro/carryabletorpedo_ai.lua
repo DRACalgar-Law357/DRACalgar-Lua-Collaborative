@@ -64,12 +64,14 @@ function carryableTorpedo.onTickEndNPC(v)
 		local held = v.heldPlayer
 		if (held.mem(0x36, FIELD_BOOL) == true and NPC.config[v.id].floatSet == 0) or (held.mem(0x36, FIELD_BOOL) == false and NPC.config[v.id].floatSet == 1) or (NPC.config[v.id].floatSet == 2) then
 			if NPC.config[v.id].floatSet == 0 then
-				data.originSpeedY = -Defines.player_grav
+				data.originSpeedY = -Defines.player_grav * 0.6
+				-- -Defines.player_grav * 0.1
+				-- -Defines.player_grav * 0.6
 			elseif NPC.config[v.id].floatSet == 1 then
 				data.originSpeedY = -Defines.player_grav
 			elseif NPC.config[v.id].floatSet == 2 then
 				if held.mem(0x36, FIELD_BOOL) == true then
-					data.originSpeedY = -Defines.player_grav
+					data.originSpeedY = -Defines.player_grav * 0.6
 				else
 					data.originSpeedY = -Defines.player_grav
 				end
