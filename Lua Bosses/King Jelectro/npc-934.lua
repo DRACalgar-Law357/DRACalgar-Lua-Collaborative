@@ -293,7 +293,7 @@ function docCroc.onTickEndNPC(v)
 		end
 		if plr.y + plr.height / 2 < v.y + v.height / 2 then
 			data.moveSpeed.y = math.clamp(data.moveSpeed.x - config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
-		elseif plr.y + plr.height / 2 > v.y + v.height / 2
+		elseif plr.y + plr.height / 2 > v.y + v.height / 2 then
 			data.moveSpeed.y = math.clamp(data.moveSpeed.x + config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
 		end
 		v.speedX = data.moveSpeed.x
@@ -361,7 +361,7 @@ function docCroc.onTickEndNPC(v)
 				end
 				if plr.y + plr.height / 2 < v.y + v.height / 2 then
 					data.moveSpeed.y = math.clamp(data.moveSpeed.x - config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
-				elseif plr.y + plr.height / 2 > v.y + v.height / 2
+				elseif plr.y + plr.height / 2 > v.y + v.height / 2 then
 					data.moveSpeed.y = math.clamp(data.moveSpeed.x + config.swimAcceleration.y.acc, -config.swimAcceleration.y.cap, config.swimAcceleration.y.cap)
 				end
 				v.speedX = data.moveSpeed.x
@@ -420,7 +420,7 @@ function docCroc.onTickEndNPC(v)
 		v.speedY = 0
 		v.friendly = true
 		v.animationFrame = math.floor(data.timer / 8) % 2 + 6
-		if data.timer >= config.hurtDelay and  then
+		if data.timer >= config.hurtDelay then
 			data.timer = 0
 			data.state = STATE.IDLE
 			v.friendly = false

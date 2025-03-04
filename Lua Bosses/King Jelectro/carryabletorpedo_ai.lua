@@ -62,19 +62,22 @@ function carryableTorpedo.onTickEndNPC(v)
 
 	if v.heldPlayer then
 		local held = v.heldPlayer
-		if (held.mem(0x36, FIELD_BOOL) == true and NPC.config[v.id].floatSet == 0) or (held.mem(0x36, FIELD_BOOL) == false and NPC.config[v.id].floatSet == 1) or (NPC.config[v.id].floatSet == 2) then
+		if (held:mem(0x36, FIELD_BOOL) == true and NPC.config[v.id].floatSet == 0) or (held:mem(0x36, FIELD_BOOL) == false and NPC.config[v.id].floatSet == 1) or (NPC.config[v.id].floatSet == 2) then
 			if NPC.config[v.id].floatSet == 0 then
-				data.originSpeedY = -Defines.player_grav * 0.6
+				data.originSpeedY = -Defines.player_grav * 0.1
 				-- -Defines.player_grav * 0.1
 				-- -Defines.player_grav * 0.6
 			elseif NPC.config[v.id].floatSet == 1 then
 				data.originSpeedY = -Defines.player_grav
 			elseif NPC.config[v.id].floatSet == 2 then
-				if held.mem(0x36, FIELD_BOOL) == true then
-					data.originSpeedY = -Defines.player_grav * 0.6
+				if held:mem(0x36, FIELD_BOOL) == true then
+					data.originSpeedY = -Defines.player_grav * 0.1
 				else
 					data.originSpeedY = -Defines.player_grav
 				end
+			end
+			if held:mem(0x36, FIELD_BOOL) == true then
+				held:mem(0x38, FIELD_WORD, 2)
 			end
 			if (held.keys.up or held.keys.down) then
 				if data.holdingKeys == true and data.heldKeyY ~= 0  then
@@ -97,16 +100,17 @@ function carryableTorpedo.onTickEndNPC(v)
 						end
 					end
 				else
-					data.holdingKeys = false
 					data.heldKeyY = 0
 				end
+			else
+				data.heldKeyY = 0
 			end
 			if (held.keys.left or held.keys.right) then
 				if data.holdingKeys == true and data.heldKeyX ~= 0  then
 					--held.isOnGround = false
 					if data.heldKeyX == 1 then
 						if held.speedX > -NPC.config[v.id].maxswimspeedx then
-							if held:mem(0x14A,FIELD_WORD) == 0 then
+							if held:mem(0x148,FIELD_WORD) == 0 then
 								held.speedX = held.speedX - NPC.config[v.id].accelerationx
 							else
 								held.speedX = 0
@@ -114,7 +118,7 @@ function carryableTorpedo.onTickEndNPC(v)
 						end
 					elseif data.heldKeyX == 2 then
 						if held.speedX < NPC.config[v.id].maxswimspeedx then
-							if held:mem(0x146,FIELD_WORD) == 0 then
+							if held:mem(0x14C,FIELD_WORD) == 0 then
 								held.speedX = held.speedX + NPC.config[v.id].accelerationx
 							else
 								held.speedX = 0
@@ -122,9 +126,10 @@ function carryableTorpedo.onTickEndNPC(v)
 						end
 					end
 				else
-					data.holdingKeys = false
 					data.heldKeyX = 0
 				end
+			else
+				data.heldKeyX = 0
 			end
 
 			if (held.keys.up == KEYS_PRESSED or held.keys.down == KEYS_PRESSED)
@@ -135,7 +140,7 @@ function carryableTorpedo.onTickEndNPC(v)
 					data.heldKeyY = 2
 				end
 			else
-				data.heldKeyY = 0
+
 			end
 			if (held.keys.left == KEYS_PRESSED or held.keys.right == KEYS_PRESSED)
 			and data.heldKeyX == 0 then
@@ -145,10 +150,13 @@ function carryableTorpedo.onTickEndNPC(v)
 					data.heldKeyX = 2
 				end
 			else
-				data.heldKeyX = 0
+
 			end
 			if (data.heldKeyX ~= 0 or data.heldKeyY ~= 0) and data.holdingKeys == false then
 				data.holdingKeys = true
+			end
+			if data.heldKeyX == 0 and data.heldKeyY == 0 and data.holdingKeys == true then
+				data.holdingKeys = false
 			end
 
 			if data.heldKeyY == 0 then
@@ -168,12 +176,37 @@ function carryableTorpedo.onTickEndNPC(v)
 				end
 			end
 		else
-			data.heldKeyX = 0
-			data.heldKeyX = 0
-			data.holdingKeys = false
+			if (held.keys.up == KEYS_PRESSED or held.keys.down == KEYS_PRESSED)
+			and data.heldKeyY == 0 then
+				if held.keys.up == KEYS_PRESSED then
+					data.heldKeyY = 1
+				elseif held.keys.down == KEYS_PRESSED then
+					data.heldKeyY = 2
+				end
+			else
+
+			end
+			if (held.keys.left == KEYS_PRESSED or held.keys.right == KEYS_PRESSED)
+			and data.heldKeyX == 0 then
+				if held.keys.left == KEYS_PRESSED then
+					data.heldKeyX = 1
+				elseif held.keys.right == KEYS_PRESSED then
+					data.heldKeyX = 2
+				end
+			else
+
+			end
+			if (data.heldKeyX ~= 0 or data.heldKeyY ~= 0) and data.holdingKeys == false then
+				data.holdingKeys = true
+			end
+			if data.heldKeyX == 0 and data.heldKeyY == 0 and data.holdingKeys == true then
+				data.holdingKeys = false
+			end
 		end
 	else
-
+		data.heldKeyX = 0
+		data.heldKeyY = 0
+		data.holdingKeys = false
 	end
 	
 	-- Animation frame handling
@@ -181,7 +214,7 @@ function carryableTorpedo.onTickEndNPC(v)
 		-- animation controlling
 		v.animationFrame = npcutils.getFrameByFramestyle(v, {
 			frame = data.frame,
-			frames = config.frames
+			frames = NPC.config[v.id].frames
 		});
 	end
 end
