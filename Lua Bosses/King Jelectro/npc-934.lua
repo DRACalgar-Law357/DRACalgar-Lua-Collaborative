@@ -354,6 +354,10 @@ function docCroc.onTickEndNPC(v)
 				else
 					v.animationFrame = 1
 				end
+				if data.timer == 1 then
+					data.moveSpeed.x = 0
+					data.moveSpeed.y = 0
+				end
 				if plr.x + plr.width / 2 < v.x + v.width / 2 then
 					data.moveSpeed.x = math.clamp(data.moveSpeed.x - config.swimAcceleration.x.acc, -config.swimAcceleration.x.cap, config.swimAcceleration.x.cap)
 				elseif plr.x + plr.width / 2 > v.x + v.width / 2 then
@@ -377,10 +381,7 @@ function docCroc.onTickEndNPC(v)
 					end
 				end
 			end
-			if data.timer == 1 then
-				data.moveSpeed.x = 0
-				data.moveSpeed.y = 0
-			elseif data.timer >= config.chaseWithLightningDelay then
+			if data.timer >= config.chaseWithLightningDelay then
 				data.moveSpeed.x = 0
 				data.moveSpeed.y = 0
 				data.timer = 0
